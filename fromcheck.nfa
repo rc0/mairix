@@ -46,8 +46,7 @@ ENDBLOCK
 
 BLOCK date
     STATE in
-        -> before_weekday
-        WHITE -> before_weekday
+        WHITE -> in, before_weekday
 
     STATE before_weekday
         UPPER ; LOWER ; LOWER ; WHITE -> after_weekday
@@ -97,6 +96,7 @@ BLOCK main
 
     STATE in
         # Real return address.
+        WHITE -> in
         <email:in->out> -> before_date
         
         # Cope with Mozilla mbox folder format which just uses a '-' as
