@@ -96,12 +96,12 @@ static void splice_header_lines(struct line *header)/*{{{*/
     printf("header=<%s>\n", x->text);
 #endif
     next = x->next;
-    if (isspace(x->text[0])) {
+    if (isspace(x->text[0] & 0xff)) {
       /* Glue to previous line */
       char *p, *newbuf, *oldbuf;
       struct line *y;
       for (p=x->text; *p; p++) {
-        if (!isspace(*p)) break;
+        if (!isspace(*(unsigned char *)p)) break;
       }
       p--; /* point to final space */
       y = x->prev;
@@ -152,14 +152,14 @@ static int audit_header(struct line *header)/*{{{*/
     if (!is_blank) {
       char *p;
       int saw_char = 0;
-      has_leading_space = isspace(x->text[0]);
+      has_leading_space = isspace(x->text[0] & 0xff);
       has_word_colon = 0; /* default */
       p = x->text;
       while(*p) {
         if(*p == ':') {
           has_word_colon = saw_char;
           break;
-        } else if (isspace(*p)) {
+        } else if (isspace(*(unsigned char *) p)) {
           has_word_colon = 0;
           break;
         } else {
@@ -357,7 +357,7 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
   if (!e) {
     result = ENC_NONE;
   } else {
-    for (p=e; *p && isspace(*p); p++) ;
+    for (p=e; *p && isspace(*(unsigned char *)p); p++) ;
     if (   match_string("7bit", p)
         || match_string("7-bit", p)
         || match_string("7 bit", p)) {
@@ -401,7 +401,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
   result->boundary = NULL;
     
   p = hdrline;
-  while (*p && isspace(*p)) p++;
+  while (*p && isspace(*(unsigned char *)p)) p++;
   for (q=p+1; *q && (*q != '/'); q++) ;
 /*  assert(*q); */
   if (*q)
@@ -411,7 +411,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
     *s = 0;
    
     p = q + 1;
-    for (q=p+1; *q && !isspace(*q) && (*q != ';'); q++) ;
+    for (q=p+1; *q && !isspace(*(unsigned char *) q) && (*q != ';'); q++) ;
     result->minor = new_array(char, 1 + (q - p));
     for (s=result->minor; p<q;) *s++ = *p++;
     *s = 0;
@@ -424,7 +424,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
     while (semi && *semi) {
 
       name = semi + 1;
-      while (*name && isspace(*name)) name++;
+      while (*name && isspace(*(unsigned char *) name)) name++;
       if (!*name) break;
 
       for (eq=name+1; *eq && (*eq != '='); eq++) ;
@@ -433,7 +433,9 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
       if (!*value) break;
 
       /* Find next semicolon, or end of line, or whitespace (if not a quoted RHS) */
-      for (semi = value+1; *semi && ((*value == '"') || (!isspace(*semi))) && (*semi != ';'); semi++) ;
+      for (semi = value+1; 
+           *semi && ((*value == '"') || (!isspace(*(unsigned char *)semi))) && (*semi != ';');
+           semi++) {}
 
       if (!strncasecmp(name, "boundary", 8)) {
         result->boundary = copy_string_start_end_unquote(value, semi);
@@ -465,7 +467,7 @@ static char *looking_at_ws_then_newline(char *start)/*{{{*/
   result = start;
   do {
          if (*result == '\n')   return result;
-    else if (!isspace(*result)) return NULL;
+    else if (!isspace(*(unsigned char *) result)) return NULL;
     else                        result++;
   } while (1);
 
@@ -585,7 +587,7 @@ static int split_and_splice_header(char *data, struct line *header, char **body_
     blank_line = 1; /* until proven otherwise */
     eol = sol;
     while (*eol && (*eol != '\n')) {
-      if (!isspace(*eol)) blank_line = 0;
+      if (!isspace(*(unsigned char *) eol)) blank_line = 0;
       eol++;
     }
     if (*eol == '\n') {

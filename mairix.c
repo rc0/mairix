@@ -154,7 +154,7 @@ static void parse_rc_file(char *name)/*{{{*/
     /* Discard blank lines */
     all_blank = 1;
     for (p=line; *p; p++) {
-      if (!isspace(*p)) {
+      if (!isspace(*(unsigned char *)p)) {
         all_blank = 0;
         break;
       }
