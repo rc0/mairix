@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/dirscan.c,v 1.6 2003/01/02 23:27:42 richard Exp $
+  $Header: /cvs/src/mairix/dirscan.c,v 1.8 2003/01/18 00:38:12 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -195,7 +195,7 @@ static int looks_like_maildir(char *folder_base, char *name)/*{{{*/
   struct stat sb;
   int result = 0;
   
-  child_name = (char *) malloc(strlen(folder_base) + strlen(name) + 6);
+  child_name = new_array(char, strlen(folder_base) + strlen(name) + 6);
   full_path = new_array(char, strlen(folder_base) + strlen(name) + 2);
   strcpy(full_path, folder_base);
   strcat(full_path, "/");

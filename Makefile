@@ -1,12 +1,12 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Attic/Makefile,v 1.2 2002/07/29 23:03:03 richard Exp $
+# $Header: /cvs/src/mairix/Attic/Makefile,v 1.5 2003/02/24 23:56:40 richard Exp $
 #
 # =======================================================================
 #
 # mairix - message index builder and finder for maildir folders.
 #
-# Copyright (C) Richard P. Curnow  2002
+# Copyright (C) Richard P. Curnow  2002, 2003
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
@@ -30,7 +30,7 @@ CC=gcc
 #CFLAGS=-O2 -pg
 CFLAGS=-Wall -g
 
-prefix=/other/mairix/0.3-1
+prefix=/usr/local
 bindir=$(prefix)/bin
 mandir=$(prefix)/man
 man1dir=$(mandir)/man1
@@ -41,15 +41,18 @@ docdir=$(prefix)/docs
 # Things below this point shouldn't need to be edited.
 
 OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
-      reader.o search.o stats.o
+      reader.o search.o stats.o dates.o datescan.o
 
 all : mairix
 
 mairix : $(OBJ)
 	$(CC) -o mairix $(CFLAGS) $(OBJ)
 
-%.o : %.c
+%.o : %.c memmac.h mairix.h reader.h Makefile
 	$(CC) -c $(CFLAGS) $<
+
+datescan.c : datescan.nfa
+	dfasyn -o datescan.c -v -u datescan.nfa
 
 clean:
 	-rm -f *~ *.o mairix *.s core mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info

@@ -1,0 +1,98 @@
+
+# NFA description for parsing dates
+
+# Stuff to pass through verbatim
+%{
+#include "dates.h"
+%}
+
+Tokens D0 D1 D2 D3 D49 A
+Abbrev D01 = D0 | D1
+Abbrev D12 = D1 | D2
+Abbrev D29 = D2 | D3 | D49
+Abbrev D19 = D1 | D29
+Abbrev D09 = D0 | D19
+Abbrev D = D09
+
+BLOCK day
+    State in
+        D0 ; D19  -> out
+        D12 ; D09 -> out
+        D3 ; D01  -> out
+ENDBLOCK
+
+# Match 2 digit year
+BLOCK year
+    State in
+        D3 ; D29 -> out
+        D49 ; D09 -> out
+ENDBLOCK
+
+BLOCK month
+    State in
+        A ; A ; A -> out
+ENDBLOCK
+
+BLOCK scaled
+    State in
+        D -> in, after_value
+
+    State after_value
+        A -> out
+ENDBLOCK
+
+BLOCK ccyy
+    State in
+        D19 ; D ; D ; D -> out
+ENDBLOCK
+
+BLOCK main
+    State in
+        D19 = DS_D
+        <day:in->out> = DS_D
+        <year:in->out> = DS_Y
+        <ccyy:in->out> = DS_Y
+        D ; D ; D ; D ; D ; D = DS_YYMMDD
+        D ; D ; D ; D ; D ; D ; D ; D = DS_YYMMDD
+        <scaled:in->out> = DS_SCALED
+        <month:in->out> = DS_M
+        D19 ; <month:in->out> = DS_DM
+        <day:in->out> ; <month:in->out> = DS_DM
+        <month:in->out> ; D19 = DS_MD
+        <month:in->out> ; <day:in->out> = DS_MD
+        <year:in->out> ; <month:in->out> = DS_YM
+        <month:in->out> ; <year:in->out> = DS_MY
+        <ccyy:in->out> ; <month:in->out> = DS_YM
+        <month:in->out> ; <ccyy:in->out> = DS_MY
+        
+        <year:in->out> ; <month:in->out> ; D19 = DS_YMD
+        <year:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
+        D19 ; <month:in->out> ; <year:in->out> = DS_DMY
+        <day:in->out> ; <month:in->out> ; <year:in->out> = DS_DMY
+        
+        <ccyy:in->out> ; <month:in->out> ; D19 = DS_YMD
+        <ccyy:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
+        D19 ; <month:in->out> ; <ccyy:in->out> = DS_DMY
+        <day:in->out> ; <month:in->out> ; <ccyy:in->out> = DS_DMY
+ENDBLOCK
+
+RESULT DS_D
+RESULT DS_Y
+RESULT DS_YYMMDD
+RESULT DS_SCALED
+RESULT DS_M
+RESULT DS_DM
+RESULT DS_MD
+RESULT DS_YM
+RESULT DS_MY
+RESULT DS_YMD
+RESULT DS_DMY
+
+DEFRESULT DS_FAILURE
+
+TYPE "enum DATESCAN_TYPE"
+PREFIX datescan
+
+
+# vim:ft=txt:et:sw=4:sts=4:ht=4
+

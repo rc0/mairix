@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.10 2002/12/29 23:44:46 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.12 2003/01/18 00:38:12 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -29,6 +29,10 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <locale.h>
+
+#ifdef TEST_OOM
+int total_bytes=0;
+#endif
 
 int verbose = 0;
 
@@ -208,10 +212,59 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 }
 /*}}}*/
 
+static void emit_int(int x)/*{{{*/
+{
+  char buf1[20], buf2[20];
+  char *p, *q;
+  int neg=0;
+  p = buf1;
+  *p = '0'; /* In case x is zero */
+  if (x < 0) {
+    neg = 1;
+    x = -x;
+  }
+  while (x) {
+    *p++ = '0' + (x % 10);
+    x /= 10;
+  }
+  p--;
+  q = buf2;
+  if (neg) *q++ = '-';
+  while (p >= buf1) {
+    *q++ = *p--;
+  }
+  write(2, buf2, q-buf2);  
+  return;
+}
+/*}}}*/
+volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
+{
+  /* Hairy coding ahead - can't use any [s]printf, itoa etc because
+   * those might try to use the heap! */
+
+  int filelen;
+  char *p;
+  
+  static char msg1[] = "Out of memory (at ";
+  static char msg2[] = " bytes)\n";
+  /* Perhaps even strlen is unsafe in this situation? */
+  p = file;
+  while (*p) p++;
+  filelen = p - file;
+  write(2, msg1, sizeof(msg1));
+  write(2, file, filelen);
+  write(2, ":", 1);
+  emit_int(line);
+  write(2, ", ", 2);
+  emit_int(size);
+  write(2, msg2, sizeof(msg2));
+  exit(1); 
+}
+/*}}}*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_9_2 $";
+  static char cvs_version[] = "$Name: V0_11_pre1 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -238,7 +291,7 @@ static char *get_version(void)/*{{{*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
-          "mairix %s, Copyright (C) 2002 Richard P. Curnow\n"
+          "mairix %s, Copyright (C) 2002, 2003 Richard P. Curnow\n"
           "mairix comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see the GNU General Public License for details.\n\n",

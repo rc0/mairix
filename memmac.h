@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/memmac.h,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/memmac.h,v 1.2 2003/01/18 00:38:12 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -26,12 +26,43 @@
 #ifndef MEMMAC_H
 #define MEMMAC_H
 
+/*{{{ Safe alloc helpers (GCC extensions) */
+extern volatile void out_of_mem(char *file, int line, size_t size);
+
+#undef TEST_OOM
+
+#ifdef TEST_OOM
+extern int total_bytes;
+#endif
+
+static __inline__ void* safe_malloc(char *file, int line, size_t s)/*{{{*/
+{
+  void *x = malloc(s);
+#ifdef TEST_OOM
+  total_bytes += s;
+  if (total_bytes > 131072) x = NULL;
+#endif
+  if (!x) out_of_mem(file, line, s);
+  return x;
+}
+/*}}}*/
+static __inline__ void* safe_realloc(char *file, int line, void *old_ptr, size_t s)/*{{{*/
+{
+  void *x = realloc(old_ptr, s);
+  if (!x) out_of_mem(file, line, s);
+  return x;
+}
+/*}}}*/
+#define Malloc(s) safe_malloc(__FILE__, __LINE__, s)
+#define Realloc(xx,s) safe_realloc(__FILE__, __LINE__,xx,s)
+/*}}}*/
+
 /*{{{  Memory macros*/
-#define new_string(s) strcpy((char *) malloc(1+strlen(s)), (s))
-#define extend_string(x,s) (strcat(realloc(x, (strlen(x)+strlen(s)+1)), s))
-#define new(T) (T *) malloc(sizeof(T))
-#define new_array(T, n) (T *) malloc(sizeof(T) * (n))
-#define grow_array(T, n, oldX) (T *) ((oldX) ? realloc(oldX, (sizeof(T) * (n))) : malloc(sizeof(T) * (n)))
+#define new_string(s) strcpy((char *) Malloc(1+strlen(s)), (s))
+#define extend_string(x,s) (strcat(Realloc(x, (strlen(x)+strlen(s)+1)), s))
+#define new(T) (T *) Malloc(sizeof(T))
+#define new_array(T, n) (T *) Malloc(sizeof(T) * (n))
+#define grow_array(T, n, oldX) (T *) ((oldX) ? Realloc(oldX, (sizeof(T) * (n))) : Malloc(sizeof(T) * (n)))
 #define EMPTY(x) {&(x), &(x)}
 /*}}}*/
 

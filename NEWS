@@ -1,3 +1,8 @@
+NEW IN VERSION 0.11
+===================
+
+* Detect failed malloc (out of memory) conditions properly and report it.
+
 NEW IN VERSION 0.10
 ===================
 
@@ -6,6 +11,7 @@ NEW IN VERSION 0.10
 * Add an ACKNOWLEDGEMENTS file.
 * Hack to handle missing NAME_MAX on various non-Linux systems
 * Improve mairix.spec file for RPM building
+* Change default value for prefix in Makefile to make it more standard.
 
 NEW IN VERSION 0.9
 ==================

@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.8 2003/01/02 23:27:42 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.10 2003/02/24 23:56:40 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -523,7 +523,10 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   int has_start, has_end, start_cond, end_cond;
   int i;
   
+  scan_date_string(date_expr, &start, &has_start, &end, &has_end);
+#if 0
   parse_date_range(date_expr, &has_start, &start, &has_end, &end);
+#endif
   if (has_start && has_end) {
     /* Allow user to put the endpoints in backwards */
     if (start > end) {
