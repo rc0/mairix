@@ -1,3 +1,13 @@
+NEW IN VERSION 0.7
+==================
+
+* Fix bug : mairix likely to crash if a non-existant folder is listed in the
+  conf file.
+* Allow multiple folders and mh_folders lines in the conf file for people who
+  have many separate folders.
+* Print an extra 'comfort' message in verbose mode before starting to scan the
+  directory tree.
+
 NEW IN VERSION 0.6
 ==================
 

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.8 2002/10/03 22:16:56 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.9 2002/11/13 23:47:01 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -58,10 +58,31 @@ static char *copy_value(char *text)/*{{{*/
   return new_string(p);
 }
 /*}}}*/
+static void add_folders(char **folders, char *extra_folders)/*{{{*/
+{
+  /* note : extra_pointers is stale after this routine exits. */
+  
+  if (!*folders) {
+    *folders = extra_folders;
+  } else {
+    char *old_folders = *folders;
+    char *new_folders;
+    int old_len, extra_len;
+    old_len = strlen(old_folders);
+    extra_len = strlen(extra_folders);
+    new_folders = new_array(char, old_len + extra_len + 2);
+    strcpy(new_folders, old_folders);
+    strcpy(new_folders + old_len, ":");
+    strcpy(new_folders + old_len + 1, extra_folders);
+    *folders = new_folders;
+    free(old_folders);
+  }
+}
+/*}}}*/
 static void parse_rc_file(char *name)/*{{{*/
 {
   FILE *in;
-  char line[1024], *p;
+  char line[4096], *p;
   int len, lineno;
   int all_blank;
   int used_default_name = 0;
@@ -119,8 +140,8 @@ static void parse_rc_file(char *name)/*{{{*/
     
     /* Now a real line to parse */
     if (!strncasecmp(p, "base", 4)) folder_base = copy_value(p);
-    else if (!strncasecmp(p, "folders", 7)) folders = copy_value(p);
-    else if (!strncasecmp(p, "mh_folders", 10)) mh_folders = copy_value(p);
+    else if (!strncasecmp(p, "folders", 7)) add_folders(&folders, copy_value(p));
+    else if (!strncasecmp(p, "mh_folders", 10)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "vfolder_format", 14)) {
       char *temp;
       temp = copy_value(p);
@@ -187,7 +208,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_5 $";
+  static char cvs_version[] = "$Name: V0_7 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -392,6 +413,7 @@ int main (int argc, char **argv)/*{{{*/
       exit(1);
     }
     
+    if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
     if (folders) {
       build_message_list(folder_base, folders, FT_MAILDIR, msgs);

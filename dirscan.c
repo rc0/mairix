@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/dirscan.c,v 1.2 2002/07/29 23:03:47 richard Exp $
+  $Header: /cvs/src/mairix/dirscan.c,v 1.3 2002/11/13 23:46:26 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -241,23 +241,25 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
   sname = new_array(char, this_folder_len + 2 + NAME_MAX);
 
   d = opendir(name);
-  while ((de = readdir(d))) {
-    if (!strcmp(de->d_name, ".") ||
-        !strcmp(de->d_name, "..")) {
-      continue;
-    }
+  if (d) {
+    while ((de = readdir(d))) {
+      if (!strcmp(de->d_name, ".") ||
+          !strcmp(de->d_name, "..")) {
+        continue;
+      }
 
-    strcpy(fname, name);
-    strcat(fname, "/");
-    strcat(fname, de->d_name);
+      strcpy(fname, name);
+      strcat(fname, "/");
+      strcat(fname, de->d_name);
 
-    strcpy(sname, this_folder);
-    strcat(sname, "/");
-    strcat(sname, de->d_name);
+      strcpy(sname, this_folder);
+      strcat(sname, "/");
+      strcat(sname, de->d_name);
 
-    if (stat(fname, &sb) >= 0) {
-      if (S_ISDIR(sb.st_mode)) {
-        scan_directory(folder_base, sname, ft, arr);
+      if (stat(fname, &sb) >= 0) {
+        if (S_ISDIR(sb.st_mode)) {
+          scan_directory(folder_base, sname, ft, arr);
+        }
       }
     }
   }

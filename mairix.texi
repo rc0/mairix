@@ -230,7 +230,8 @@ example illustrates:
 
 @example
 base=/home/richard/mail
-folders=new-mail:new-chrony:new-lojban:new-jbofihe:recent...:ancient...
+folders=new-mail:new-chrony:new-lojban:new-jbofihe
+folders=recent...:ancient...
 mh_folders=an_mh_folder
 vfolder=vfolder
 vfolder_format=maildir
@@ -246,10 +247,18 @@ This is the path to the common parent directory of all your maildir folders.
 This is a colon-separated list of the Maildir folders (relative to @samp{base})
 that you want indexed.  Any entry that ends @samp{...} is recursively scanned
 to find any Maildir folders underneath it.
+
+More than one line starting with @samp{folders} can be included.  In this case,
+mairix joins the lines together with colons as though a single list of folders had
+been given on a single very long line.
 @item mh_folders
 This is a colon-separated list of the MH folders (relative to @samp{base}) that
 you want indexed.  Any entry that ends @samp{...} is recursively scanned to
 find any MH folders underneath it.
+
+More than one line starting with @samp{mh_folders} can be included.  In this case,
+mairix joins the lines together with colons as though a single list of folders had
+been given on a single very long line.
 @item vfolder
 This defines the name of the @emph{virtual} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
