@@ -25,6 +25,9 @@ BLOCK email
 
     STATE before_at
         EMAIL -> before_at
+        # Local part only : >=1 characters will suffice, which we've already
+        # matched.
+        -> out
         AT -> after_at
 
     STATE after_at
