@@ -373,7 +373,7 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
     } else if (match_string("binary", p)) {
       result = ENC_BINARY;
     } else {
-      fprintf(stderr, "Warning: unkown encoding type: '%s'\n", e);
+      fprintf(stderr, "Warning: unknown encoding type: '%s'\n", e);
       result = ENC_UNKNOWN;
     }
   }
