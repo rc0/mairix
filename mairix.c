@@ -537,7 +537,7 @@ int main (int argc, char **argv)/*{{{*/
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
     }
-    if (1 || any_updates || any_purges) {
+    if (any_updates || any_purges) {
       /* For now write it every time.  This is obviously the most reliable method. */
       write_database(db, database_path, do_integrity_checks);
     }
