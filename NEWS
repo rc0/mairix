@@ -1,9 +1,25 @@
 NEW IN VERSION 0.16
 ===================
 
-* Home directory and environment variable expansion in the .mairixrc file
-* Add -Q flag to skip integrity checks.
+* Home directory (~) and environment variable ($foo / ${foo}) expansion in the
+  .mairixrc file
+* Add -Q flag to skip database integrity checks during indexing (equivalently
+  the nochecks option in .mairixrc file).  This speeds up indexing but loses
+  some robustness.
 * Add ^ word prefix to require substring search to be left-anchored
+* Split 'make clean' into separate clean and clean_docs
+* Improve some error messages
+* Add online help entries for -o and -d
+* Don't write out the database if there are no changes found during indexing.
+* Fix stale information about the 'and' and 'or' delimiters in the online help.
+* Add the capability to omit particular folders from indexing (omit keyword in
+  .mairixrc file.)  This allows broad wildcards to be used with selected
+  folders removed from the wildcard which is much more convenient in many
+  set-ups.
+* Avoid writing matches to any folder on the list of folders to be indexed
+  (affects both mfolder option and argument of -o command line switch.)  This
+  prevents disasterous loss of messages in the event of trying to overwrite an
+  wanted folder with the matches.
 
 NEW IN VERSION 0.15
 ===================
