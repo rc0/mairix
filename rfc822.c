@@ -922,7 +922,7 @@ struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
   
 }
 /*}}}*/
-void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
@@ -964,7 +964,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/
 /*}}}*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
-  size_t len;
+  int len;
   char *data;
   struct rfc822 *result;
 
@@ -979,7 +979,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
     result = data_to_rfc822(data, len);
   }
   
-  if (munmap(data, len) < 0) {
+  if (munmap(data, (size_t) len) < 0) {
     perror("Could not munmap");
   }
 

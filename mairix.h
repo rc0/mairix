@@ -258,7 +258,7 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft, s
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
 struct rfc822 *data_to_rfc822(char *data, int length);
-void create_ro_mapping(const char *filename, unsigned char **data, size_t *len);
+void create_ro_mapping(const char *filename, unsigned char **data, int *len);
 
 /* In tok.c */
 struct toktable *new_toktable(void);
@@ -267,7 +267,7 @@ void free_token(struct token *x);
 void free_token2(struct token2 *x);
 void free_toktable(struct toktable *x);
 void free_toktable2(struct toktable2 *x);
-void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table);
+void add_token_in_file(int file_index, unsigned int hash_key, unsigned char *tok_text, struct toktable *table);
 void check_and_enlarge_encoding(struct matches *m);
 void insert_index_on_encoding(struct matches *m, int idx);
 void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1);

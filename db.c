@@ -556,8 +556,8 @@ static unsigned char special_table[256] = {
 
 static void tokenise_string(int file_index, unsigned int hash_key, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
-  char *ss, *es, old_es;
-  ss = data;
+  unsigned char *ss, *es, old_es;
+  ss = (unsigned char *) data;
   for (;;) {
     while (*ss && !CHAR_VALID(*ss,match_mask)) ss++;
     if (!*ss) break;
@@ -578,11 +578,11 @@ static void tokenise_string(int file_index, unsigned int hash_key, struct toktab
 /*}}}*/
 static void tokenise_html_string(int file_index, unsigned int hash_key, struct toktable *table, char *data)/*{{{*/
 {
-  char *ss, *es, old_es;
+  unsigned char *ss, *es, old_es;
 
   /* FIXME : Probably want to rewrite this as an explicit FSM */
   
-  ss = data;
+  ss = (unsigned char *) data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
     while (*ss && !CHAR_VALID(*ss, 1)) {

@@ -784,11 +784,11 @@ void build_mbox_lists(struct database *db, const char *folder_base, const char *
         mb->n_old_msgs_valid = mb->n_msgs;
       } else {
         unsigned char *va;
-        size_t len;
+        int len;
         create_ro_mapping(mb->path, &va, &len);
         if (va) {
           rescan_mbox(mb, va, len);
-          munmap(va, len);
+          munmap(va, (size_t) len);
         } else {
           /* Treat as dead mbox */
           deaden_mbox(mb);
@@ -807,7 +807,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
   int i, j;
   int any_new = 0;
   unsigned char *va;
-  size_t valen;
+  int valen;
 
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
@@ -848,7 +848,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
       ++db->n_msgs;
       any_new = 1;
     }
-    if (va) munmap(va, valen);
+    if (va) munmap(va, (size_t) valen);
   }
   return any_new;
 }

@@ -242,15 +242,15 @@ void insert_index_on_encoding(struct matches *m, int idx)/*{{{*/
   m->highest = idx;
 }
 /*}}}*/
-void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table)/*{{{*/
+void add_token_in_file(int file_index, unsigned int hash_key, unsigned char *tok_text, struct toktable *table)/*{{{*/
 {
   unsigned long hash;
   int index;
   struct token *tok;
-  char *lc_tok_text;
-  char *p;
+  unsigned char *lc_tok_text;
+  unsigned char *p;
 
-  lc_tok_text = new_string(tok_text);
+  lc_tok_text = (unsigned char *) new_string((char*)tok_text);
   for (p = lc_tok_text; *p; p++) {
     *p = tolower(*p);
   }
