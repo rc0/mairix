@@ -2,7 +2,7 @@
 system("make mairix.txt");
 unlink "build_kit";
 
-$version = $ARGV[0] || die "No version on command line";
+$version = $ARGV[0] || $version = "UNKNOWN";
 
 open (IN, "<mairix.spec.sample");
 open (OUT, ">mairix.spec");
