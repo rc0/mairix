@@ -1,3 +1,19 @@
+NEW IN VERSION 0.15
+===================
+
+* Migrate to GNU Arch for hosting the development archive
+* In mbox parsing, handle return path in 'From ' line only being a local part
+  (reported by several people)
+* Don't output number of matched messages in raw mode (to make output more
+  useful to scripts etc) (Samuel Tardieu)
+* Fix vfolder->mfolder in dotmairixrc.eg (reported by several people)
+* Handle spaces in multipart message boundary strings (Chung-chieh Shan)
+* Be more tolerant of bad multipart message boundary separators (Chung-chieh
+  Shan)
+* Add rudimentary database dump command (-d/--dump)
+* Fix bug in handling of per-database hash key
+* Improve standards-compliance of maildir output file names (Jeff King)
+
 NEW IN VERSION 0.14.1
 =====================
 
