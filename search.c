@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.6 2002/09/11 21:21:09 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.8 2003/01/02 23:27:42 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -32,6 +32,14 @@
 #include <unistd.h>
 #include <assert.h>
 #include <dirent.h>
+
+/* Lame fix for systems where NAME_MAX isn't defined after including the above
+ * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
+ * it'll do. */
+
+#if !defined(NAME_MAX)
+#define NAME_MAX 4096
+#endif
 
 #include "mairix.h"
 #include "reader.h"
@@ -827,6 +835,18 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
       }
 
       break;
+    case FT_RAW:
+      for (i=0; i<db->n_paths; i++) {
+        if (hit3[i]) {
+          if (db->path_offsets[i]) {
+            /* File is not dead */
+            ++n_hits;
+            printf("%s\n", db->data + db->path_offsets[i]);
+          }
+        }
+      }
+      printf("\n");
+      break;
     default:
       assert(0);
       break;
@@ -982,6 +1002,8 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
       case FT_MH:
         create_dir(complete_vfolder);
         break;
+      case FT_RAW:
+        break;
       default:
         assert(0);
     }
@@ -995,6 +1017,8 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
         break;
       case FT_MH:
         clear_mh_folder(complete_vfolder);
+        break;
+      case FT_RAW:
         break;
       default:
         assert(0);

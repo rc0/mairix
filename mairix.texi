@@ -152,15 +152,20 @@ Create a @file{~/.mairixrc} file.  An example is included in the file
 searching mode runs whenever the command line contains any expressions to
 search for.  Otherwise, the indexing mode is run.
 
-The output of the search mode is placed in a @emph{virtual folder}.  This is
+The output of the search mode is usually placed in a @emph{virtual folder}.  This is
 just a normal maildir directory (i.e. containing @file{new}, @file{tmp} and
 @file{cur}) subdirectories, or a MH directory, so you can open it as a normal
 folder in your mail program.  You configure the path for this virtual folder in
-your @file{~/.mairixrc} file.  mairix will popululate the virtual folder with
+your @file{~/.mairixrc} file.  mairix will populate the virtual folder with
 symbolic links pointing to the paths of the real messages that were matched by
 the search expression.@footnote{Although symlinks use up more inodes than hard
 links, I decided they were more useful because it makes it possible to see the
 filenames of the original messages via @command{ls -l}.}
+
+If desired, mairix can produce just a list of files that match the
+search expression and omit the building of the virtual folder.  This
+mode of operation may be useful in communicating the results of the
+search to other programs.
 
 @node capabilities
 @section Indexing strategy and search capabilities
@@ -268,11 +273,15 @@ been given on a single very long line.
 @item vfolder
 This defines the name of the @emph{virtual} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
+If the vfolder_format used is @samp{raw}, then this setting is not
+used and may be excluded.
 @item vfolder_format
 This defines the type of folder used for the @emph{virtual folder} where the
-search results go.  There are two valid settings for this @samp{mh} or
-@samp{maildir}.  @samp{maildir} is the default if this option is not defined.
-The setting is case-insensitive.
+search results go.  There are three valid settings for this @samp{mh},
+@samp{maildir} or @samp{raw}.  If the @samp{raw} setting is used then
+mairix will just print out the path names of the files that match and
+no virtual folder will be created.  @samp{maildir} is the default if this
+option is not defined.  The setting is case-insensitive.
 @item database
 This defines the path where mairix's index database is kept.  You can keep this
 file anywhere you like.

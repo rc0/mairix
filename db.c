@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.5 2002/12/23 00:04:57 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.6 2002/12/29 23:43:46 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -706,7 +706,10 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
     for (;;) {
       int i;
 
-      fprintf(stderr, "Pass %d\n", pass);
+      if (verbose) {
+        fprintf(stderr, "Pass %d\n", pass);
+      }
+
       any_moved = 0;
 
       for (i=0; i<tbl->size; i++) {

@@ -2,3 +2,16 @@
 system("make mairix.txt");
 unlink "build_kit";
 
+$version = $ARGV[0] || die "No version on command line";
+
+open (IN, "<mairix.spec.sample");
+open (OUT, ">mairix.spec");
+while (<IN>) {
+  s/\@\@VERSION\@\@/$version/;
+  print OUT;
+}
+close (IN);
+close (OUT);
+
+unlink "mairix.spec.sample";
+

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/dirscan.c,v 1.5 2002/12/27 22:46:16 richard Exp $
+  $Header: /cvs/src/mairix/dirscan.c,v 1.6 2003/01/02 23:27:42 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -32,6 +32,14 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <assert.h>
+
+/* Lame fix for systems where NAME_MAX isn't defined after including the above
+ * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
+ * it'll do. */
+
+#if !defined(NAME_MAX)
+#define NAME_MAX 4096
+#endif
 
 struct msgpath_array *new_msgpath_array(void)/*{{{*/
 {

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.9 2002/11/13 23:47:01 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.10 2002/12/29 23:44:46 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -149,7 +149,10 @@ static void parse_rc_file(char *name)/*{{{*/
         output_folder_type = FT_MH;
       } else if (!strncasecmp(temp, "maildir", 7)) {
         output_folder_type = FT_MAILDIR;
-      } else {
+      } else if (!strncasecmp(temp, "raw", 3)) {
+        output_folder_type = FT_RAW;
+      }
+      else {
         fprintf(stderr, "Unrecognized vfolder_format <%s>\n", temp);
       }
       free(temp);
@@ -208,7 +211,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_7 $";
+  static char cvs_version[] = "$Name: V0_9_2 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -401,8 +404,11 @@ int main (int argc, char **argv)/*{{{*/
   
   if (do_search) {
     if (!vfolder) {
-      fprintf(stderr, "No vfolder/MAIRIX_VFOLDER set\n");
-      exit(1);
+      if (output_folder_type != FT_RAW) {
+        fprintf(stderr, "No vfolder/MAIRIX_VFOLDER set\n");
+        exit(1);
+      }
+      vfolder = new_string("");
     }
 
     search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type, verbose);

@@ -1,3 +1,12 @@
+NEW IN VERSION 0.10
+===================
+
+* Add 'raw' mode for searching.
+* When purging, only print the pass[12] message in verbose mode
+* Add an ACKNOWLEDGEMENTS file.
+* Hack to handle missing NAME_MAX on various non-Linux systems
+* Improve mairix.spec file for RPM building
+
 NEW IN VERSION 0.9
 ==================
 

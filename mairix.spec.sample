@@ -1,12 +1,13 @@
 Summary: A maildir indexer and searcher
 Name: mairix
-Version: 0.9
+Version: @@VERSION@@
 Release: 1
 Source: mairix-%{version}.tar.gz
 Copyright: GPL
 Group: Application/Internet
 Packager: Richard P. Curnow
-BuildRoot: %{_tmpdir}/%{name}-%{version}-root-%(id -u -n)
+BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(id -u -n)
+Requires: info
 
 %description
 mairix is a tool for indexing email messages stored in maildir format folders
@@ -17,27 +18,27 @@ maildir folder containing symbolic links to the matched messages.
 %setup
 
 %build
-make CC=gcc CFLAGS=-O2 prefix=/usr
-make mairix.txt prefix=/usr
-make mairix.info prefix=/usr
-make mairix.html prefix=/usr
+make CC=gcc CFLAGS=-O2 prefix=%{_prefix}
+make mairix.txt prefix=%{_prefix}
+make mairix.info prefix=%{_prefix}
+make mairix.html prefix=%{_prefix}
 
 %install
 rm -rf $RPM_BUILD_ROOT
 cd $RPM_BUILD_DIR/mairix-%{version}
-make install prefix=$RPM_BUILD_ROOT/usr
-mkdir -p $RPM_BUILD_ROOT/usr/share/info
-cp mairix.info* $RPM_BUILD_ROOT/usr/share/info
+make install prefix=$RPM_BUILD_ROOT%{_prefix}
+mkdir -p $RPM_BUILD_ROOT%{_infodir}
+cp mairix.info* $RPM_BUILD_ROOT%{_infodir}
 cp README mairix.txt mairix.html dotmairixrc.eg ..
 
 %files
-/usr/bin/mairix
-/usr/share/info/mairix.info*
+%{_bindir}/mairix
+%{_infodir}/mairix.info*
 %doc README
 %doc mairix.txt
 %doc mairix.html
 %doc dotmairixrc.eg
 
 %post
-/usr/sbin/install-info
+install-info %{_infodir}/%{name}.info.gz %{_infodir}/dir
 

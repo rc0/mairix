@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.h,v 1.3 2002/09/09 20:45:43 richard Exp $
+  $Header: /cvs/src/mairix/mairix.h,v 1.4 2002/12/29 23:44:46 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -135,7 +135,8 @@ struct database {/*{{{*/
 
 enum folder_type {/*{{{*/
   FT_MAILDIR,
-  FT_MH
+  FT_MH,
+  FT_RAW
 };
 /*}}}*/
 
