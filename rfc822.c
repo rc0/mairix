@@ -432,7 +432,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
       value = eq + 1;
       if (!*value) break;
 
-      for (semi = value+1; *semi && !isspace(*semi) && (*semi != ';'); semi++) ;
+      for (semi = value+1; *semi && (*value = '"' || !isspace(*semi)) && (*semi != ';'); semi++) ;
 
       if (!strncasecmp(name, "boundary", 8)) {
         result->boundary = copy_string_start_end_unquote(value, semi);
