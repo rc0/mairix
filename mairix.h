@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.h,v 1.2 2002/07/29 23:03:47 richard Exp $
+  $Header: /cvs/src/mairix/mairix.h,v 1.3 2002/09/09 20:45:43 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -173,7 +173,7 @@ int cull_dead_messages(struct database *db);
 void write_database(struct database *db, char *filename);
 
 /* In search.c */
-void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft);
+void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose);
   
 /* In stats.c */
 void get_db_stats(struct database *db);

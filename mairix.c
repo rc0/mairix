@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.4 2002/07/30 23:03:01 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.5 2002/09/09 20:45:43 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -184,7 +184,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_4 $";
+  static char cvs_version[] = "$Name: V0_5_pre1 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -371,7 +371,7 @@ int main (int argc, char **argv)/*{{{*/
       exit(1);
     }
 
-    search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type);
+    search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type, verbose);
     
   } else {
     if (!folders && !mh_folders) {

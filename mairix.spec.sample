@@ -1,11 +1,11 @@
 Summary: A maildir indexer and searcher
 Name: mairix
-Version: 0.2
+Version: 0.5-pre1
 Release: 1
 Copyright: GPL
 Group: Application/Internet
 Packager: Richard P. Curnow
-BuildRoot: /home/richard/rpm/root
+BuildRoot: %{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
 mairix is a tool for indexing email messages stored in maildir format folders
@@ -13,11 +13,11 @@ and performing fast searches on the resulting index.  The output is a new
 maildir folder containing symbolic links to the matched messages.
 
 %prep
-rm -rf $RPM_BUILD_DIR/mairix-0.2
-tar xzvf $RPM_SOURCE_DIR/mairix-0.2.tar.gz
+rm -rf $RPM_BUILD_DIR/mairix-%{version}
+tar xzvf $RPM_SOURCE_DIR/mairix-%{version}.tar.gz
 
 %build
-cd mairix-0.2
+cd mairix-%{version}
 make CC=gcc CFLAGS=-O2 prefix=/usr
 make mairix.txt prefix=/usr
 make mairix.info prefix=/usr
@@ -26,7 +26,7 @@ make mairix.pdf prefix=/usr
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd $RPM_BUILD_DIR/mairix-0.2
+cd $RPM_BUILD_DIR/mairix-%{version}
 make install prefix=$RPM_BUILD_ROOT/usr
 mkdir -p $RPM_BUILD_ROOT/usr/share/info
 cp mairix.info* $RPM_BUILD_ROOT/usr/share/info
@@ -40,3 +40,7 @@ cp README mairix.txt mairix.html mairix.pdf dotmairixrc.eg ..
 %doc mairix.html
 %doc mairix.pdf
 %doc dotmairixrc.eg
+
+%post
+/usr/sbin/install-info
+

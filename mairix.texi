@@ -305,7 +305,12 @@ space in the database file.  The @samp{-p} flag (meaning @emph{purge}) will
 compress the deleted paths out of the database to save space.
 
 The @samp{-v} flag is used in indexing mode.  It stands for @emph{verbose}, and
-causes more information to be shown during the indexing process.
+causes more information to be shown during the indexing process.  In search
+mode, it causes debug information to be shown if there are problems creating
+the symlinks.  (Normally this would be an annoyance.  If a message matches
+multiple queries when using @samp{-a}, mairix will try to create the same
+symlink multiple times.  This prevents the same message being shown multiple
+times in the virtual folder.)
 
 The @samp{-t} flag stands for @emph{threads}.  It applies to search mode.
 Normally, only the messages matching all the specified expressions are included
@@ -320,7 +325,8 @@ The @samp{-a} flag stands for @emph{augment}.  It also applies to search mode.
 Normally, the first action of the search mode is to clear any existing message
 links from the virtual folder.  With the @samp{-a} flag, this step is
 suppressed.  It allows the folder contents to be built up by matching with 2 or
-more diverse sets of match expressions.
+more diverse sets of match expressions.  If this mode is used, and a message
+matches multiple queries, only a single symlink will be created for it.
 
 The search mode runs when there is at least one search expression.  Search
 expressions can take forms such as (in increasing order of complexity):
