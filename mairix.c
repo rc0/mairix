@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.18 2003/11/21 22:09:46 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.19 2004/01/06 22:00:49 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -41,7 +41,7 @@ static char *folder_base = NULL;
 static char *maildir_folders = NULL;
 static char *mh_folders = NULL;
 static char *mboxen = NULL;
-static char *vfolder = NULL;
+static char *mfolder = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 
@@ -99,7 +99,7 @@ static void parse_output_folder(char *p)/*{{{*/
     output_folder_type = FT_MBOX;
   }
   else {
-    fprintf(stderr, "Unrecognized vformat <%s>\n", temp);
+    fprintf(stderr, "Unrecognized mformat <%s>\n", temp);
   }
   free(temp);
 }
@@ -177,14 +177,10 @@ static void parse_rc_file(char *name)/*{{{*/
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
       
-    else if (!strncasecmp(p, "vfolder_format=", 15)) {
-      fprintf(stderr, "'vfolder_format=' option in rc file is depracated, use 'vformat='\n");
+    else if (!strncasecmp(p, "mformat=", 8)) {
       parse_output_folder(p);
     }
-    else if (!strncasecmp(p, "vformat=", 8)) {
-      parse_output_folder(p);
-    }
-    else if (!strncasecmp(p, "vfolder=", 8)) vfolder = copy_value(p);
+    else if (!strncasecmp(p, "mfolder=", 8)) mfolder = copy_value(p);
     else if (!strncasecmp(p, "database=", 9)) database_path = copy_value(p);
     else {
       if (verbose) {
@@ -293,7 +289,7 @@ volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_12 $";
+  static char cvs_version[] = "$Name: V0_13 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -338,9 +334,9 @@ static void usage(void)/*{{{*/
          "-f <rcfile> : use alternative rc file (default ~/.mairixrc)\n"
          "-v          : be verbose\n"
          "-p          : purge messages that no longer exist\n"
-         "-a          : add new matches to virtual folder (default : clear it first)\n"
+         "-a          : add new matches to match folder (default : clear it first)\n"
          "-t          : include all messages in same threads as matching messages\n"
-         "-r          : force raw output regardless of vformat setting in mairixrc file\n"
+         "-r          : force raw output regardless of mformat setting in mairixrc file\n"
          "expr_i      : search expression (all expr's AND'ed together):\n"
          "    word          : match word in whole message\n"
          "    t:word        : match word in To: header\n"
@@ -362,11 +358,11 @@ static void usage(void)/*{{{*/
     /*}}}*/
 /* Notes on folder management: {{{
  
-   Assumption is that the user wants to keep the 'vfolder' directories under a
+   Assumption is that the user wants to keep the 'mfolder' directories under a
    common root with the real maildir folders.  This allows a common value for
    mutt's 'folder' variable => the '+' and '=' prefixes work better.  This
    means the indexer here can't just scan down all subdirectories of a single
-   ancestor, because it'll pick up its own vfolders.  So, use environment
+   ancestor, because it'll pick up its own mfolders.  So, use environment
    variables to tailor the folders.
  
    MAIRIX_FOLDER_BASE is the common ancestor directory of the folders (aka
@@ -376,11 +372,11 @@ static void usage(void)/*{{{*/
    the feature that '...' after a component means any maildir underneath that,
    e.g.
 
-   MAIRIX_VFOLDER is the parent of the vfolders underneath the base
+   MAIRIX_MFOLDER is the parent of the mfolders underneath the base
    
    MAIRIX_FOLDER_BASE = "/home/foobar/mail"
    MAIRIX_FOLDERS = "inbox:lists...:action:archive..."
-   MAIRIX_VFOLDER = "vf"
+   MAIRIX_MFOLDER = "mf"
 
    so /home/foobar/mail/vf/search1/{new,cur,tmp} contain the output for search1 etc.
    }}} */
@@ -391,7 +387,7 @@ int main (int argc, char **argv)/*{{{*/
   struct database *db;
 
   char *arg_rc_file_path = NULL;
-  char *arg_vfolder = NULL;
+  char *arg_mfolder = NULL;
   char *e;
   int do_augment = 0;
   int do_threads = 0;
@@ -416,9 +412,9 @@ int main (int argc, char **argv)/*{{{*/
     } else if (!strcmp(*argv, "-a") || !strcmp(*argv, "--augment")) {
       do_search = 1;
       do_augment = 1;
-    } else if (!strcmp(*argv, "-o") || !strcmp(*argv, "--vfolder")) {
+    } else if (!strcmp(*argv, "-o") || !strcmp(*argv, "--mfolder")) {
       ++argv, --argc;
-      arg_vfolder = *argv;
+      arg_mfolder = *argv;
     } else if (!strcmp(*argv, "-p") || !strcmp(*argv, "--purge")) {
       do_purge = 1;
     } else if (!strcmp(*argv, "-r") || !strcmp(*argv, "--raw-output")) {
@@ -471,16 +467,16 @@ int main (int argc, char **argv)/*{{{*/
     mboxen = e;
   }
 
-  if (getenv("MAIRIX_VFOLDER")) {
-    vfolder = getenv("MAIRIX_VFOLDER");
+  if (getenv("MAIRIX_MFOLDER")) {
+    mfolder = getenv("MAIRIX_MFOLDER");
   }
 
   if (getenv("MAIRIX_DATABASE")) {
     database_path = getenv("MAIRIX_DATABASE");
   }
 
-  if (arg_vfolder) {
-    vfolder = arg_vfolder;
+  if (arg_mfolder) {
+    mfolder = arg_mfolder;
   }
   
   if (!folder_base) {
@@ -498,15 +494,15 @@ int main (int argc, char **argv)/*{{{*/
   }
 
   if (do_search) {
-    if (!vfolder) {
+    if (!mfolder) {
       if (output_folder_type != FT_RAW) {
-        fprintf(stderr, "No vfolder/MAIRIX_VFOLDER set\n");
+        fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
         exit(2);
       }
-      vfolder = new_string("");
+      mfolder = new_string("");
     }
 
-    return search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type, verbose);
+    return search_top(do_threads, do_augment, database_path, folder_base, mfolder, argv, output_folder_type, verbose);
     
   } else {
     if (!maildir_folders && !mh_folders && !mboxen) {

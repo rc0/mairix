@@ -15,7 +15,7 @@
 # PLUSMINUS : [+-]
 # OTHER_EMAIL : other stuff valid in an address, at least [_.]
 
-Tokens CR DIGIT AT COLON WHITE LOWER UPPER PLUSMINUS OTHER_EMAIL
+Tokens LF CR DIGIT AT COLON WHITE LOWER UPPER PLUSMINUS OTHER_EMAIL
 Abbrev EMAIL = LOWER | UPPER | DIGIT | PLUSMINUS | OTHER_EMAIL
 
 
@@ -96,11 +96,21 @@ ENDBLOCK
 BLOCK main
 
     STATE in
+        # Real return address.
         <email:in->out> -> before_date
+        
+        # Cope with Mozilla mbox folder format which just uses a '-' as
+        # the return address field.
+        PLUSMINUS       -> before_date
+
+        # Empty return address
                         -> before_date
 
     STATE before_date
-        <date:in->out> ; CR = FROMCHECK_PASS
+        <date:in->out> ; LF = FROMCHECK_PASS
+
+        # Cope with mozilla mbox format
+        <date:in->out> ; CR ; LF = FROMCHECK_PASS
 
     # Mention this state last : the last mentioned state in the last defined
     # block becomes the entry state of the scanner.

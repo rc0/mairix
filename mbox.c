@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mbox.c,v 1.17 2003/12/03 23:56:08 richard Exp $
+  $Header: /cvs/src/mairix/mbox.c,v 1.18 2003/12/12 23:11:59 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -248,7 +248,8 @@ static void init_fromcheck_table()/*{{{*/
   fromcheck_table['-'] = FS_PLUSMINUS;
   fromcheck_table['@'] = FS_AT;
   fromcheck_table[':'] = FS_COLON;
-  fromcheck_table['\n'] = FS_CR;
+  fromcheck_table['\n'] = FS_LF;
+  fromcheck_table['\r'] = FS_CR;
   fromcheck_table[' '] = FS_WHITE;
   fromcheck_table['\t'] = FS_WHITE;
   fromcheck_table['_'] = FS_OTHEREMAIL;

@@ -1,6 +1,6 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Makefile.in,v 1.5 2003/12/04 22:18:07 richard Exp $
+# $Header: /cvs/src/mairix/Makefile.in,v 1.6 2003/12/12 23:17:11 richard Exp $
 #
 # =======================================================================
 #
@@ -62,8 +62,10 @@ mairix : $(OBJ)
 datescan.c : datescan.nfa dfasyn/dfasyn
 	dfasyn/dfasyn -o datescan.c -v -u datescan.nfa
 
-fromcheck.c : fromcheck.nfa dfasyn/dfasyn
+fromcheck.c : fromcheck.nfa dfasyn/dfasyn fromcheck.h
 	dfasyn/dfasyn -o fromcheck.c -v -u fromcheck.nfa
+
+mbox.o : fromcheck.h
 
 dfasyn/dfasyn:
 	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi

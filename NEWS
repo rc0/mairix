@@ -1,3 +1,14 @@
+NEW IN VERSION 0.13
+===================
+
+* Fixes to support the mbox format used by Mozilla mail
+* When creating vfolder directories for maildir/mh, remove existing
+  non-directory at the same path, if present.  When creating mbox vfolder file,
+  complain if there's already a directory at the same path and exit.
+* Switch from the term "virtual folder" to "match folder"
+* Fix bug in path matches (p:) containing upper-case letters - previously they
+  matched on corresponding all lower-case paths.
+
 NEW IN VERSION 0.12
 ===================
 

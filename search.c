@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.23 2003/12/03 23:05:33 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.27 2004/01/06 22:15:51 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -850,7 +850,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
        * , = 'and' separator */
       char *orsep;
       char *andsep;
-      char *word, *orig_word;
+      char *word, *orig_word, *lower_word;
       char *equal;
       char *p;
       int negate;
@@ -907,30 +907,33 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
 
       /* Canonicalise search string to lowercase, since the database has all
-       * tokens handled that way */
-      for (p=word; *p; p++) {
+       * tokens handled that way.  But not for path search! */
+      lower_word = new_string(word);
+      for (p=lower_word; *p; p++) {
         *p = tolower(*p);
       }
 
       memset(hit0, 0, db->n_msgs);
       if (equal) {
-        if (do_to) match_substring_in_table(db, &db->to, word, max_errors, hit0);
-        if (do_cc) match_substring_in_table(db, &db->cc, word, max_errors, hit0);
-        if (do_from) match_substring_in_table(db, &db->from, word, max_errors, hit0);
-        if (do_subject) match_substring_in_table(db, &db->subject, word, max_errors, hit0);
-        if (do_body) match_substring_in_table(db, &db->body, word, max_errors, hit0);
+        if (do_to) match_substring_in_table(db, &db->to, lower_word, max_errors, hit0);
+        if (do_cc) match_substring_in_table(db, &db->cc, lower_word, max_errors, hit0);
+        if (do_from) match_substring_in_table(db, &db->from, lower_word, max_errors, hit0);
+        if (do_subject) match_substring_in_table(db, &db->subject, lower_word, max_errors, hit0);
+        if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, hit0);
         if (do_path) match_substring_in_paths(db, word, max_errors, hit0);
-        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, word, max_errors, hit0);
+        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, hit0);
       } else {
-        if (do_to) match_string_in_table(db, &db->to, word, hit0);
-        if (do_cc) match_string_in_table(db, &db->cc, word, hit0);
-        if (do_from) match_string_in_table(db, &db->from, word, hit0);
-        if (do_subject) match_string_in_table(db, &db->subject, word, hit0);
-        if (do_body) match_string_in_table(db, &db->body, word, hit0);
+        if (do_to) match_string_in_table(db, &db->to, lower_word, hit0);
+        if (do_cc) match_string_in_table(db, &db->cc, lower_word, hit0);
+        if (do_from) match_string_in_table(db, &db->from, lower_word, hit0);
+        if (do_subject) match_string_in_table(db, &db->subject, lower_word, hit0);
+        if (do_body) match_string_in_table(db, &db->body, lower_word, hit0);
         /* FIXME */
         if (do_path) match_substring_in_paths(db, word, 0, hit0);
-        if (do_msgid) match_string_in_table2(db, &db->msg_ids, word, hit0);
+        if (do_msgid) match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
       }
+
+      free(lower_word);
 
       /* AND-combine match vectors */
       for (i=0; i<db->n_msgs; i++) {
@@ -1044,6 +1047,10 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       {
         FILE *out;
         out = fopen(output_path, "ab");
+        if (!out) {
+          fprintf(stderr, "Cannot open output folder %s\n", output_path);
+          exit(1);
+        }
 
         for (i=0; i<db->n_msgs; i++) {
           if (hit3[i]) {
@@ -1124,7 +1131,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 }
 /*}}}*/
 
-static int directory_exists(char *name)/*{{{*/
+static int directory_exists_remove_other(char *name)/*{{{*/
 {
   struct stat sb;
 
@@ -1134,6 +1141,8 @@ static int directory_exists(char *name)/*{{{*/
   if (S_ISDIR(sb.st_mode)) {
     return 1;
   } else {
+    /* Try to remove. */
+    unlink(name);
     return 0;
   }
 }
@@ -1156,7 +1165,7 @@ static int is_file_or_nothing(char *name)/*{{{*/
 static void create_dir(char *path)/*{{{*/
 {
   if (mkdir(path, 0700) < 0) {
-    perror("mkdir");
+    fprintf(stderr, "Could not create directory %s\n", path);
     exit(2);
   }
   fprintf(stderr, "Created directory %s\n", path);
@@ -1168,7 +1177,7 @@ static void maybe_create_maildir(char *path)/*{{{*/
   char *subdir, *tailpos;
   int len;
   
-  if (!directory_exists(path)) {
+  if (!directory_exists_remove_other(path)) {
     create_dir(path);
   }
 
@@ -1179,15 +1188,15 @@ static void maybe_create_maildir(char *path)/*{{{*/
   tailpos = subdir + len + 1;
 
   strcpy(tailpos,"cur");
-  if (!directory_exists(subdir)) {
+  if (!directory_exists_remove_other(subdir)) {
     create_dir(subdir);
   }
   strcpy(tailpos,"new");
-  if (!directory_exists(subdir)) {
+  if (!directory_exists_remove_other(subdir)) {
     create_dir(subdir);
   }
   strcpy(tailpos,"tmp");
-  if (!directory_exists(subdir)) {
+  if (!directory_exists_remove_other(subdir)) {
     create_dir(subdir);
   }
   free(subdir);
@@ -1277,31 +1286,32 @@ static void clear_mbox_folder(char *path)/*{{{*/
 }
 /*}}}*/
 
-int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
+int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *mfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
 {
   struct read_db *db;
-  char *complete_vfolder;
+  char *complete_mfolder;
   int len;
+  int result;
 
   db = open_db(database_path);
 
-  if ((vfolder[0] == '/') || (vfolder[0] == '.')) {
-    complete_vfolder = new_string(vfolder);
+  if ((mfolder[0] == '/') || (mfolder[0] == '.')) {
+    complete_mfolder = new_string(mfolder);
   } else {
-    len = strlen(folder_base) + strlen(vfolder) + 2;
-    complete_vfolder = new_array(char, len);
-    strcpy(complete_vfolder, folder_base);
-    strcat(complete_vfolder, "/");
-    strcat(complete_vfolder, vfolder);
+    len = strlen(folder_base) + strlen(mfolder) + 2;
+    complete_mfolder = new_array(char, len);
+    strcpy(complete_mfolder, folder_base);
+    strcat(complete_mfolder, "/");
+    strcat(complete_mfolder, mfolder);
   }
 
   switch (ft) {
     case FT_MAILDIR:
-      maybe_create_maildir(complete_vfolder);
+      maybe_create_maildir(complete_mfolder);
       break;
     case FT_MH:
-      if (!directory_exists(complete_vfolder)) {
-        create_dir(complete_vfolder);
+      if (!directory_exists_remove_other(complete_mfolder)) {
+        create_dir(complete_mfolder);
       }
       break;
     case FT_MBOX:
@@ -1316,14 +1326,14 @@ int search_top(int do_threads, int do_augment, char *database_path, char *folder
   if (!do_augment) {
     switch (ft) {
       case FT_MAILDIR:
-        clear_maildir_subfolder(complete_vfolder, "new");
-        clear_maildir_subfolder(complete_vfolder, "cur");
+        clear_maildir_subfolder(complete_mfolder, "new");
+        clear_maildir_subfolder(complete_mfolder, "cur");
         break;
       case FT_MH:
-        clear_mh_folder(complete_vfolder);
+        clear_mh_folder(complete_mfolder);
         break;
       case FT_MBOX:
-        clear_mbox_folder(complete_vfolder);
+        clear_mbox_folder(complete_mfolder);
         break;
       case FT_RAW:
         break;
@@ -1332,9 +1342,10 @@ int search_top(int do_threads, int do_augment, char *database_path, char *folder
     }
   }
 
-  return do_search(db, argv, complete_vfolder, do_threads, ft, verbose);
-
+  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose);
+  free(complete_mfolder);
   close_db(db);
+  return result;
 }
 /*}}}*/
 
