@@ -13,6 +13,7 @@ NEW IN VERSION 0.15
 * Add rudimentary database dump command (-d/--dump)
 * Fix bug in handling of per-database hash key
 * Improve standards-compliance of maildir output file names (Jeff King)
+* Remove most compiler warnings
 
 NEW IN VERSION 0.14.1
 =====================
