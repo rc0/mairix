@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.2 2002/07/24 22:50:13 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.3 2002/07/28 23:18:16 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -140,9 +140,11 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
     result = ENC_NONE;
   } else {
     for (p=e; *p && isspace(*p); p++) ;
-    if (match_string("7bit", p)) {
+    if (   match_string("7bit", p)
+        || match_string("7-bit", p)) {
       result = ENC_7BIT;
-    } else if (match_string("8bit", p)) {
+    } else if (match_string("8bit", p)
+            || match_string("8-bit", p)) {
       result = ENC_8BIT;
     } else if (match_string("quoted-printable", p)) {
       result = ENC_QUOTED_PRINTABLE;
@@ -151,6 +153,7 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
     } else if (match_string("binary", p)) {
       result = ENC_BINARY;
     } else {
+      fprintf(stderr, "Warning: unkown encoding type: '%s'\n", e);
       result = ENC_UNKNOWN;
     }
   }
@@ -180,41 +183,57 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
   p = hdrline;
   while (*p && isspace(*p)) p++;
   for (q=p+1; *q && (*q != '/'); q++) ;
-  assert(*q);
-  result->major = new_array(char, 1 + (q - p));
-  for (s=result->major; p<q;) *s++ = *p++;
-  *s = 0;
- 
-  p = q + 1;
-  for (q=p+1; *q && !isspace(*q) && (*q != ';'); q++) ;
-  result->minor = new_array(char, 1 + (q - p));
-  for (s=result->minor; p<q;) *s++ = *p++;
-  *s = 0;
+/*  assert(*q); */
+  if (*q)
+  {
+    result->major = new_array(char, 1 + (q - p));
+    for (s=result->major; p<q;) *s++ = *p++;
+    *s = 0;
+   
+    p = q + 1;
+    for (q=p+1; *q && !isspace(*q) && (*q != ';'); q++) ;
+    result->minor = new_array(char, 1 + (q - p));
+    for (s=result->minor; p<q;) *s++ = *p++;
+    *s = 0;
 
-  /* Now try to extract other fields */
-  /* FIXME : won't work if ; or = occur within quotation marks */
+    /* Now try to extract other fields */
+    /* FIXME : won't work if ; or = occur within quotation marks */
 
-  while (*q && (*q != ';')) q++;
-  semi = q;
-  while (semi && *semi) {
+    while (*q && (*q != ';')) q++;
+    semi = q;
+    while (semi && *semi) {
 
-    name = semi + 1;
-    while (*name && isspace(*name)) name++;
-    if (!*name) break;
+      name = semi + 1;
+      while (*name && isspace(*name)) name++;
+      if (!*name) break;
 
-    for (eq=name+1; *eq && (*eq != '='); eq++) ;
-    if (!*eq) break;
-    value = eq + 1;
-    if (!*value) break;
+      for (eq=name+1; *eq && (*eq != '='); eq++) ;
+      if (!*eq) break;
+      value = eq + 1;
+      if (!*value) break;
 
-    for (semi = value+1; *semi && !isspace(*semi) && (*semi != ';'); semi++) ;
+      for (semi = value+1; *semi && !isspace(*semi) && (*semi != ';'); semi++) ;
 
-    if (!strncasecmp(name, "boundary", 8)) {
-      result->boundary = copy_string_start_end_unquote(value, semi);
+      if (!strncasecmp(name, "boundary", 8)) {
+        result->boundary = copy_string_start_end_unquote(value, semi);
+      }
+      
+      semi = strchr(semi, ';'); /* in case value string was ended by whitespace */
+
     }
-    
-    semi = strchr(semi, ';'); /* in case value string was ended by whitespace */
-
+  } else {
+    /* If we can't find the '/', just take the first word */
+    for (q=p+1; *q && (*q != '/') && (*q != ' '); q++) ;
+    result->major = new_array(char, 1 + (q - p));
+    for (s=result->major; p<q;) *s++ = *p++;
+    *s = 0;
+   
+    /* Assume text will be plain */
+    if (match_string(result->major, "text")) {
+      result->minor = new_string("plain");
+    } else {
+      result->minor = new_string("\0");
+    }
   }
 }
 
@@ -592,7 +611,7 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
     start_b1_search_from = line_after_b0;
     do {
       /* reject boundaries that aren't a whole line */
-      b1 = strstr(line_after_b0, normal_boundary);
+      b1 = strstr(start_b1_search_from, normal_boundary);
 
       if (!b1) {
         fprintf(stderr, "Oops, didn't find another normal boundary?\n");
@@ -747,30 +766,45 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   size_t len;
   int fd;
   char *data;
+  struct rfc822 *result;
 
-  if (stat(filename, &sb) < 0) return NULL;
+  if (stat(filename, &sb) < 0) 
+  {
+    perror("Could not stat");
+    return NULL;
+  }
 
   len = sb.st_size;
   
   fd = open(filename, O_RDONLY);
-  if (fd < 0) return NULL;
+  if (fd < 0)
+  {
+    perror("Could not open");
+    return NULL;
+  }
   
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
-  close(fd);
+  if (close(fd) < 0)
+    perror("close");
   if ((int) data < 0) {
     perror("mmap");
     return NULL;
   }
   
   /* Don't process empty files */
-  if (!data) return NULL;
+  result = NULL;
 
+  if (data)
+  {
   /* Now process the data */
-  return data_to_rfc822(data, len);
+    result = data_to_rfc822(data, len);
+  }
   
   if (munmap(data, len) < 0) {
     perror("Could not munmap");
   }
+
+  return result;
 }
 /*}}}*/
 void free_rfc822(struct rfc822 *msg)/*{{{*/

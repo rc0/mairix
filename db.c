@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.2 2002/07/24 22:52:35 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.3 2002/07/28 23:18:16 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -397,9 +397,14 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
     struct rfc822 *msg;
     if (verbose) fprintf(stderr, "Scanning <%s>\n", db->paths[i].path);
     msg = make_rfc822(db->paths[i].path);
-    db->paths[i].date = msg->hdrs.date;
-    tokenise_message(i, db, msg);
-    free_rfc822(msg);
+    if(msg) 
+    {
+      db->paths[i].date = msg->hdrs.date;
+      tokenise_message(i, db, msg);
+      free_rfc822(msg);
+    }
+    else
+      fprintf(stderr, "Skipping...\n");
   }
 }
 /*}}}*/
