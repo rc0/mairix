@@ -3,6 +3,7 @@ NEW IN VERSION 0.16
 
 * Home directory and environment variable expansion in the .mairixrc file
 * Add -Q flag to skip integrity checks.
+* Add ^ word prefix to require substring search to be left-anchored
 
 NEW IN VERSION 0.15
 ===================

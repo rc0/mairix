@@ -332,6 +332,7 @@ static void usage(void)/*{{{*/
          "    s:word1/word2 : match either word or both words in Subject:\n"
          "    s:~word       : match messages not containing word in Subject:\n"
          "    s:substring=  : match substring in any word in Subject:\n"
+         "    s:^substring= : match left-anchored substring in any word in Subject:\n"
          "    s:substring=2 : match substring with <=2 errors in any word in Subject:\n"
          "\n"
          "    (See documentation for more examples)\n"

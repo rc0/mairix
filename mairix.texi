@@ -662,6 +662,16 @@ substring with at most one error, e.g. @samp{jointed} contains @samp{joint}
 which can be got from @samp{point} with one letter changed.  An error can be a
 single letter changed, inserted or deleted.
 
+@item A left-anchored substring match, e.g. @samp{s:^point=}.  This matches all
+messages containing a word in their subject line where the word begins with the
+string @samp{point}.  (This feature is intended to be useful for inflected
+languages where the substring search is used to avoid the grammatical ending on
+the word.)  This left-anchored facility can be combined with the approximate
+match facility, e.g. @samp{s:^point=1}.  
+
+Note, if the @samp{^} prefix is used without the @samp{=} suffix, it is ignored.
+For example, @samp{s:^point} means the same thing as @samp{s:point}.
+
 @item A disjunction, e.g. @samp{s:pointer/dereference}.  This matches all
 messages with one or both of the words @samp{pointer} and @samp{dereference} in
 their subject lines.

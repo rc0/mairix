@@ -99,89 +99,104 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   return;
 }
 /*}}}*/
-static int substring_match_0(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+static int substring_match_0(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
   unsigned long r0;
+  unsigned long anchor, anchor1;
   
   r0 = ~0;
   got_hit = 0;
+  anchor = 0;
+  anchor1 = left_anchor ? 0x1 : 0x0;
   for(p=token; *p; p++) {
     int idx = (unsigned int) *(unsigned char *)p;
-    r0 = (r0<<1) | a[idx];
+    r0 = (r0<<1) | anchor | a[idx];
     if (~(r0 | hit)) {
       got_hit = 1;
       break;
     }
+    anchor = anchor1;
   }
   return got_hit;
 }
 /*}}}*/
-static int substring_match_1(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+static int substring_match_1(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
   unsigned long r0, r1, nr0;
+  unsigned long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
   got_hit = 0;
+  anchor = 0;
+  anchor1 = left_anchor ? 0x1 : 0x0;
   for(p=token; *p; p++) {
     int idx = (unsigned int) *(unsigned char *)p;
-    nr0 = (r0<<1) | a[idx];
-    r1  = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
+    nr0 = (r0<<1) | anchor | a[idx];
+    r1  = ((r1<<1) | anchor | a[idx]) & ((r0 & nr0) << 1) & r0;
     r0  = nr0;
     if (~((r0 & r1) | hit)) {
       got_hit = 1;
       break;
     }
+    anchor = anchor1;
   }
   return got_hit;
 }
 /*}}}*/
-static int substring_match_2(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+static int substring_match_2(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
   unsigned long r0, r1, r2, nr0, nr1;
+  unsigned long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
   r2 = r1<<1;
   got_hit = 0;
+  anchor = 0;
+  anchor1 = left_anchor ? 0x1 : 0x0;
   for(p=token; *p; p++) {
     int idx = (unsigned int) *(unsigned char *)p;
-    nr0 =  (r0<<1) | a[idx];
-    nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
-    r2  = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
+    nr0 =  (r0<<1) | anchor | a[idx];
+    nr1 = ((r1<<1) | anchor | a[idx]) & ((r0 & nr0) << 1) & r0;
+    r2  = ((r2<<1) | anchor | a[idx]) & ((r1 & nr1) << 1) & r1;
     r0  = nr0;
     r1  = nr1;
-    if (~((r0 & r1& r2) | hit)) {
+    if (~((r0 & r1 & r2) | hit)) {
       got_hit = 1;
       break;
     }
+    anchor = anchor1;
   }
   return got_hit;
 }
 /*}}}*/
-static int substring_match_3(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+static int substring_match_3(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
   unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
+  unsigned long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
   r2 = r1<<1;
   r3 = r2<<1;
   got_hit = 0;
+  anchor = 0;
+  anchor1 = left_anchor ? 0x1 : 0x0;
   for(p=token; *p; p++) {
     int idx = (unsigned int) *(unsigned char *)p;
-    nr0 =  (r0<<1) | a[idx];
-    nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
-    nr2 = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
-    r3  = ((r3<<1) | a[idx]) & ((r2 & nr2) << 1) & r2;
+    nr0 =  (r0<<1) | anchor | a[idx];
+    nr1 = ((r1<<1) | anchor | a[idx]) & ((r0 & nr0) << 1) & r0;
+    nr2 = ((r2<<1) | anchor | a[idx]) & ((r1 & nr1) << 1) & r1;
+    r3  = ((r3<<1) | anchor | a[idx]) & ((r2 & nr2) << 1) & r2;
     r0  = nr0;
     r1  = nr1;
     r2  = nr2;
@@ -189,17 +204,21 @@ static int substring_match_3(unsigned long *a, unsigned long hit, char *token)/*
       got_hit = 1;
       break;
     }
+    anchor = anchor1;
   }
   return got_hit;
 }
 /*}}}*/
-static int substring_match_general(unsigned long *a, unsigned long hit, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
+static int substring_match_general(unsigned long *a, unsigned long hit, int left_anchor, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
 {
   int got_hit=0;
   char *p;
   int j;
+  unsigned long anchor, anchor1;
 
   r[0] = ~0;
+  anchor = 0;
+  anchor1 = left_anchor ? 0x1 : 0x0;
   for (j=1; j<=max_errors; j++) {
     r[j] = r[j-1] << 1;
   }
@@ -209,9 +228,9 @@ static int substring_match_general(unsigned long *a, unsigned long hit, char *to
     int d;
     unsigned int compo;
 
-    compo = nr[0] = ((r[0]<<1) | a[idx]);
+    compo = nr[0] = ((r[0]<<1) | anchor | a[idx]);
     for (d=1; d<=max_errors; d++) {
-      nr[d] = ((r[d]<<1) | a[idx])
+      nr[d] = ((r[d]<<1) | anchor | a[idx])
         & ((r[d-1] & nr[d-1])<<1)
         & r[d-1];
       compo &= nr[d];
@@ -221,12 +240,13 @@ static int substring_match_general(unsigned long *a, unsigned long hit, char *to
       got_hit = 1;
       break;
     }
+    anchor = anchor1;
   }
   return got_hit;
 }
 /*}}}*/
 
-static void match_substring_in_table(struct read_db *db, struct toktable_db *tt, char *substring, int max_errors, char *hits)/*{{{*/
+static void match_substring_in_table(struct read_db *db, struct toktable_db *tt, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
 {
 
   int i, got_hit;
@@ -248,19 +268,19 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
       /* Optimise common cases for few errors to allow optimizer to keep bitmaps
        * in registers */
       case 0:
-        got_hit = substring_match_0(a, hit, token);
+        got_hit = substring_match_0(a, hit, left_anchor, token);
         break;
       case 1:
-        got_hit = substring_match_1(a, hit, token);
+        got_hit = substring_match_1(a, hit, left_anchor, token);
         break;
       case 2:
-        got_hit = substring_match_2(a, hit, token);
+        got_hit = substring_match_2(a, hit, left_anchor, token);
         break;
       case 3:
-        got_hit = substring_match_3(a, hit, token);
+        got_hit = substring_match_3(a, hit, left_anchor, token);
         break;
       default:
-        got_hit = substring_match_general(a, hit, token, max_errors, r, nr);
+        got_hit = substring_match_general(a, hit, left_anchor, token, max_errors, r, nr);
         break;
     }
     if (got_hit) {
@@ -271,7 +291,7 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
   if (nr) free(nr);
 }
 /*}}}*/
-static void match_substring_in_table2(struct read_db *db, struct toktable2_db *tt, char *substring, int max_errors, char *hits)/*{{{*/
+static void match_substring_in_table2(struct read_db *db, struct toktable2_db *tt, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
 {
 
   int i, got_hit;
@@ -293,19 +313,19 @@ static void match_substring_in_table2(struct read_db *db, struct toktable2_db *t
       /* Optimise common cases for few errors to allow optimizer to keep bitmaps
        * in registers */
       case 0:
-        got_hit = substring_match_0(a, hit, token);
+        got_hit = substring_match_0(a, hit, left_anchor, token);
         break;
       case 1:
-        got_hit = substring_match_1(a, hit, token);
+        got_hit = substring_match_1(a, hit, left_anchor, token);
         break;
       case 2:
-        got_hit = substring_match_2(a, hit, token);
+        got_hit = substring_match_2(a, hit, left_anchor, token);
         break;
       case 3:
-        got_hit = substring_match_3(a, hit, token);
+        got_hit = substring_match_3(a, hit, left_anchor, token);
         break;
       default:
-        got_hit = substring_match_general(a, hit, token, max_errors, r, nr);
+        got_hit = substring_match_general(a, hit, left_anchor, token, max_errors, r, nr);
         break;
     }
     if (got_hit) {
@@ -316,7 +336,7 @@ static void match_substring_in_table2(struct read_db *db, struct toktable2_db *t
   if (nr) free(nr);
 }
 /*}}}*/
-static void match_substring_in_paths(struct read_db *db, char *substring, int max_errors, char *hits)/*{{{*/
+static void match_substring_in_paths(struct read_db *db, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
 {
 
   int i;
@@ -352,19 +372,19 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
       /* Optimise common cases for few errors to allow optimizer to keep bitmaps
        * in registers */
       case 0:
-        hits[i] = substring_match_0(a, hit, token);
+        hits[i] = substring_match_0(a, hit, left_anchor, token);
         break;
       case 1:
-        hits[i] = substring_match_1(a, hit, token);
+        hits[i] = substring_match_1(a, hit, left_anchor, token);
         break;
       case 2:
-        hits[i] = substring_match_2(a, hit, token);
+        hits[i] = substring_match_2(a, hit, left_anchor, token);
         break;
       case 3:
-        hits[i] = substring_match_3(a, hit, token);
+        hits[i] = substring_match_3(a, hit, left_anchor, token);
         break;
       default:
-        hits[i] = substring_match_general(a, hit, token, max_errors, r, nr);
+        hits[i] = substring_match_general(a, hit, left_anchor, token, max_errors, r, nr);
         break;
     }
 next_message:
@@ -660,6 +680,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   char *hit0, *hit1, *hit2, *hit3;
   int i;
   int n_hits;
+  int left_anchor;
 
   had_failed_checksum = 0;
 
@@ -793,6 +814,13 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         negate = 0;
       }
 
+      if (word[0] == '^') {
+        left_anchor = 1;
+        word++;
+      } else {
+        left_anchor = 0;
+      }
+      
       equal = strchr(word, '=');
       if (equal) {
         *equal = 0;
@@ -811,13 +839,13 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 
       memset(hit0, 0, db->n_msgs);
       if (equal) {
-        if (do_to) match_substring_in_table(db, &db->to, lower_word, max_errors, hit0);
-        if (do_cc) match_substring_in_table(db, &db->cc, lower_word, max_errors, hit0);
-        if (do_from) match_substring_in_table(db, &db->from, lower_word, max_errors, hit0);
-        if (do_subject) match_substring_in_table(db, &db->subject, lower_word, max_errors, hit0);
-        if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, hit0);
-        if (do_path) match_substring_in_paths(db, word, max_errors, hit0);
-        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, hit0);
+        if (do_to) match_substring_in_table(db, &db->to, lower_word, max_errors, left_anchor, hit0);
+        if (do_cc) match_substring_in_table(db, &db->cc, lower_word, max_errors, left_anchor, hit0);
+        if (do_from) match_substring_in_table(db, &db->from, lower_word, max_errors, left_anchor, hit0);
+        if (do_subject) match_substring_in_table(db, &db->subject, lower_word, max_errors, left_anchor, hit0);
+        if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, left_anchor, hit0);
+        if (do_path) match_substring_in_paths(db, word, max_errors, left_anchor, hit0);
+        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, left_anchor, hit0);
       } else {
         if (do_to) match_string_in_table(db, &db->to, lower_word, hit0);
         if (do_cc) match_string_in_table(db, &db->cc, lower_word, hit0);
@@ -825,7 +853,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_subject) match_string_in_table(db, &db->subject, lower_word, hit0);
         if (do_body) match_string_in_table(db, &db->body, lower_word, hit0);
         /* FIXME */
-        if (do_path) match_substring_in_paths(db, word, 0, hit0);
+        if (do_path) match_substring_in_paths(db, word, 0, left_anchor, hit0);
         if (do_msgid) match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
       }
 
