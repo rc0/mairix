@@ -70,10 +70,13 @@ dfasyn/dfasyn:
 	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi
 
 clean:
-	-rm -f *~ *.o mairix *.s core mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info
+	-rm -f *~ *.o mairix *.s core
 	-rm -f mairix.cp mairix.fn mairix.aux mairix.log mairix.ky mairix.pg mairix.toc mairix.tp mairix.vr
 	-rm -f fromcheck.c datescan.c
 	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
+
+clean_docs:
+	-rm -f mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info
 
 distclean: clean
 	-rm -f Makefile config.log
