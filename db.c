@@ -29,15 +29,37 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+struct sortable_token {/*{{{*/
+  char *text;
+  int index;
+};
+/*}}}*/
+static int compare_sortable_tokens(const void *a, const void *b)/*{{{*/
+{
+  const struct sortable_token *aa = (const struct sortable_token *) a;
+  const struct sortable_token *bb = (const struct sortable_token *) b;
+  int foo;
+  foo = strcmp(aa->text, bb->text);
+  if (foo) {
+    return foo;
+  } else {
+    if (aa->index < bb->index) return -1;
+    else if (aa->index > bb->index) return +1;
+    else return 0;
+  }
+}
+/*}}}*/
 static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{{*/
 {
   /* FIXME : Check reachability of tokens that are displaced from their natural
    * hash bucket (if deletions have occurred during purge). */
 
   int idx, incr;
-  int i;
+  int i, k;
   unsigned char *j, *last_char;
   int broken_chains = 0;
+  struct sortable_token *sort_list;
+  int any_duplicates;
   
   for (i=0; i<table->size; i++) {
     struct token *tok = table->tokens[i];
@@ -64,6 +86,40 @@ static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{
 
   assert(!broken_chains);
 
+  /* Check there are no duplicated tokens in the table. */
+  sort_list = new_array(struct sortable_token, table->n);
+  k = 0;
+  for (i=0; i<table->size; i++) {
+    struct token *tok = table->tokens[i];
+    if (tok) {
+      sort_list[k].text = new_string(tok->text);
+      sort_list[k].index = i;
+      k++;
+    }
+  }
+  assert(k == table->n);
+
+  qsort(sort_list, table->n, sizeof(struct sortable_token), compare_sortable_tokens);
+  /* Check for uniqueness of neighbouring token texts */
+  any_duplicates = 0;
+  for (i=0; i<(table->n - 1); i++) {
+    if (!strcmp(sort_list[i].text, sort_list[i+1].text)) {
+      fprintf(stderr, "Token table contains duplicated token %s at indices %d and %d\n", 
+               sort_list[i].text, sort_list[i].index, sort_list[i+1].index);
+      any_duplicates = 1;
+    }
+  }
+
+  /* release */
+  for (i=0; i<table->n; i++) {
+    free(sort_list[i].text);
+  }
+  free(sort_list);
+
+  if (any_duplicates) {
+    fprintf(stderr, "Token table contained duplicate entries, aborting\n");
+    assert(0);
+  }
 }
 /*}}}*/
 static int compare_strings(const void *a, const void *b)/*{{{*/
@@ -246,6 +302,17 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
 
     index = hash & out->mask;
     while (out->tokens[index]) {
+      /* Audit to look for corrupt database with multiple entries for the same
+       * string. */
+      if (!strcmp(nt->text, out->tokens[index]->text)) {
+        fprintf(stderr, "\n!!! Corrupt token table found in database, token <%s> duplicated, aborting\n",
+            nt->text);
+        fprintf(stderr, "  Delete the database file and rebuild from scratch as a workaround\n");
+        /* No point going on - need to find out why the database got corrupted
+         * in the 1st place.  Workaround for user - rebuild database from
+         * scratch by deleting it then rerunning. */
+        exit(1);
+      }
       ++index;
       index &= out->mask;
     }
@@ -355,6 +422,8 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
   result->max_msgs = input->n_msgs; /* let it be extended as-and-when */
   result->msgs = new_array(struct msgpath, n);
   result->type = new_array(enum message_type, n);
+
+  result->hash_key = input->hash_key;
 
   /* Set up mbox structures */
   N = result->n_mboxen = result->max_mboxen = input->n_mboxen;
