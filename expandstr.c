@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <ctype.h>
+#include <unistd.h>
 
 static int isenv(unsigned char x)/*{{{*/
 {
