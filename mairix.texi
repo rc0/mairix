@@ -181,8 +181,10 @@ It's also worth pointing out that there is no 'locality' information stored, so
 you can't search for messages that have one words 'close' to some other word.
 For every message and every word, there is a simple yes/no condition stored -
 whether the message contains the word in a particular header or in the body.
+So far this has proved to be adequate.  mairix has a similar feel to using an
+Internet search engine.
 
-There are two further searching criteria that are supported (besides word
+There are three further searching criteria that are supported (besides word
 searching):
 
 @itemize @bullet
@@ -190,6 +192,9 @@ searching):
 @item Searching for messages whose size is in a particular range.  (I see this
 being used mainly for finding 'huge' messages, as you're most likely to want to
 cull these to recover disc space.)
+@item Searching for messages with a particular substring in their paths.  You
+can use this feature to limit the search to particular folders in your mail
+hierarchy, for example.
 @end itemize
 
 @node mairixrc
@@ -349,11 +354,11 @@ Multiple fields may be specified, e.g. @t{sb:pointer} to match in the
 @item A negated word, e.g. @samp{s:~pointer}.  This matches all messages that
 don't have the word @samp{pointer} in the subject line.
 
-@item A substring match, e.g. @samp{s:point/}.  This matches all messages
+@item A substring match, e.g. @samp{s:point=}.  This matches all messages
 containing a word in their subject line where the word has @samp{point} as a
 substring, e.g. @samp{pointer}, @samp{disappoint}.
 
-@item An approximate match, e.g. @samp{s:point/1}.  This matches all messages
+@item An approximate match, e.g. @samp{s:point=1}.  This matches all messages
 containing a word in their subject line where the word has @samp{point} as a
 substring with at most one error, e.g. @samp{jointed} contains @samp{joint}
 which can be got from @samp{point} with one letter changed.  An error can be a
@@ -364,9 +369,32 @@ messages with one or both of the words @samp{pointer} and @samp{dereference} in
 their subject lines.
 
 @item Each disjunction may be a conjunction, e.g.
-@samp{s:null+pointer,dereference/2} matches all messages whose subject lines
+@samp{s:null+pointer,dereference=2} matches all messages whose subject lines
 either contain both the words @samp{null} and @samp{pointer}, or contain the
 word @samp{dereference} with up to 2 errors (or both).
+
+@item A path expression.  This matches all messages with a particular substring
+in their path.  The syntax is very similar to that for words within the message
+(above), and all the rules for @samp{+}, @samp{,}, approximate matching etc are
+the same.  The word prefix used for a path expression is @samp{p:}.  Examples:
+
+@example
+mairix p:/archive/
+@end example
+
+matches all messages with @samp{/archive/} in their path, and
+
+@example
+mairix p:wibble=1 s:wibble=1
+@end example
+
+matches all messages with @samp{wibble} in their path and in their subject
+line, allowing up to 1 error in each case (the errors may be different for a
+particular message.)
+
+Path expressions always use substring matches and never exact matches (it's
+very unlikely you want to type in the whole of a message path as a search
+expression!)  There is a limit of 32 characters on the match expression.
 
 @end itemize
 
@@ -405,7 +433,7 @@ range, and I suspect that some messages I replied to might have had the subject
 keyword spelt wrongly (let's allow up to 2 errors):
 
 @example
-mairix d:6m- f:richard s:chrony/2
+mairix d:6m- f:richard s:chrony=2
 @end example
 
 @bye

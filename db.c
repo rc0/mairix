@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.1 2002/07/03 22:15:58 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.2 2002/07/24 22:52:35 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -236,6 +236,11 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
   
   result = new_database();
   input = open_db(db_filename);
+  if (!input) {
+    /* Nothing to initialise */
+    if (verbose) printf("Database file was empty, creating a new database\n");
+    return result;
+  }
 
   /* Build pathname information */
   n = result->n_paths = input->n_paths;
@@ -641,7 +646,9 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
          * the natural one and the one where they are now are all occupied, to
          * prevent their lookups failing. */
 
+#if 0
         fprintf(stderr, "Token <%s> (bucket %d) no longer has files containing it, deleting\n", tok->text, i);
+#endif
         free(tok->text);
         free(new_enc);
         free(tok);
@@ -676,7 +683,9 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
             while (j != i) {
               if (!tbl->tokens[j]) {
                 /* put it here */
+#if 0
                 fprintf(stderr, "Moved <%s> from bucket %d to %d (natural bucket %d)\n", tbl->tokens[i]->text, i, j, nat_bucket_i);
+#endif
                 tbl->tokens[j] = tbl->tokens[i];
                 tbl->tokens[i] = NULL;
                 any_moved = 1;

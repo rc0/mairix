@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/reader.c,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/reader.c,v 1.2 2002/07/24 22:50:13 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -95,9 +95,18 @@ struct read_db *open_db(char *filename)/*{{{*/
   len = sb.st_size;
 
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
-  if (!data) {
+  if ((int)data < 0) {
     perror("mmap");
     exit(1);
+  }
+
+  if (!data) {
+    /* Empty file opened => database corrupt for sure */
+    if (close(fd) < 0) {
+      perror("close");
+      exit(1);
+    }
+    return NULL;
   }
   
   if (close(fd) < 0) {

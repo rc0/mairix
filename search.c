@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.2 2002/07/24 22:53:06 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -50,185 +50,248 @@ static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int h
   }
 }
 /*}}}*/
-static void match_substring_in_table(struct read_db *db, struct toktable_db *tt, char *substring, int max_errors, char *hits)/*{{{*/
-{
-  /* See "Fast text searching with errors, Sun Wu and Udi Manber, TR 91-11,
-     University of Arizona.  I have been informed that this algorithm is NOT
-     patented.  This implementation of it is entirely the work of Richard P.
-     Curnow - I haven't looked at any related source (webglimpse, agrep etc) in
-     writing this.
-  */
 
-  int i, len, got_hit;
-  unsigned long a[256];
-  unsigned long *r, *nr;
-  unsigned long hit;
+/* See "Fast text searching with errors, Sun Wu and Udi Manber, TR 91-11,
+   University of Arizona.  I have been informed that this algorithm is NOT
+   patented.  This implementation of it is entirely the work of Richard P.
+   Curnow - I haven't looked at any related source (webglimpse, agrep etc) in
+   writing this.
+*/
+static void build_match_vector(char *substring, unsigned long *a, unsigned long *hit)/*{{{*/
+{
+  int len;
   char *p;
+  int i;
 
   len = strlen(substring);
   if (len > 31 || len == 0) {
     fprintf(stderr, "Can't match patterns longer than 31 characters or empty\n");
     exit(1);
   }
-
-  /* Set array 'a' to all -1 values */
   memset(a, 0xff, 256 * sizeof(unsigned long));
   for (p=substring, i=0; *p; p++, i++) {
     a[(unsigned int) *(unsigned char *)p] &= ~(1UL << i);
   }
-  hit = ~(1UL << (len-1));
+  *hit = ~(1UL << (len-1));
+  return;
+}
+/*}}}*/
+static int substring_match_0(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+{
+  int got_hit=0;
+  char *p;
+  unsigned long r0;
+  
+  r0 = ~0;
+  got_hit = 0;
+  for(p=token; *p; p++) {
+    int idx = (unsigned int) *(unsigned char *)p;
+    r0 = (r0<<1) | a[idx];
+    if (~(r0 | hit)) {
+      got_hit = 1;
+      break;
+    }
+  }
+  return got_hit;
+}
+/*}}}*/
+static int substring_match_1(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+{
+  int got_hit=0;
+  char *p;
+  unsigned long r0, r1, nr0;
+
+  r0 = ~0;
+  r1 = r0<<1;
+  got_hit = 0;
+  for(p=token; *p; p++) {
+    int idx = (unsigned int) *(unsigned char *)p;
+    nr0 = (r0<<1) | a[idx];
+    r1  = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
+    r0  = nr0;
+    if (~((r0 & r1) | hit)) {
+      got_hit = 1;
+      break;
+    }
+  }
+  return got_hit;
+}
+/*}}}*/
+static int substring_match_2(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+{
+  int got_hit=0;
+  char *p;
+  unsigned long r0, r1, r2, nr0, nr1;
+
+  r0 = ~0;
+  r1 = r0<<1;
+  r2 = r1<<1;
+  got_hit = 0;
+  for(p=token; *p; p++) {
+    int idx = (unsigned int) *(unsigned char *)p;
+    nr0 =  (r0<<1) | a[idx];
+    nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
+    r2  = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
+    r0  = nr0;
+    r1  = nr1;
+    if (~((r0 & r1& r2) | hit)) {
+      got_hit = 1;
+      break;
+    }
+  }
+  return got_hit;
+}
+/*}}}*/
+static int substring_match_3(unsigned long *a, unsigned long hit, char *token)/*{{{*/
+{
+  int got_hit=0;
+  char *p;
+  unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
+
+  r0 = ~0;
+  r1 = r0<<1;
+  r2 = r1<<1;
+  r3 = r2<<1;
+  got_hit = 0;
+  for(p=token; *p; p++) {
+    int idx = (unsigned int) *(unsigned char *)p;
+    nr0 =  (r0<<1) | a[idx];
+    nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
+    nr2 = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
+    r3  = ((r3<<1) | a[idx]) & ((r2 & nr2) << 1) & r2;
+    r0  = nr0;
+    r1  = nr1;
+    r2  = nr2;
+    if (~((r0 & r1 & r2 & r3) | hit)) {
+      got_hit = 1;
+      break;
+    }
+  }
+  return got_hit;
+}
+/*}}}*/
+static int substring_match_general(unsigned long *a, unsigned long hit, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
+{
+  int got_hit=0;
+  char *p;
+  int j;
+
+  r[0] = ~0;
+  for (j=1; j<=max_errors; j++) {
+    r[j] = r[j-1] << 1;
+  }
+  got_hit = 0;
+  for(p=token; *p; p++) {
+    int idx = (unsigned int) *(unsigned char *)p;
+    int d;
+    unsigned int compo;
+
+    compo = nr[0] = ((r[0]<<1) | a[idx]);
+    for (d=1; d<=max_errors; d++) {
+      nr[d] = ((r[d]<<1) | a[idx])
+        & ((r[d-1] & nr[d-1])<<1)
+        & r[d-1];
+      compo &= nr[d];
+    }
+    memcpy(r, nr, (1 + max_errors) * sizeof(unsigned long));
+    if (~(compo | hit)) {
+      got_hit = 1;
+      break;
+    }
+  }
+  return got_hit;
+}
+/*}}}*/
+
+static void match_substring_in_table(struct read_db *db, struct toktable_db *tt, char *substring, int max_errors, char *hits)/*{{{*/
+{
+
+  int i, got_hit;
+  unsigned long a[256];
+  unsigned long *r=NULL, *nr=NULL;
+  unsigned long hit;
+  char *token;
+
+  build_match_vector(substring, a, &hit);
 
   got_hit = 0;
-  switch (max_errors) {
-    /* Optimise common cases for few errors to allow optimizer to keep bitmaps
-     * in registers */
-    case 0:/*{{{*/
-      for (i=0; i<tt->n; i++) {
-        char *token;
-        unsigned long r0;
-        r0 = ~0;
-        got_hit = 0;
-        token = db->data + tt->tok_offsets[i];
-        for(p=token; *p; p++) {
-          int idx = (unsigned int) *(unsigned char *)p;
-          r0 = (r0<<1) | a[idx];
-          if (~(r0 | hit)) {
-            got_hit = 1;
-            break;
-          }
-        }
-        if (got_hit) {
-          mark_hits_in_table(db, tt, i, hits);
-        }
-      }
-      break;
-      /*}}}*/
-    case 1:/*{{{*/
-      for (i=0; i<tt->n; i++) {
-        char *token;
-        unsigned long r0, r1, nr0;
-        r0 = ~0;
-        r1 = r0<<1;
-        got_hit = 0;
-        token = db->data + tt->tok_offsets[i];
-        for(p=token; *p; p++) {
-          int idx = (unsigned int) *(unsigned char *)p;
-          nr0 = (r0<<1) | a[idx];
-          r1  = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
-          r0  = nr0;
-          if (~((r0 & r1) | hit)) {
-            got_hit = 1;
-            break;
-          }
-        }
-        if (got_hit) {
-          mark_hits_in_table(db, tt, i, hits);
-        }
-      }
-      break;
-/*}}}*/
-    case 2:/*{{{*/
-      for (i=0; i<tt->n; i++) {
-        char *token;
-        unsigned long r0, r1, r2, nr0, nr1;
-        r0 = ~0;
-        r1 = r0<<1;
-        r2 = r1<<1;
-        got_hit = 0;
-        token = db->data + tt->tok_offsets[i];
-        for(p=token; *p; p++) {
-          int idx = (unsigned int) *(unsigned char *)p;
-          nr0 =  (r0<<1) | a[idx];
-          nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
-          r2  = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
-          r0  = nr0;
-          r1  = nr1;
-          if (~((r0 & r1& r2) | hit)) {
-            got_hit = 1;
-            break;
-          }
-        }
-        if (got_hit) {
-          mark_hits_in_table(db, tt, i, hits);
-        }
-      }
-      break;
-/*}}}*/
-    case 3:/*{{{*/
-      /* Probably the biggest common case, e.g. two letters maybe transposed +
-       * one error elsewhere.  More than 3 diffs leads to too many matches for
-       * anything other than very long words anyway. */
-      for (i=0; i<tt->n; i++) {
-        char *token;
-        unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
-        r0 = ~0;
-        r1 = r0<<1;
-        r2 = r1<<1;
-        r3 = r2<<1;
-        got_hit = 0;
-        token = db->data + tt->tok_offsets[i];
-        for(p=token; *p; p++) {
-          int idx = (unsigned int) *(unsigned char *)p;
-          nr0 =  (r0<<1) | a[idx];
-          nr1 = ((r1<<1) | a[idx]) & ((r0 & nr0) << 1) & r0;
-          nr2 = ((r2<<1) | a[idx]) & ((r1 & nr1) << 1) & r1;
-          r3  = ((r3<<1) | a[idx]) & ((r2 & nr2) << 1) & r2;
-          r0  = nr0;
-          r1  = nr1;
-          r2  = nr2;
-          if (~((r0 & r1 & r2 & r3) | hit)) {
-            got_hit = 1;
-            break;
-          }
-        }
-        if (got_hit) {
-          mark_hits_in_table(db, tt, i, hits);
-        }
-      }
-      break;
-      /*}}}*/
-    default:/*{{{*/
-      /* slower (but still very quick!) general case */
-      r = new_array(unsigned long, 1 + max_errors);
-      nr = new_array(unsigned long, 1 + max_errors);
-      
-      for (i=0; i<tt->n; i++) {
-        int j;
-        char *token;
-        r[0] = ~0;
-        for (j=1; j<=max_errors; j++) {
-          r[j] = r[j-1] << 1;
-        }
-        got_hit = 0;
-        token = db->data + tt->tok_offsets[i];
-        for(p=token; *p; p++) {
-          int idx = (unsigned int) *(unsigned char *)p;
-          int d;
-          unsigned int compo;
-
-          compo = nr[0] = ((r[0]<<1) | a[idx]);
-          for (d=1; d<=max_errors; d++) {
-            nr[d] = ((r[d]<<1) | a[idx])
-                  & ((r[d-1] & nr[d-1])<<1)
-                  & r[d-1];
-            compo &= nr[d];
-          }
-          memcpy(r, nr, (1 + max_errors) * sizeof(unsigned long));
-          if (~(compo | hit)) {
-            got_hit = 1;
-            break;
-          }
-        }
-        if (got_hit) {
-          mark_hits_in_table(db, tt, i, hits);
-        }
-      }
-
-      free(r);
-      free(nr);
-      break;
-/*}}}*/
+  if (max_errors > 3) {
+    r = new_array(unsigned long, 1 + max_errors);
+    nr = new_array(unsigned long, 1 + max_errors);
   }
+  for (i=0; i<tt->n; i++) {
+    token = db->data + tt->tok_offsets[i];
+    switch (max_errors) {
+      /* Optimise common cases for few errors to allow optimizer to keep bitmaps
+       * in registers */
+      case 0:
+        got_hit = substring_match_0(a, hit, token);
+        break;
+      case 1:
+        got_hit = substring_match_1(a, hit, token);
+        break;
+      case 2:
+        got_hit = substring_match_2(a, hit, token);
+        break;
+      case 3:
+        got_hit = substring_match_3(a, hit, token);
+        break;
+      default:
+        got_hit = substring_match_general(a, hit, token, max_errors, r, nr);
+        break;
+    }
+    if (got_hit) {
+      mark_hits_in_table(db, tt, i, hits);
+    }
+  }
+  if (r)  free(r);
+  if (nr) free(nr);
+}
+/*}}}*/
+static void match_substring_in_paths(struct read_db *db, char *substring, int max_errors, char *hits)/*{{{*/
+{
+
+  int i;
+  unsigned long a[256];
+  unsigned long *r=NULL, *nr=NULL;
+  unsigned long hit;
+  char *token;
+
+  build_match_vector(substring, a, &hit);
+
+  if (max_errors > 3) {
+    r = new_array(unsigned long, 1 + max_errors);
+    nr = new_array(unsigned long, 1 + max_errors);
+  }
+  for (i=0; i<db->n_paths; i++) {
+    if (db->path_offsets[i]) {
+      token = db->data + db->path_offsets[i];
+      switch (max_errors) {
+        /* Optimise common cases for few errors to allow optimizer to keep bitmaps
+         * in registers */
+        case 0:
+          hits[i] = substring_match_0(a, hit, token);
+          break;
+        case 1:
+          hits[i] = substring_match_1(a, hit, token);
+          break;
+        case 2:
+          hits[i] = substring_match_2(a, hit, token);
+          break;
+        case 3:
+          hits[i] = substring_match_3(a, hit, token);
+          break;
+        default:
+          hits[i] = substring_match_general(a, hit, token, max_errors, r, nr);
+          break;
+      }
+    } else {
+      /* Never match deleted paths */
+      hits[i] = 0;
+    }
+  }
+  if (r)  free(r);
+  if (nr) free(nr);
 }
 /*}}}*/
 static void match_string_in_table(struct read_db *db, struct toktable_db *tt, char *key, char *hits)/*{{{*/
@@ -427,6 +490,14 @@ static void find_size_matches_in_table(struct read_db *db, char *size_expr, char
   int i;
   
   parse_size_range(size_expr, &has_start, &start, &has_end, &end);
+  if (has_start && has_end) {
+    /* Allow user to put the endpoints in backwards */
+    if (start > end) {
+      int temp = start;
+      start = end;
+      end = temp;
+    }
+  }
 
   for (i=0; i<db->n_paths; i++) {
     start_cond = has_start ? (db->size_table[i] > start) : 1;
@@ -444,6 +515,14 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   int i;
   
   parse_date_range(date_expr, &has_start, &start, &has_end, &end);
+  if (has_start && has_end) {
+    /* Allow user to put the endpoints in backwards */
+    if (start > end) {
+      time_t temp = start;
+      start = end;
+      end = temp;
+    }
+  }
 
   for (i=0; i<db->n_paths; i++) {
     start_cond = has_start ? (db->date_table[i] > start) : 1;
@@ -459,6 +538,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
+  int do_path;
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
   int i;
@@ -501,6 +581,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
     do_body = 0;
     do_date = 0;
     do_size = 0;
+    do_path = 0;
     
     colon = strchr(key, ':');
 
@@ -517,6 +598,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
           case 'a': do_to = do_cc = do_from = 1; break;
           case 'd': do_date = 1; break;
           case 'z': do_size = 1; break;
+          case 'p': do_path = 1; break;
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
@@ -556,7 +638,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
       char *comma;
       char *plus;
       char *word, *orig_word;
-      char *slash;
+      char *equal;
       char *p;
       int negate;
       int had_comma;
@@ -602,10 +684,10 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
         negate = 0;
       }
 
-      slash = strchr(word, '/');
-      if (slash) {
-        *slash = 0;
-        max_errors = atoi(slash + 1);
+      equal = strchr(word, '=');
+      if (equal) {
+        *equal = 0;
+        max_errors = atoi(equal + 1);
         /* Extend this to do anchoring etc */
       }
       
@@ -616,18 +698,21 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
       }
       
       memset(hit0, 0, db->n_paths);
-      if (slash) {
+      if (equal) {
         if (do_to) match_substring_in_table(db, &db->to, word, max_errors, hit0);
         if (do_cc) match_substring_in_table(db, &db->cc, word, max_errors, hit0);
         if (do_from) match_substring_in_table(db, &db->from, word, max_errors, hit0);
         if (do_subject) match_substring_in_table(db, &db->subject, word, max_errors, hit0);
         if (do_body) match_substring_in_table(db, &db->body, word, max_errors, hit0);
+        if (do_path) match_substring_in_paths(db, word, max_errors, hit0);
       } else {
         if (do_to) match_string_in_table(db, &db->to, word, hit0);
         if (do_cc) match_string_in_table(db, &db->cc, word, hit0);
         if (do_from) match_string_in_table(db, &db->from, word, hit0);
         if (do_subject) match_string_in_table(db, &db->subject, word, hit0);
         if (do_body) match_string_in_table(db, &db->body, word, hit0);
+        /* FIXME */
+        if (do_path) match_substring_in_paths(db, word, 0, hit0);
       }
       
       /* AND-combine match vectors */

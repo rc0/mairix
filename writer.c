@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/writer.c,v 1.1 2002/07/03 22:16:00 richard Exp $
+  $Header: /cvs/src/mairix/writer.c,v 1.2 2002/07/24 22:50:40 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -109,7 +109,7 @@ static char *create_file_mapping(char *filename, size_t len)/*{{{*/
   }
 
   data = mmap(0, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-  if (!data) {
+  if ((int)data <= 0) {
     perror("mmap");
     exit(1);
   }
@@ -258,6 +258,11 @@ static char *write_filenames(struct database *db, struct write_map *map, unsigne
       /* File dead */
       uidata[map->path_offset + i] = 0; /* Can't ever happen for real */
       uidata[map->mtime_offset + i] = 0; /* For cleanliness */
+      uidata[map->size_offset + i] = 0;  /* For cleanliness */
+      /* The following line is necessary, otherwise 'random' tid
+       * information is written to the database, which can crash the search
+       * functions. */
+      uidata[map->tid_offset + i]  = db->paths[i].tid;
     }
   }
   if (verbose) {

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.2 2002/07/24 22:50:13 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -757,7 +757,12 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   close(fd);
+  if ((int) data < 0) {
+    perror("mmap");
+    return NULL;
+  }
   
+  /* Don't process empty files */
   if (!data) return NULL;
 
   /* Now process the data */

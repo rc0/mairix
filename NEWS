@@ -1,0 +1,11 @@
+NEW IN VERSION 0.2
+==================
+
+* Substrings of message paths can be used as search expressions (p:substring
+  option)
+
+* = now used instead of / as the delimiter for number of errors in an
+  approximate match (to help with path search)
+
+* Bug fix when using -t mode for search with unpurged dead messages still in
+  the database.
