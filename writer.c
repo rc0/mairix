@@ -548,14 +548,16 @@ static char *write_toktable2(struct toktable2 *tab, struct write_map_toktable2 *
   return cdata;
 }
 /*}}}*/
-void write_database(struct database *db, char *filename)/*{{{*/
+void write_database(struct database *db, char *filename, int do_integrity_checks)/*{{{*/
 {
   int file_len;
   char *data, *cdata;
   unsigned int *uidata;
   struct write_map map;
 
-  check_database_integrity(db);
+  if (do_integrity_checks) {
+    check_database_integrity(db);
+  }
 
   if (!verify_mbox_size_constraints(db)) {
     exit(1);

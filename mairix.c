@@ -43,6 +43,7 @@ static char *mboxen = NULL;
 static char *mfolder = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
+static int skip_integrity_checks = 0;
 
 static int file_exists(char *name)/*{{{*/
 {
@@ -183,6 +184,7 @@ static void parse_rc_file(char *name)/*{{{*/
     }
     else if (!strncasecmp(p, "mfolder=", 8)) mfolder = copy_value(p);
     else if (!strncasecmp(p, "database=", 9)) database_path = copy_value(p);
+    else if (!strncasecmp(p, "nochecks", 8)) skip_integrity_checks = 1;
     else {
       if (verbose) {
         fprintf(stderr, "Unrecognized option at line %d in %s\n", lineno, name);
@@ -376,6 +378,7 @@ int main (int argc, char **argv)/*{{{*/
   int do_help = 0;
   int do_raw_output = 0;
   int do_dump = 0;
+  int do_integrity_checks = 1;
 
   setlocale(LC_CTYPE, "");
 
@@ -400,6 +403,8 @@ int main (int argc, char **argv)/*{{{*/
       do_dump = 1;
     } else if (!strcmp(*argv, "-r") || !strcmp(*argv, "--raw-output")) {
       do_raw_output = 1;
+    } else if (!strcmp(*argv, "-Q") || !strcmp(*argv, "--no-integrity-checks")) {
+      do_integrity_checks = 0;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-h") ||
@@ -460,6 +465,10 @@ int main (int argc, char **argv)/*{{{*/
     mfolder = arg_mfolder;
   }
   
+  if (skip_integrity_checks) {
+    do_integrity_checks = 0;
+  }
+  
   if (!folder_base) {
     fprintf(stderr, "No folder_base/MAIRIX_FOLDER_BASE set\n");
     exit(2);
@@ -513,7 +522,7 @@ int main (int argc, char **argv)/*{{{*/
     /* Try to open existing database */
     if (file_exists(database_path)) {
       if (verbose) printf("Reading existing database...\n");
-      db = new_database_from_file(database_path);
+      db = new_database_from_file(database_path, do_integrity_checks);
       if (verbose) printf("Loaded %d existing messages\n", db->n_msgs);
     } else {
       if (verbose) printf("Starting new database\n");
@@ -524,11 +533,11 @@ int main (int argc, char **argv)/*{{{*/
     
     any_updates = update_database(db, msgs->paths, msgs->n);
     if (do_purge) {
-      any_purges = cull_dead_messages(db);
+      any_purges = cull_dead_messages(db, do_integrity_checks);
     }
     if (1 || any_updates || any_purges) {
       /* For now write it every time.  This is obviously the most reliable method. */
-      write_database(db, database_path);
+      write_database(db, database_path, do_integrity_checks);
     }
 
 #if 0

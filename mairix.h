@@ -274,13 +274,13 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
 
 /* In db.c */
 struct database *new_database(void);
-struct database *new_database_from_file(char *db_filename);
+struct database *new_database_from_file(char *db_filename, int do_integrity_checks);
 void free_database(struct database *db);
 void maybe_grow_message_arrays(struct database *db);
 void tokenise_message(int file_index, struct database *db, struct rfc822 *msg);
 int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths);
 void check_database_integrity(struct database *db);
-int cull_dead_messages(struct database *db);
+int cull_dead_messages(struct database *db, int do_integrity_checks);
 
 /* In mbox.c */
 void build_mbox_lists(struct database *db, const char *folder_base, const char *mboxen_paths);
@@ -300,7 +300,7 @@ void free_globber(struct globber *old);
 int is_glob_match(struct globber *g, const char *s);
 
 /* In writer.c */
-void write_database(struct database *db, char *filename);
+void write_database(struct database *db, char *filename, int do_integrity_checks);
 
 /* In search.c */
 int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *mfolder, char **argv, enum folder_type ft, int verbose);

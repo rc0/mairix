@@ -402,7 +402,7 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
   }
 }
 /*}}}*/
-struct database *new_database_from_file(char *db_filename)/*{{{*/
+struct database *new_database_from_file(char *db_filename, int do_integrity_checks)/*{{{*/
 { 
   /* Read existing database from file for doing incremental update */
   struct database *result;
@@ -492,7 +492,9 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
 
   close_db(input);
 
-  check_database_integrity(result);
+  if (do_integrity_checks) {
+    check_database_integrity(result);
+  }
   
   return result;
 }
@@ -1130,7 +1132,7 @@ static void recode_toktable2(struct toktable2 *tbl, int *new_idx)/*{{{*/
   }
 }
 /*}}}*/
-int cull_dead_messages(struct database *db)/*{{{*/
+int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
 {
   /* Return true if any culled */
 
@@ -1139,7 +1141,9 @@ int cull_dead_messages(struct database *db)/*{{{*/
 
   /* Check db is OK before we start on this. (Check afterwards is done in the
    * writer.c code.) */
-  check_database_integrity(db);
+  if (do_integrity_checks) {
+    check_database_integrity(db);
+  }
 
   if (verbose) {
     fprintf(stderr, "Culling dead messages\n");

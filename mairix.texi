@@ -398,6 +398,10 @@ this is unlikely to be much of a problem in reality.
 @emph{mairix} can support a maximum of 65536 separate mboxes, and a maximum of
 65536 messages within any one mbox.
 
+@item nochecks
+This takes no arguments.  If a line starting with @samp{nochecks} is present,
+it is the equivalent of specifying the @samp{-Q} flag to every indexing run.
+
 @item mfolder
 This defines the name of the @emph{match} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
@@ -498,8 +502,17 @@ need to do.
 
 The command line syntax is
 
+For indexing mode:
 @example
-mairix [-f path] [-p] [-v] [-t] [-d] [-a] [-r] [-o mfolder] [expr1] ... [exprn]
+mairix [-f path] [-p] [-v] [-Q]
+@end example
+For search mode
+@example
+mairix [-f path] [-t] [-v] [-a] [-r] [-o mfolder] expr1 [expr2] ... [exprn]
+@end example
+For database dump mode
+@example
+mairix [-f path] -d
 @end example
 
 The @samp{-f} or @samp{--rcfile} flag allows a different path to the
@@ -521,6 +534,13 @@ symlinks.  (Normally this would be an annoyance.  If a message matches multiple
 queries when using @samp{-a}, mairix will try to create the same symlink
 multiple times.  This prevents the same message being shown multiple times in
 the match folder.)
+
+The @samp{-Q} or @samp{--no-integrity-checks} flag is used in indexing mode.
+Normally, mairix will do various integrity checks on the database after loading
+it in, and before writing the modified database out again.  The checking helps
+to detect mairix bugs much earlier, but it has a performance penalty.  This
+flag skips the checks, at the cost of some loss in robustness.  See also the
+@samp{nochecks} directive in @ref{mairixrc}.
 
 The @samp{-t} or @samp{--threads} option applies to search mode.  Normally,
 only the messages matching all the specified expressions are included in the
@@ -579,7 +599,7 @@ The search mode runs when there is at least one search expression.  Search
 expressions can take forms such as (in increasing order of complexity):
 
 @itemize @bullet
-@item A date expression.  The format for specifying the date is described in section @xref{date_syntax}.
+@item A date expression.  The format for specifying the date is described in section @ref{date_syntax}.
 
 @item A size expression.  This matches all messages whose size in bytes is in a
 particular range.  For example, to match all messages bigger than 1 Megabyte
