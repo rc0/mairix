@@ -298,7 +298,7 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
 
   lc_tok_text = new_string(tok_text);
   for (p = lc_tok_text; *p; p++) {
-    *p = tolower(*p);
+    *p = tolower(*(unsigned char *) p);
   }
   /* 2nd arg is string length */
   hash = hashfn(lc_tok_text, p - lc_tok_text, hash_key);

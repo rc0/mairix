@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <sys/mman.h>
 
+#include "mairix.h"
 #include "reader.h"
 #include "memmac.h"
 
@@ -109,7 +110,7 @@ void dump_database(char *filename)
     printf("\n");
   }
 
-  printf("Hash key %08lx\n\n", db->hash_key);
+  printf("Hash key %08x\n\n", db->hash_key);
   printf("--------------------------------\n");
   dump_toktable(db, &db->to, "To");
   printf("--------------------------------\n");

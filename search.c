@@ -323,7 +323,6 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
   unsigned long a[256];
   unsigned long *r=NULL, *nr=NULL;
   unsigned long hit;
-  char *token;
 
   build_match_vector(substring, a, &hit);
 
@@ -332,7 +331,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
     nr = new_array(unsigned long, 1 + max_errors);
   }
   for (i=0; i<db->n_msgs; i++) {
-    char *token;
+    char *token = NULL;
     int mbix, msgix;
     switch (db->msg_type[i]) {
       case DB_MSG_FILE:
@@ -429,79 +428,6 @@ static int parse_size_expr(char *x)/*{{{*/
   }
 }
 /*}}}*/
-static time_t parse_date_expr(char *x)/*{{{*/
-{
-  char *p;
-  for (p=x; *p; p++) ;
-  p--;
-  if (!isdigit(*p)) {
-    int value;
-    value = atoi(x);
-    switch (*p) {
-      case 'd': value *= 86400; break;
-      case 'w': value *= 7 * 86400; break;
-      case 'm': value *= 30 * 86400; break;
-      case 'y': value *= 365 * 86400; break;
-    }
-    return time(NULL) - value;
-  } else {
-    int len = strlen(x);
-    int day, month, year;
-    int n;
-    struct tm tm;
-    time_t now;
-    time(&now);
-    tm = *localtime(&now);
-    
-    switch (len) {
-      case 2:
-        n = sscanf(x, "%2d", &day);
-        if (n != 1) {
-          fprintf(stderr, "Can't parse day from %s\n", x);
-          return (time_t) 0; /* arbitrary */
-        }
-        tm.tm_mday = day;
-        break;
-      case 4:
-        n = sscanf(x, "%2d%2d", &month, &day);
-        if (n != 2) {
-          fprintf(stderr, "Can't parse month and day from %s\n", x);
-          return (time_t) 0; /* arbitrary */
-        }
-        tm.tm_mday = day;
-        tm.tm_mon = month;
-        break;
-      case 6:
-        n = sscanf(x, "%2d%2d%2d", &year, &month, &day);
-        if (n != 3) {
-          fprintf(stderr, "Can't parse year, month and day from %s\n", x);
-          return (time_t) 0; /* arbitrary */
-        }
-        if (year < 70) year += 100;
-        tm.tm_mday = day;
-        tm.tm_mon = month;
-        tm.tm_year = year;
-        break;
-      case 8:
-        n = sscanf(x, "%4d%2d%2d", &year, &month, &day);
-        if (n != 3) {
-          fprintf(stderr, "Can't parse year, month and day from %s\n", x);
-          return (time_t) 0; /* arbitrary */
-        }
-        year -= 1900;
-        tm.tm_mday = day;
-        tm.tm_mon = month;
-        tm.tm_year = year;
-        break;
-      default:
-       fprintf(stderr, "Can't parse date from %s\n", x);
-       return (time_t) 0; /* arbitrary */
-       break;
-    }
-    return mktime(&tm);
-  }
-}
-/*}}}*/
 static void parse_size_range(char *size_expr, int *has_start, int *start, int *has_end, int *end)/*{{{*/
 {
   char *x = size_expr;
@@ -535,44 +461,6 @@ static void parse_size_range(char *size_expr, int *has_start, int *start, int *h
   } else {
     *has_start = 0;
     *end = parse_size_expr(size_expr);
-    *has_end = 1;
-  }
-  return;
-}
-/*}}}*/
-static void parse_date_range(char *date_expr, int *has_start, time_t *start, int *has_end, time_t *end)/*{{{*/
-{
-  char *x = date_expr;
-  char *dash;
-  int len;
-  
-  if (*x == ':') x++;
-  len = strlen(x);
-  dash = strchr(x, '-');
-  *has_start = *has_end = 0;
-  if (dash) {
-    char *p, *q;
-    if (dash > x) {
-      char *s;
-      s = new_array(char, dash - x + 1);
-      for (p=s, q=x; q<dash; ) *p++ = *q++;
-      *p = 0;
-      *start = parse_date_expr(s);
-      *has_start = 1;
-      free(s);
-    }
-    if (dash[1]) { /* dash not at end of arg */
-      char *e;
-      e = new_array(char, (x + len) - dash);
-      for (p=e, q=dash+1; *q; ) *p++ = *q++;
-      *p = 0;
-      *end = parse_date_expr(e);
-      *has_end = 1;
-      free(e);
-    }
-  } else {
-    *has_start = 0;
-    *end = parse_date_expr(date_expr);
     *has_end = 1;
   }
   return;
@@ -615,9 +503,6 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
     exit (2);
   }
 
-#if 0
-  parse_date_range(date_expr, &has_start, &start, &has_end, &end);
-#endif
   if (has_start && has_end) {
     /* Allow user to put the endpoints in backwards */
     if (start > end) {
@@ -876,7 +761,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         char *p, *q;
         word = new_array(char, 1 + (andsep - start_words)); /* maybe oversize */
         for (p=word, q=start_words; q < andsep; q++) {
-          if (!isspace(*q)) {
+          if (!isspace(*(unsigned char *)q)) {
             *p++ = *q;
           }
         }
@@ -886,7 +771,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         char *p, *q;
         word = new_array(char, 1 + (orsep - start_words)); /* maybe oversize */
         for (p=word, q=start_words; q < orsep; q++) {
-          if (!isspace(*q)) {
+          if (!isspace(*(unsigned char *)q)) {
             *p++ = *q;
           }
         }
@@ -921,7 +806,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
        * tokens handled that way.  But not for path search! */
       lower_word = new_string(word);
       for (p=lower_word; *p; p++) {
-        *p = tolower(*p);
+        *p = tolower(*(unsigned char *)p);
       }
 
       memset(hit0, 0, db->n_msgs);
@@ -1157,21 +1042,6 @@ static int directory_exists_remove_other(char *name)/*{{{*/
     unlink(name);
     return 0;
   }
-}
-/*}}}*/
-static int is_file_or_nothing(char *name)/*{{{*/
-{
-  struct stat sb;
-  if (stat(name, &sb) < 0) {
-    if (errno == ENOENT)
-      return 1;
-    else
-      return 0;
-  }
-  if (S_ISREG(sb.st_mode))
-    return 1;
-  else
-    return 0;
 }
 /*}}}*/
 static void create_dir(char *path)/*{{{*/

@@ -133,9 +133,9 @@ static int audit_header(struct line *header)/*{{{*/
   int first=1;
   int count=1;
   for (x=header->next; x!=header; x=x->next) {
-    int has_leading_space;
+    int has_leading_space=0;
     int is_blank;
-    int has_word_colon;
+    int has_word_colon=0;
 
     if (first) {
       /* Ignore any UUCP or mbox style From line at the start */

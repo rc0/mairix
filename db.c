@@ -742,7 +742,7 @@ static void find_threading(struct database *db)/*{{{*/
       unsigned char *j = tok->match0.msginfo;
       unsigned char *last_char = j + tok->match0.n;
       int cur = 0, incr, first=1;
-      int new_base, old_base;
+      int new_base=-1, old_base;
       while (j < last_char) {
         incr = read_increment(&j);
         cur += incr;
@@ -755,6 +755,7 @@ static void find_threading(struct database *db)/*{{{*/
             ix[new_base] = old_base;
             new_base = old_base;
           } else if (old_base > new_base) {
+            assert(new_base != -1);
             ix[old_base] = new_base;
           }
         }
