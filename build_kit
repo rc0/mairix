@@ -1,9 +1,27 @@
 #!/usr/bin/env perl
 
-system("make -f Makefile.in mairix.txt");
-unlink "build_kit";
+# Work out the name of the directory and hence the version
 
-($version = $ARGV[0]) || ($version = "UNKNOWN");
+# Have to run it in the current directory
+if ($0 ne "build_kit") {
+  die "Have to be in the checked-out directory to run build_kit";
+}
+
+$here=`pwd`;
+chomp $here;
+$version=$here;
+$version =~ s,^.*/mairix-([^/]+)$,$1, || die "Didn't recognize directory name";
+print "Building kit for version $version\n";
+
+system("make -f Makefile.in mairix.txt");
+
+# Overwrite normal version.h file with version-specific one
+open (OUT, ">version.h");
+print OUT "#ifndef VERSION_H\n";
+print OUT "#define VERSION_H 1\n";
+print OUT "#define PROGRAM_VERSION \"".$version."\"\n";
+print OUT "#endif /* VERSION_H */\n";
+close OUT;
 
 open (IN, "<mairix.spec.sample");
 open (OUT, ">mairix.spec");
@@ -14,7 +32,15 @@ while (<IN>) {
 close (IN);
 close (OUT);
 
+unlink "build_kit";
 unlink "mairix.spec.sample";
 
-system("cvs export -d dfasyn -r V0_3 dfasyn");
+system ("rm -rf dfasyn/{arch}");
+system ("rm -rf ./{arch}");
+system ("rm -rf dfasyn/.arch-ids");
+system ("rm -rf ./.arch-ids");
+
+chdir ("..");
+system ("tar cvf - mairix-$version | gzip -9 > mairix-$version.tar.gz");
+system ("gpg -b -a -o mairix-$version-tar-gz-asc.txt mairix-$version.tar.gz");
 

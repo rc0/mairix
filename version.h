@@ -1,0 +1,4 @@
+#ifndef VERSION_H
+#define VERSION_H 1
+#define PROGRAM_VERSION "DEVELOPMENT"
+#endif /* VERSION_H */

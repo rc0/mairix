@@ -21,6 +21,7 @@
  */
 
 #include "mairix.h"
+#include "version.h"
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -284,33 +285,6 @@ volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
   exit(2); 
 }
 /*}}}*/
-static char *get_version(void)/*{{{*/
-{
-  static char buffer[256];
-  static char cvs_version[] = "$Name: V0_14 $";
-  char *p, *q;
-  for (p=cvs_version; *p; p++) {
-    if (*p == ':') {
-      p++;
-      break;
-    }
-  }
-  while (isspace(*p)) p++;
-  if (*p == '$') {
-    strcpy(buffer, "development version");
-  } else {
-    for (q=buffer; *p && *p != '$'; p++) {
-      if (!isspace(*p)) {
-        if (*p == '_') *q++ = '.';
-        else *q++ = *p;
-      }
-    }
-    *q = 0;
-  }
-
-  return buffer;
-}
-/*}}}*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
@@ -318,7 +292,7 @@ static void print_copyright(void)/*{{{*/
           "mairix comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see the GNU General Public License for details.\n\n",
-          get_version());
+          PROGRAM_VERSION);
 }
 /*}}}*/
 static void usage(void)/*{{{*/
