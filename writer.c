@@ -85,7 +85,7 @@ struct write_map {/*{{{*/
 };
 /*}}}*/
 
-static char *create_rw_mapping(char *filename, size_t len)/*{{{*/
+static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **out_data)/*{{{*/
 {
   int fd;
   char *data;
@@ -128,12 +128,8 @@ static char *create_rw_mapping(char *filename, size_t len)/*{{{*/
     exit(2);
   }
 
-  if (close(fd) < 0) {
-    perror("close");
-    exit(2);
-  }
-  
-  return data;
+  *out_data = data;
+  *out_fd = fd;
 }
 /*}}}*/
   
@@ -551,6 +547,7 @@ static char *write_toktable2(struct toktable2 *tab, struct write_map_toktable2 *
 void write_database(struct database *db, char *filename, int do_integrity_checks)/*{{{*/
 {
   int file_len;
+  int fd;
   char *data, *cdata;
   unsigned int *uidata;
   struct write_map map;
@@ -568,7 +565,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   
   file_len = char_length(db) + (4 * map.beyond_last_ui_offset);
   
-  data = create_rw_mapping(filename, file_len);
+  create_rw_mapping(filename, file_len, &fd, &data);
   uidata = (unsigned int *) data; /* align(int) < align(page)! */
   cdata = data + (4 * map.beyond_last_ui_offset);
 
@@ -588,6 +585,14 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   /* Unmap / close file */
   if (munmap(data, file_len) < 0) {
     perror("munmap");
+    exit(2);
+  }
+  if (fsync(fd) < 0) {
+    perror("fsync");
+    exit(2);
+  }
+  if (close(fd) < 0) {
+    perror("close");
     exit(2);
   }
 }
