@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-system("make mairix.txt");
+
+system("make -f Makefile.in mairix.txt");
 unlink "build_kit";
 
 ($version = $ARGV[0]) || ($version = "UNKNOWN");
@@ -15,5 +16,5 @@ close (OUT);
 
 unlink "mairix.spec.sample";
 
-system("cvs export -d dfasyn -r V0_2 dfasyn");
+system("cvs export -d dfasyn -r V0_3 dfasyn");
 

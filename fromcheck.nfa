@@ -1,0 +1,118 @@
+
+%{
+#include "fromcheck.h"
+%}
+
+
+# Define tokens
+# CR : \n
+# DIGIT : [0-9]
+# AT : @
+# COLON : :
+# WHITE : ' ', \t
+# LOWER : [a-z]
+# UPPER : [A-Z]
+# PLUSMINUS : [+-]
+# OTHER_EMAIL : other stuff valid in an address, at least [_.]
+
+Tokens CR DIGIT AT COLON WHITE LOWER UPPER PLUSMINUS OTHER_EMAIL
+Abbrev EMAIL = LOWER | UPPER | DIGIT | PLUSMINUS | OTHER_EMAIL
+
+
+BLOCK email
+    STATE in
+        EMAIL -> in, before_at
+
+    STATE before_at
+        EMAIL -> before_at
+        AT -> after_at
+
+    STATE after_at
+        EMAIL -> after_at, out
+
+ENDBLOCK
+
+BLOCK zone
+    # Make this pretty lenient
+    STATE in
+        UPPER -> zone2
+        UPPER -> out
+        PLUSMINUS -> zone2
+
+    STATE zone2
+        UPPER | LOWER -> zone2, out
+        DIGIT         -> zone2, out
+ENDBLOCK
+
+BLOCK date
+    STATE in
+        -> before_weekday
+        WHITE -> before_weekday
+
+    STATE before_weekday
+        UPPER ; LOWER ; LOWER ; WHITE -> after_weekday
+
+    STATE after_weekday
+        WHITE -> after_weekday
+        UPPER ; LOWER ; LOWER ; WHITE -> after_month
+
+    STATE after_month
+        WHITE -> after_month
+        DIGIT ; WHITE -> after_day
+        DIGIT ; DIGIT ; WHITE -> after_day
+
+    STATE after_day
+        WHITE -> after_day
+        # Accept HH:MM:SS
+        DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; WHITE -> after_time
+        # Accept HH:MM
+        DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; WHITE -> after_time
+
+    # Allow either 1 or 2 words of timezone 
+    STATE after_time
+        WHITE -> after_time
+        -> after_timezone
+        <zone:in->out> ; WHITE -> after_timezone
+        <zone:in->out> ; WHITE -> after_timezone_1
+
+    STATE after_timezone_1
+        WHITE -> after_timezone_1
+        <zone:in->out> ; WHITE -> after_timezone
+        
+    STATE after_timezone
+        WHITE -> after_timezone
+        DIGIT ; DIGIT ; DIGIT ; DIGIT -> after_year
+
+    STATE after_year
+        WHITE -> after_year
+        -> out
+        
+ENDBLOCK
+
+
+# Assume the earlier code has identified the '\nFrom ' sequence,
+# and the validator starts scanning from the character beyond the space
+
+BLOCK main
+
+    STATE in
+        <email:in->out> -> before_date
+                        -> before_date
+
+    STATE before_date
+        <date:in->out> ; CR = FROMCHECK_PASS
+
+    # Mention this state last : the last mentioned state in the last defined
+    # block becomes the entry state of the scanner.
+
+    STATE in
+
+ENDBLOCK
+
+RESULT FROMCHECK_PASS
+RESULT FROMCHECK_FAIL
+DEFRESULT FROMCHECK_FAIL
+PREFIX fromcheck
+TYPE "enum fromcheck_result"
+
+# vim:ft=txt:et:sw=4:sts=4:ht=4

@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/mairix.h,v 1.5 2003/02/24 23:56:40 richard Exp $
+  $Header: /cvs/src/mairix/mairix.h,v 1.18 2003/12/03 23:56:08 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -30,40 +30,80 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "memmac.h"
 
 struct msgpath {/*{{{*/
-  char *path;
-  size_t size;  /* size of the message in bytes */
-  time_t mtime; /* mtime of message file on disc */
+  /* The 'selector' for this union is the corresponding entry of type 'enum
+   * message_type' */
+  union {
+    struct {
+      char *path;
+      size_t size;  /* size of the message in bytes */
+      time_t mtime; /* mtime of message file on disc */
+    } mpf; /* message per file */
+    struct {
+      int file_index; /* index into table of mbox files */
+      int msg_index;  /* index of message within the file */
+    } mbox; /* for messages in mbox format folders */
+  } src;
+
+  /* Now fields that are common to both types of message. */
   time_t date;  /* representation of Date: header in message */
   int tid;      /* thread-id */
   /* + other stuff eventually */
 };
 /*}}}*/
 
+enum message_type {/*{{{*/
+  MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
+                   prune it on a '-p' run. */
+  MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
+  MTY_MBOX      /* multiple msgs per file : MBOX format file */
+};
+/*}}}*/
 struct msgpath_array {/*{{{*/
+  enum message_type *type;
   struct msgpath *paths;
   int n;
   int max;
 };
 /*}}}*/
 
-struct token {/*{{{*/
-  char *text;
-  unsigned long hashval;
-  
-  /* to store delta-compressed info of which msgpaths match the token */
+struct matches {/*{{{*/
   unsigned char *msginfo;
   int n; /* bytes in use */
   int max; /* bytes allocated */
   unsigned long highest;
-  
+};
+/*}}}*/
+struct token {/*{{{*/
+  char *text;
+  unsigned long hashval;
+  /* to store delta-compressed info of which msgpaths match the token */
+  struct matches match0;
+};
+/*}}}*/
+struct token2 {/*{{{*/
+  char *text;
+  unsigned long hashval;
+  /* to store delta-compressed info of which msgpaths match the token */
+  struct matches match0;
+  struct matches match1;
 };
 /*}}}*/
 struct toktable {/*{{{*/
   struct token **tokens;
+  int n; /* # in use */
+  int size; /* # allocated */
+  unsigned int mask; /* for masking down hash values */
+  int hwm; /* number to have before expanding */
+};
+/*}}}*/
+struct toktable2 {/*{{{*/
+  struct token2 **tokens;
   int n; /* # in use */
   int size; /* # allocated */
   unsigned int mask; /* for masking down hash values */
@@ -113,14 +153,57 @@ struct rfc822 {/*{{{*/
 };
 /*}}}*/
 
+typedef char checksum_t[16];
+
+struct mbox {/*{{{*/
+  /* If path==NULL, this indicates that the mbox is dead, i.e. no longer
+   * exists. */
+  char *path;
+  /* As read in from database (i.e. current last time mairix scan was run.) */
+  time_t file_mtime;
+  size_t file_size;
+  /* As found in the filesystem now. */
+  time_t current_mtime;
+  size_t current_size;
+  /* After reconciling a loaded database with what's on the disc, this entry
+     stores how many of the msgs that used to be there last time are still
+     present at the head of the file.  Thus, all messages beyond that are
+     treated as dead, and scanning starts at that point to find 'new' messages
+     (whch may actually be old ones that have moved, but they're treated as
+     new.) */
+  int n_old_msgs_valid;
+
+  int n_so_far; /* Used during database load. */
+  
+  int n_msgs;   /* Number of entries in 'start' and 'len' */
+  int max_msgs; /* Allocated size of 'start' and 'len' */
+  /* File offset to the start of each message (first line of real header, not to mbox 'From ' line) */
+  off_t *start;
+  /* Length of each message */
+  size_t *len;
+  /* Checksums on whole messages. */
+  checksum_t *check_all;
+
+};
+/*}}}*/
 struct database {/*{{{*/
   /* Used to hold an entire mapping between an array of filenames, each
      containing a single message, and the sets of tokens that occur in various
      parts of those messages */
 
-  struct msgpath *paths; /* Paths to messages */
-  int n_paths; /* Number in use */
-  int max_paths; /* Space allocated */
+  enum message_type *type;
+  struct msgpath *msgs; /* Paths to messages */
+  int n_msgs; /* Number in use */
+  int max_msgs; /* Space allocated */
+
+  struct mbox *mboxen;
+  int n_mboxen; /* number in use. */
+  int max_mboxen; /* space allocated */
+
+  /* Seed for hashing in the token tables.  Randomly created for
+   * each new database - avoid DoS attacks through carefully
+   * crafted messages. */
+  unsigned int hash_key;
 
   /* Token tables */
   struct toktable *to;
@@ -129,18 +212,38 @@ struct database {/*{{{*/
   struct toktable *subject;
   struct toktable *body;
 
-  struct toktable *msg_ids;
+  /* Encoding chain 0 stores all msgids appearing in the following message headers:
+   * Message-Id, In-Reply-To, References.  Used for thread reconciliation.
+   * Encoding chain 1 stores just the Message-Id.  Used for search by message ID.
+  */
+  struct toktable2 *msg_ids;
 };
 /*}}}*/
 
 enum folder_type {/*{{{*/
   FT_MAILDIR,
   FT_MH,
+  FT_MBOX,
   FT_RAW
 };
 /*}}}*/
 
+struct string_list {/*{{{*/
+  struct string_list *next;
+  struct string_list *prev;
+  char *data;
+};
+/*}}}*/
+
 extern int verbose; /* cmd line -v switch */
+
+/* Lame fix for systems where NAME_MAX isn't defined after including the above
+ * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
+ * it'll do. */
+
+#if !defined(NAME_MAX)
+#define NAME_MAX 4096
+#endif
 
 /* In hash.c */
 unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval);
@@ -149,32 +252,60 @@ unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval
 struct msgpath_array *new_msgpath_array(void);
 int is_integer_string(char *x);
 void free_msgpath_array(struct msgpath_array *x);
+void string_list_to_array(struct string_list *list, int *n, char ***arr);
+void split_on_colons(const char *str, int *n, char ***arr);
 void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs);
   
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
+struct rfc822 *data_to_rfc822(char *data, int length);
+void create_ro_mapping(const char *filename, unsigned char **data, size_t *len);
 
 /* In tok.c */
 struct toktable *new_toktable(void);
+struct toktable2 *new_toktable2(void);
+void free_token(struct token *x);
+void free_token2(struct token2 *x);
 void free_toktable(struct toktable *x);
-void add_token_in_file(int file_index, char *tok_text, struct toktable *table);
-void check_and_enlarge_tok_encoding(struct token *tok);
-void insert_index_on_token(struct token *tok, int idx);
+void free_toktable2(struct toktable2 *x);
+void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table);
+void check_and_enlarge_encoding(struct matches *m);
+void insert_index_on_encoding(struct matches *m, int idx);
+void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1);
 
 /* In db.c */
 struct database *new_database(void);
 struct database *new_database_from_file(char *db_filename);
 void free_database(struct database *db);
+void maybe_grow_message_arrays(struct database *db);
+void tokenise_message(int file_index, struct database *db, struct rfc822 *msg);
 int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths);
 void check_database_integrity(struct database *db);
 int cull_dead_messages(struct database *db);
+
+/* In mbox.c */
+void build_mbox_lists(struct database *db, const char *folder_base, const char *mboxen_paths);
+int add_mbox_messages(struct database *db);
+void compute_checksum(const unsigned char *data, size_t len, checksum_t *csum);
+void cull_dead_mboxen(struct database *db);
+unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
+void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
+int verify_mbox_size_constraints(struct database *db);
+void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *));
+
+/* In glob.c */
+struct globber;
+
+struct globber *make_globber(const char *wildstring);
+void free_globber(struct globber *old);
+int is_glob_match(struct globber *g, const char *s);
 
 /* In writer.c */
 void write_database(struct database *db, char *filename);
 
 /* In search.c */
-void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose);
+int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose);
   
 /* In stats.c */
 void get_db_stats(struct database *db);

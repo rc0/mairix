@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.10 2002/12/27 22:17:42 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.17 2003/11/27 23:18:37 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * 
  * This program is free software; you can redistribute it and/or modify
@@ -142,6 +142,10 @@ static int audit_header(struct line *header)/*{{{*/
     if (first) {
       /* Ignore any UUCP or mbox style From line at the start */
       if (!strncmp("From ", x->text, 5)) {
+        continue;
+      }
+      /* Ignore escaped From line at the start */
+      if (!strncmp(">From ", x->text, 6)) {
         continue;
       }
     }
@@ -357,10 +361,12 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
   } else {
     for (p=e; *p && isspace(*p); p++) ;
     if (   match_string("7bit", p)
-        || match_string("7-bit", p)) {
+        || match_string("7-bit", p)
+        || match_string("7 bit", p)) {
       result = ENC_7BIT;
     } else if (match_string("8bit", p)
-            || match_string("8-bit", p)) {
+            || match_string("8-bit", p)
+            || match_string("8 bit", p)) {
       result = ENC_8BIT;
     } else if (match_string("quoted-printable", p)) {
       result = ENC_QUOTED_PRINTABLE;
@@ -619,7 +625,6 @@ static int split_and_splice_header(char *data, struct line *header, char **body_
 
 /* Forward prototypes */
 static void do_multipart(char *input, int input_len, char *boundary, struct attachment *atts);
-static struct rfc822 *data_to_rfc822(char *data, int length);
   
 static void do_body(char *body_start, int body_len, char *content_type, char *content_transfer_encoding, struct attachment *atts)/*{{{*/
 {
@@ -855,7 +860,7 @@ tough_cheese:
   return (time_t) -1; /* default value */
 }
 /*}}}*/
-static struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
+struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
 {
   struct rfc822 *result;
   char *body_start;
@@ -913,37 +918,54 @@ static struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
   
 }
 /*}}}*/
-struct rfc822 *make_rfc822(char *filename)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/*{{{*/
 {
   struct stat sb;
-  size_t len;
   int fd;
-  char *data;
-  struct rfc822 *result;
-
   if (stat(filename, &sb) < 0) 
   {
     perror("Could not stat");
-    return NULL;
+    *data = NULL;
+    return;
   }
 
-  len = sb.st_size;
-  
+  *len = sb.st_size;
+  if (*len == 0) {
+    *data = NULL;
+    return;
+  }
+
+  if (!S_ISREG(sb.st_mode)) {
+    *data = NULL;
+    return;
+  }
+
   fd = open(filename, O_RDONLY);
   if (fd < 0)
   {
     perror("Could not open");
-    return NULL;
+    *data = NULL;
+    return;
   }
-  
-  data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
+
+  *data = (char *) mmap(0, *len, PROT_READ, MAP_SHARED, fd, 0);
   if (close(fd) < 0)
     perror("close");
-  if ((int) data <= 0) {
+  if (*data == MAP_FAILED) {
     perror("mmap");
-    return NULL;
+    *data = NULL;
+    return;
   }
-  
+}
+/*}}}*/
+struct rfc822 *make_rfc822(char *filename)/*{{{*/
+{
+  size_t len;
+  char *data;
+  struct rfc822 *result;
+
+  create_ro_mapping(filename, (unsigned char **)&data, &len);
+
   /* Don't process empty files */
   result = NULL;
 
@@ -1043,7 +1065,7 @@ int main (int argc, char **argv)/*{{{*/
   
   if (argc < 2) {
     fprintf(stderr, "Need a path\n");
-    exit(1);
+    exit(2);
   }
 
   msg = make_rfc822(argv[1]);

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/memmac.h,v 1.2 2003/01/18 00:38:12 richard Exp $
+  $Header: /cvs/src/mairix/memmac.h,v 1.3 2003/11/27 22:07:12 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -53,8 +53,13 @@ static __inline__ void* safe_realloc(char *file, int line, void *old_ptr, size_t
   return x;
 }
 /*}}}*/
+#ifndef TEST
 #define Malloc(s) safe_malloc(__FILE__, __LINE__, s)
 #define Realloc(xx,s) safe_realloc(__FILE__, __LINE__,xx,s)
+#else
+#define Malloc(s) malloc(s)
+#define Realloc(xx,s) realloc(xx,s)
+#endif
 /*}}}*/
 
 /*{{{  Memory macros*/

@@ -1,3 +1,34 @@
+NEW IN VERSION 0.12
+===================
+
+! Change in database file format - existing databases need to be destroyed and
+  recreated.
+
+* Indexing of mbox folders in addition to the existing maildir & MH support
+* Output to mbox format vfolder
+* Return exit status 1 if no messages are matched in search mode, and exit
+  status 2 for all error conditions.
+* Allow wildcards to be used in specifying maildir and mh folder paths.
+* Searching on messages having a particular Message-ID (m:msgid expression in
+  search mode).
+* When indexing whole email addresses, '+' is now considered a valid character.
+* Use ',' instead of '+' in search expressions, and '/' instead of ','.  This
+  is to allow '+' to be used inside email addresses that are being searched
+  for.  The '/' character is traditionally associated with meaning 'or', so it
+  made more sense to move ',' to mean 'and'.  (Unfortunately, there were very
+  few metacharacters left which don't have some special meaning to shells, and
+  I wanted to avoid the need to quote or escape the search expressions.)
+* Bug fix checking return status of mmap.
+* Handle ">From " at the start of the message headers
+* Handle mis-formatted encoding strings "7 bit" and "8 bit"
+* Make every database use a random seed for the token hash function (to prevent
+  denial of service attacks against mairix through carefully crafted messages.)
+* Rename some options in the mairixrc file, to put the folder formats on an
+  equal footing.
+* Properly handle the case where a maildir vfolder exists but one or more of
+  the new,tmp,cur subdirectories is missing.
+* Add configure script (not autoconf-based)
+
 NEW IN VERSION 0.11
 ===================
 

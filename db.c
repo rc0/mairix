@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.6 2002/12/29 23:43:46 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.15 2003/12/01 23:14:32 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -28,8 +28,10 @@
 #include "reader.h"
 #include <ctype.h>
 #include <assert.h>
+#include <sys/time.h>
+#include <unistd.h>
 
-static void check_toktable_enc_integrity(int n_paths, struct toktable *table)/*{{{*/
+static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{{*/
 {
   /* FIXME : Check reachability of tokens that are displaced from their natural
    * hash bucket (if deletions have occurred during purge). */
@@ -44,18 +46,18 @@ static void check_toktable_enc_integrity(int n_paths, struct toktable *table)/*{
     if (tok) {
       idx = 0;
       incr = 0;
-      last_char = tok->msginfo + tok->n;
-      for (j = tok->msginfo; j < last_char; ) {
+      last_char = tok->match0.msginfo + tok->match0.n;
+      for (j = tok->match0.msginfo; j < last_char; ) {
         incr = read_increment(&j);
         idx += incr;
       }
-      if (idx != tok->highest) {
-        fprintf(stderr, "broken encoding chain for token <%s>, highest=%ld\n", tok->text, tok->highest);
+      if (idx != tok->match0.highest) {
+        fprintf(stderr, "broken encoding chain for token <%s>, highest=%ld\n", tok->text, tok->match0.highest);
         fflush(stderr);
         broken_chains = 1;
       }
-      if (idx >= n_paths) {
-        fprintf(stderr, "end of chain higher than number of message paths (%d) for token <%s>\n", n_paths, tok->text);
+      if (idx >= n_msgs) {
+        fprintf(stderr, "end of chain higher than number of message paths (%d) for token <%s>\n", n_msgs, tok->text);
         fflush(stderr);
         broken_chains = 1;
       }
@@ -75,16 +77,22 @@ static int compare_strings(const void *a, const void *b)/*{{{*/
 /*}}}*/
 static void check_message_path_integrity(struct database *db)/*{{{*/
 {
+  /* TODO : for now only checks integrity of non-mbox paths. */
   /* Check there are no duplicates */
   int i;
   int n;
   int has_duplicate = 0;
   
   char **paths;
-  paths = new_array(char *, db->n_paths);
-  for (i=0, n=0; i<db->n_paths; i++) {
-    if (db->paths[i].path) {
-      paths[n++] = db->paths[i].path;
+  paths = new_array(char *, db->n_msgs);
+  for (i=0, n=0; i<db->n_msgs; i++) {
+    switch (db->type[i]) {
+      case MTY_DEAD:
+      case MTY_MBOX:
+        break;
+      case MTY_FILE:
+        paths[n++] = db->msgs[i].src.mpf.path;
+        break;
     }
   }
 
@@ -111,20 +119,22 @@ void check_database_integrity(struct database *db)/*{{{*/
   
   /* Just check encoding chains for now */
   if (verbose) fprintf(stderr, "Checking to\n");
-  check_toktable_enc_integrity(db->n_paths, db->to);
+  check_toktable_enc_integrity(db->n_msgs, db->to);
   if (verbose) fprintf(stderr, "Checking cc\n");
-  check_toktable_enc_integrity(db->n_paths, db->cc);
+  check_toktable_enc_integrity(db->n_msgs, db->cc);
   if (verbose) fprintf(stderr, "Checking from\n");
-  check_toktable_enc_integrity(db->n_paths, db->from);
+  check_toktable_enc_integrity(db->n_msgs, db->from);
   if (verbose) fprintf(stderr, "Checking subject\n");
-  check_toktable_enc_integrity(db->n_paths, db->subject);
+  check_toktable_enc_integrity(db->n_msgs, db->subject);
   if (verbose) fprintf(stderr, "Checking body\n");
-  check_toktable_enc_integrity(db->n_paths, db->body);
+  check_toktable_enc_integrity(db->n_msgs, db->body);
 }
 /*}}}*/
 struct database *new_database(void)/*{{{*/
 {
   struct database *result = new(struct database);
+  struct timeval tv;
+  pid_t  pid;
 
   result->to = new_toktable();
   result->cc = new_toktable();
@@ -132,11 +142,20 @@ struct database *new_database(void)/*{{{*/
   result->subject = new_toktable();
   result->body = new_toktable();
 
-  result->msg_ids = new_toktable();
+  result->msg_ids = new_toktable2();
 
-  result->paths = NULL;
-  result->n_paths = 0;
-  result->max_paths = 0;
+  gettimeofday(&tv, NULL);
+  pid = getpid();
+  result->hash_key = tv.tv_sec ^ (pid ^ (tv.tv_usec << 15));
+
+  result->msgs = NULL;
+  result->type = NULL;
+  result->n_msgs = 0;
+  result->max_msgs = 0;
+
+  result->mboxen = NULL;
+  result->n_mboxen = 0;
+  result->max_mboxen = 0;
 
   return result;
 }
@@ -150,13 +169,23 @@ void free_database(struct database *db)/*{{{*/
   free_toktable(db->from);
   free_toktable(db->subject);
   free_toktable(db->body);
-  free_toktable(db->msg_ids);
+  free_toktable2(db->msg_ids);
 
-  if (db->paths) {
-    for (i=0; i<db->n_paths; i++) {
-      if (db->paths[i].path) free(db->paths[i].path);
+  if (db->msgs) {
+    for (i=0; i<db->n_msgs; i++) {
+      switch (db->type[i]) {
+        case MTY_DEAD:
+          break;
+        case MTY_MBOX:
+          break;
+        case MTY_FILE:
+          assert(db->msgs[i].src.mpf.path);
+          free(db->msgs[i].src.mpf.path);
+          break;
+      }
     }
-    free(db->paths);
+    free(db->msgs);
+    free(db->type);
   }
 
   free(db);
@@ -167,7 +196,7 @@ static int get_max (int a, int b) {/*{{{*/
   return (a > b) ? a : b;
 }
 /*}}}*/
-static void import_toktable(char *data, int n_paths, struct toktable_db *in, struct toktable *out)/*{{{*/
+static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struct toktable_db *in, struct toktable *out)/*{{{*/
 {
   int n, size, i;
 
@@ -204,18 +233,99 @@ static void import_toktable(char *data, int n_paths, struct toktable_db *in, str
     enc_hi = idx;
 
     text = data + in->tok_offsets[i];
-    hash = hashfn(text, strlen(text), 0);
+    hash = hashfn(text, strlen(text), hash_key);
 
     nt = new(struct token);
     nt->hashval = hash;
     nt->text = new_string(text);
     /* Allow a bit of headroom for adding more entries later */
-    nt->max = get_max(16, enc_len + (enc_len >> 1));
-    nt->n = enc_len;
-    nt->highest = enc_hi;
-    assert(nt->highest < n_paths);
-    nt->msginfo = new_array(char, nt->max);
-    memcpy(nt->msginfo, enc, nt->n);
+    nt->match0.max = get_max(16, enc_len + (enc_len >> 1));
+    nt->match0.n = enc_len;
+    nt->match0.highest = enc_hi;
+    assert(nt->match0.highest < n_msgs);
+    nt->match0.msginfo = new_array(char, nt->match0.max);
+    memcpy(nt->match0.msginfo, enc, nt->match0.n);
+
+    index = hash & out->mask;
+    while (out->tokens[index]) {
+      ++index;
+      index &= out->mask;
+    }
+
+    out->tokens[index] = nt;
+  }
+}
+/*}}}*/
+static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, struct toktable2_db *in, struct toktable2 *out)/*{{{*/
+{
+  int n, size, i;
+
+  n = in->n;
+  size = 1;
+  while (size < n) size <<= 1;
+  size <<= 1; /* safe hash table size */
+
+  out->size = size;
+  out->mask = size - 1;
+  out->n = n;
+  out->tokens = new_array(struct token2 *, size);
+  memset(out->tokens, 0, size * sizeof(struct token *));
+  out->hwm = (n + size) >> 1;
+
+  for (i=0; i<n; i++) {
+    unsigned int hash, index;
+    char *text;
+    struct token2 *nt;
+    unsigned char *enc0, *enc1;
+    int enc0_len, enc1_len;
+    int enc0_hi, enc1_hi;
+    int idx, incr;
+    unsigned char *j;
+
+/*{{{ do enc0*/
+    enc0 = (unsigned char *) data + in->enc0_offsets[i];
+    idx = 0;
+    for (j = enc0; *j != 0xff; ) {
+      incr = read_increment(&j);
+      idx += incr;
+    }
+    enc0_len = j - enc0;
+    enc0_hi = idx;
+/*}}}*/
+/*{{{ do enc1*/
+    enc1 = (unsigned char *) data + in->enc1_offsets[i];
+    idx = 0;
+    for (j = enc1; *j != 0xff; ) {
+      incr = read_increment(&j);
+      idx += incr;
+    }
+    enc1_len = j - enc1;
+    enc1_hi = idx;
+/*}}}*/
+
+    text = data + in->tok_offsets[i];
+    hash = hashfn(text, strlen(text), hash_key);
+
+    nt = new(struct token2);
+    nt->hashval = hash;
+    nt->text = new_string(text);
+    /* Allow a bit of headroom for adding more entries later */
+    /*{{{ set up match0 chain */
+    nt->match0.max = get_max(16, enc0_len + (enc0_len >> 1));
+    nt->match0.n = enc0_len;
+    nt->match0.highest = enc0_hi;
+    assert(nt->match0.highest < n_msgs);
+    nt->match0.msginfo = new_array(char, nt->match0.max);
+    memcpy(nt->match0.msginfo, enc0, nt->match0.n);
+    /*}}}*/
+    /*{{{ set up match1 chain */
+    nt->match1.max = get_max(16, enc1_len + (enc1_len >> 1));
+    nt->match1.n = enc1_len;
+    nt->match1.highest = enc1_hi;
+    assert(nt->match1.highest < n_msgs);
+    nt->match1.msginfo = new_array(char, nt->match1.max);
+    memcpy(nt->match1.msginfo, enc1, nt->match1.n);
+    /*}}}*/
 
     index = hash & out->mask;
     while (out->tokens[index]) {
@@ -232,7 +342,7 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
   /* Read existing database from file for doing incremental update */
   struct database *result;
   struct read_db *input;
-  int i, n;
+  int i, n, N;
   
   result = new_database();
   input = open_db(db_filename);
@@ -243,27 +353,75 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
   }
 
   /* Build pathname information */
-  n = result->n_paths = input->n_paths;
-  result->max_paths = input->n_paths; /* let it be extended as-and-when */
-  result->paths = new_array(struct msgpath, n);
-  for (i=0; i<n; i++) {
-    if (input->path_offsets[i]) {
-      result->paths[i].path = new_string(input->data + input->path_offsets[i]);
+  n = result->n_msgs = input->n_msgs;
+  result->max_msgs = input->n_msgs; /* let it be extended as-and-when */
+  result->msgs = new_array(struct msgpath, n);
+  result->type = new_array(enum message_type, n);
+
+  /* Set up mbox structures */
+  N = result->n_mboxen = result->max_mboxen = input->n_mboxen;
+  result->mboxen = N ? (new_array(struct mbox, N)) : NULL;
+  for (i=0; i<N; i++) {
+    int nn;
+    if (input->mbox_paths_table[i]) {
+      result->mboxen[i].path = new_string(input->data + input->mbox_paths_table[i]);
     } else {
-      result->paths[i].path = NULL;
+      /* mbox is dead. */
+      result->mboxen[i].path = NULL;
     }
-    result->paths[i].mtime = input->mtime_table[i];
-    result->paths[i].date  = input->date_table[i];
-    result->paths[i].size  = input->size_table[i];
-    result->paths[i].tid   = input->tid_table[i];
+    result->mboxen[i].file_mtime = input->mbox_mtime_table[i];
+    result->mboxen[i].file_size  = input->mbox_size_table[i];
+    nn = result->mboxen[i].n_msgs = input->mbox_entries_table[i];
+    result->mboxen[i].max_msgs = nn;
+    result->mboxen[i].start = new_array(off_t, nn);
+    result->mboxen[i].len   = new_array(size_t, nn);
+    result->mboxen[i].check_all = new_array(checksum_t, nn);
+    /* Copy the entire checksum table in one go. */
+    memcpy(result->mboxen[i].check_all,
+           input->data + input->mbox_checksum_table[i],
+           nn * sizeof(checksum_t));
+    result->mboxen[i].n_so_far = 0;
   }
 
-  import_toktable(input->data, result->n_paths, &input->to, result->to);
-  import_toktable(input->data, result->n_paths, &input->cc, result->cc);
-  import_toktable(input->data, result->n_paths, &input->from, result->from);
-  import_toktable(input->data, result->n_paths, &input->subject, result->subject);
-  import_toktable(input->data, result->n_paths, &input->body, result->body);
-  import_toktable(input->data, result->n_paths, &input->msg_ids, result->msg_ids);
+  for (i=0; i<n; i++) {
+    switch (input->msg_type[i]) {
+      case DB_MSG_DEAD:
+        result->type[i] = MTY_DEAD;
+        break;
+      case DB_MSG_FILE:
+        result->type[i] = MTY_FILE;
+        result->msgs[i].src.mpf.path = new_string(input->data + input->path_offsets[i]);
+        result->msgs[i].src.mpf.mtime = input->mtime_table[i];
+        result->msgs[i].src.mpf.size  = input->size_table[i];
+        break;
+      case DB_MSG_MBOX:
+        {
+          int mbi, msgi, n;
+          struct mbox *mb;
+          result->type[i] = MTY_MBOX;
+          decode_mbox_indices(input->path_offsets[i], &mbi, &msgi);
+          result->msgs[i].src.mbox.file_index = mbi;
+          mb = &result->mboxen[mbi];
+          assert(mb->n_so_far == msgi);
+          n = mb->n_so_far;
+          result->msgs[i].src.mbox.msg_index = n;
+          mb->start[n] = input->mtime_table[i];
+          mb->len[n] = input->size_table[i];
+          ++mb->n_so_far;
+        }
+
+        break;
+    }
+    result->msgs[i].date  = input->date_table[i];
+    result->msgs[i].tid   = input->tid_table[i];
+  }
+
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->to, result->to);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->cc, result->cc);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->from, result->from);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->subject, result->subject);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->body, result->body);
+  import_toktable2(input->data, input->hash_key, result->n_msgs, &input->msg_ids, result->msg_ids);
 
   close_db(input);
 
@@ -273,7 +431,7 @@ struct database *new_database_from_file(char *db_filename)/*{{{*/
 }
 /*}}}*/
 
-static void add_angled_terms(int file_index, struct toktable *table, char *s)/*{{{*/
+static void add_angled_terms(int file_index, unsigned int hash_key, struct toktable2 *table, int add_to_chain1, char *s)/*{{{*/
 {
   char *left, *right;
 
@@ -283,7 +441,7 @@ static void add_angled_terms(int file_index, struct toktable *table, char *s)/*{
       right = strchr(left, '>');
       if (right) {
         *right = '\0';
-        add_token_in_file(file_index, left+1, table);
+        add_token2_in_file(file_index, hash_key, left+1, table, add_to_chain1);
         *right = '>'; /* restore */
       } else {
         break;
@@ -294,11 +452,24 @@ static void add_angled_terms(int file_index, struct toktable *table, char *s)/*{
 }
 /*}}}*/
 
-/* Macro for what characters can make up token strings */
+/* Macro for what characters can make up token strings.
+
+   The following characters have special meanings:
+   0x2b +
+   0x2d -
+   0x2e .
+   0x40 @
+   0x5f _
+
+   since they can occur within email addresses and message IDs when considered
+   as a whole rather than as individual words.  Underscore (0x5f) is considered
+   a word-character always too.
+
+   */
 static unsigned char special_table[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 00-0f */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 10-1f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, /* 20-2f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 2, 0, /* 20-2f */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 30-3f */
   2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 40-4f */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, /* 50-5f */
@@ -316,7 +487,7 @@ static unsigned char special_table[256] = {
 
 #define CHAR_VALID(x,mask) (isalnum(x) || (special_table[(unsigned int)(unsigned char) x] & mask))
 
-static void tokenise_string(int file_index, struct toktable *table, char *data, int match_mask)/*{{{*/
+static void tokenise_string(int file_index, unsigned int hash_key, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
   char *ss, *es, old_es;
   ss = data;
@@ -330,7 +501,7 @@ static void tokenise_string(int file_index, struct toktable *table, char *data, 
     old_es = *es;
     *es = '\0';
     /* FIXME: Ought to do this by passing start and length - clean up later */
-    add_token_in_file(file_index, ss, table);
+    add_token_in_file(file_index, hash_key, ss, table);
     *es = old_es;
 
     if (!*es) break;
@@ -338,7 +509,7 @@ static void tokenise_string(int file_index, struct toktable *table, char *data, 
   }
 }
 /*}}}*/
-static void tokenise_html_string(int file_index, struct toktable *table, char *data)/*{{{*/
+static void tokenise_html_string(int file_index, unsigned int hash_key, struct toktable *table, char *data)/*{{{*/
 {
   char *ss, *es, old_es;
 
@@ -362,7 +533,7 @@ static void tokenise_html_string(int file_index, struct toktable *table, char *d
     old_es = *es;
     *es = '\0';
     /* FIXME: Ought to do this by passing start and length - clean up later */
-    add_token_in_file(file_index, ss, table);
+    add_token_in_file(file_index, hash_key, ss, table);
     *es = old_es;
 
     if (!*es) break;
@@ -370,32 +541,32 @@ static void tokenise_html_string(int file_index, struct toktable *table, char *d
   }
 }
 /*}}}*/
-static void tokenise_message(int file_index, struct database *db, struct rfc822 *msg)/*{{{*/
+void tokenise_message(int file_index, struct database *db, struct rfc822 *msg)/*{{{*/
 {
   struct attachment *a;
 
   /* Match on whole addresses in these headers as well as the individual words */
   if (msg->hdrs.to) {
-    tokenise_string(file_index, db->to, msg->hdrs.to, 1);
-    tokenise_string(file_index, db->to, msg->hdrs.to, 2);
+    tokenise_string(file_index, db->hash_key, db->to, msg->hdrs.to, 1);
+    tokenise_string(file_index, db->hash_key, db->to, msg->hdrs.to, 2);
   }
   if (msg->hdrs.cc) {
-    tokenise_string(file_index, db->cc, msg->hdrs.cc, 1);
-    tokenise_string(file_index, db->cc, msg->hdrs.cc, 2);
+    tokenise_string(file_index, db->hash_key, db->cc, msg->hdrs.cc, 1);
+    tokenise_string(file_index, db->hash_key, db->cc, msg->hdrs.cc, 2);
   }
   if (msg->hdrs.from) {
-    tokenise_string(file_index, db->from, msg->hdrs.from, 1);
-    tokenise_string(file_index, db->from, msg->hdrs.from, 2);
+    tokenise_string(file_index, db->hash_key, db->from, msg->hdrs.from, 1);
+    tokenise_string(file_index, db->hash_key, db->from, msg->hdrs.from, 2);
   }
-  if (msg->hdrs.subject) tokenise_string(file_index, db->subject, msg->hdrs.subject, 1);
+  if (msg->hdrs.subject) tokenise_string(file_index, db->hash_key, db->subject, msg->hdrs.subject, 1);
 
   for (a=msg->atts.next; a!=&msg->atts; a=a->next) {
     switch (a->ct) {
       case CT_TEXT_PLAIN:
-        tokenise_string(file_index, db->body, a->data.normal.bytes, 1);
+        tokenise_string(file_index, db->hash_key, db->body, a->data.normal.bytes, 1);
         break;
       case CT_TEXT_HTML:
-        tokenise_html_string(file_index, db->body, a->data.normal.bytes);
+        tokenise_html_string(file_index, db->hash_key, db->body, a->data.normal.bytes);
         break;
       case CT_MESSAGE_RFC822:
         /* Just recurse for now - maybe we should have separate token tables
@@ -416,21 +587,31 @@ static void tokenise_message(int file_index, struct database *db, struct rfc822 
   }
 
   /* Deal with threading information */
-  add_angled_terms(file_index, db->msg_ids, msg->hdrs.message_id);
-  add_angled_terms(file_index, db->msg_ids, msg->hdrs.in_reply_to);
-  add_angled_terms(file_index, db->msg_ids, msg->hdrs.references);
+  add_angled_terms(file_index, db->hash_key, db->msg_ids, 1, msg->hdrs.message_id);
+  add_angled_terms(file_index, db->hash_key, db->msg_ids, 0, msg->hdrs.in_reply_to);
+  add_angled_terms(file_index, db->hash_key, db->msg_ids, 0, msg->hdrs.references);
 }
 /*}}}*/
 static void scan_new_messages(struct database *db, int start_at)/*{{{*/
 {
   int i;
-  for (i=start_at; i<db->n_paths; i++) {
-    struct rfc822 *msg;
-    if (verbose) fprintf(stderr, "Scanning <%s>\n", db->paths[i].path);
-    msg = make_rfc822(db->paths[i].path);
+  for (i=start_at; i<db->n_msgs; i++) {
+    struct rfc822 *msg = NULL;
+    switch (db->type[i]) {
+      case MTY_DEAD:
+        assert(0);
+        break;
+      case MTY_MBOX:
+        assert(0); /* Should never get here - mbox messages are scanned elsewhere. */
+        break;
+      case MTY_FILE:
+        if (verbose) fprintf(stderr, "Scanning <%s>\n", db->msgs[i].src.mpf.path);
+        msg = make_rfc822(db->msgs[i].src.mpf.path);
+        break;
+    }
     if(msg) 
     {
-      db->paths[i].date = msg->hdrs.date;
+      db->msgs[i].date = msg->hdrs.date;
       tokenise_message(i, db, msg);
       free_rfc822(msg);
     }
@@ -479,7 +660,7 @@ static void find_threading(struct database *db)/*{{{*/
   int i, m, np, nm, sm;
   int next_tid;
   
-  np = db->n_paths;
+  np = db->n_msgs;
   nm = db->msg_ids->n;
   sm = db->msg_ids->size;
   
@@ -489,10 +670,10 @@ static void find_threading(struct database *db)/*{{{*/
   }
 
   for (m=0; m<sm; m++) {
-    struct token *tok = db->msg_ids->tokens[m];
+    struct token2 *tok = db->msg_ids->tokens[m];
     if (tok) {
-      unsigned char *j = tok->msginfo;
-      unsigned char *last_char = j + tok->n;
+      unsigned char *j = tok->match0.msginfo;
+      unsigned char *last_char = j + tok->match0.n;
       int cur = 0, incr, first=1;
       int new_base, old_base;
       while (j < last_char) {
@@ -526,9 +707,9 @@ static void find_threading(struct database *db)/*{{{*/
   next_tid = 0;
   for (i=0; i<np; i++) {
     if (ix[i] == i) {
-      db->paths[i].tid = next_tid++;
+      db->msgs[i].tid = next_tid++;
     } else {
-      db->paths[i].tid = db->paths[ix[i]].tid;
+      db->msgs[i].tid = db->msgs[ix[i]].tid;
     }
   }
 
@@ -536,15 +717,16 @@ static void find_threading(struct database *db)/*{{{*/
   return;
 }
 /*}}}*/
-static int lookup_msgpath(struct msgpath *sorted_paths, int n_paths, char *key)/*{{{*/
+static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*{{{*/
 {
   /* Implement bisection search */
  int l, h, m, r;
- l = 0, h = n_paths;
+ l = 0, h = n_msgs;
  m = -1;
  while (h > l) {
    m = (h + l) >> 1;
-   r = strcmp(sorted_paths[m].path, key);
+   /* Should only get called on 'file' type messages - TBC */
+   r = strcmp(sorted_paths[m].src.mpf.path, key);
    if (r == 0) break;
    if (l == m) return -1;
    if (r > 0) h = m;
@@ -553,23 +735,30 @@ static int lookup_msgpath(struct msgpath *sorted_paths, int n_paths, char *key)/
  return m;
 }
 /*}}}*/
-static void add_msg_path(struct database *db, char *path, time_t mtime, size_t message_size)/*{{{*/
+void maybe_grow_message_arrays(struct database *db)/*{{{*/
 {
-  if (db->n_paths == db->max_paths) {
-    if (db->max_paths == 0) {
-      db->max_paths = 256;
+  if (db->n_msgs == db->max_msgs) {
+    if (db->max_msgs == 0) {
+      db->max_msgs = 256;
     } else {
-      db->max_paths += (db->max_paths >> 1);
+      db->max_msgs += (db->max_msgs >> 1);
     }
-    db->paths = grow_array(struct msgpath, db->max_paths, db->paths);
+    db->msgs  = grow_array(struct msgpath,    db->max_msgs, db->msgs);
+    db->type  = grow_array(enum message_type, db->max_msgs, db->type);
   }
-  db->paths[db->n_paths].path = new_string(path);
-  db->paths[db->n_paths].mtime = mtime;
-  db->paths[db->n_paths].size = message_size;
-  ++db->n_paths;
 }
 /*}}}*/
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths)/*{{{*/
+static void add_msg_path(struct database *db, char *path, time_t mtime, size_t message_size)/*{{{*/
+{
+  maybe_grow_message_arrays(db);
+  db->type[db->n_msgs] = MTY_FILE;
+  db->msgs[db->n_msgs].src.mpf.path = new_string(path);
+  db->msgs[db->n_msgs].src.mpf.mtime = mtime;
+  db->msgs[db->n_msgs].src.mpf.size = message_size;
+  ++db->n_msgs;
+}
+/*}}}*/
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
    * possible.  We search for each existing path in the incoming sorted array.
@@ -583,54 +772,92 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_pat
   char *file_in_db, *file_in_new_list;
   int matched_index;
   int i, new_entries_start_at;
-  int any_new, n_pruned;
+  int any_new, n_newly_pruned, n_already_dead;
   
-  file_in_db = new_array(char, n_paths);
-  file_in_new_list = new_array(char, db->n_paths);
-  bzero(file_in_db, n_paths);
-  bzero(file_in_new_list, db->n_paths);
+  file_in_db = new_array(char, n_msgs);
+  file_in_new_list = new_array(char, db->n_msgs);
+  bzero(file_in_db, n_msgs);
+  bzero(file_in_new_list, db->n_msgs);
 
-  for (i=0; i<db->n_paths; i++) {
-    if (db->paths[i].path) {
-      matched_index = lookup_msgpath(sorted_paths, n_paths, db->paths[i].path);
-      if ((matched_index >= 0) &&
-          (sorted_paths[matched_index].mtime == db->paths[i].mtime)) {
-      /* Treat stale files as though the path has changed. */
-        file_in_db[matched_index] = 1;
-        file_in_new_list[i] = 1;
-      }
-    } else {
-      /* Just leave the entry dead */
+  n_already_dead = 0;
+  n_newly_pruned = 0;
+
+  for (i=0; i<db->n_msgs; i++) {
+    switch (db->type[i]) {
+      case MTY_FILE:
+        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
+        if ((matched_index >= 0) &&
+            (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime)) {
+        /* Treat stale files as though the path has changed. */
+          file_in_db[matched_index] = 1;
+          file_in_new_list[i] = 1;
+        }
+        break;
+      case MTY_MBOX:
+        /* Nothing to do on this pass. */
+        break;
+      case MTY_DEAD:
+        break;
     }
   }
 
   /* Add new entries to database */
-  new_entries_start_at = db->n_paths;
+  new_entries_start_at = db->n_msgs;
   
-  n_pruned = 0;
-  for (i=0; i<db->n_paths; i++) {
+  for (i=0; i<db->n_msgs; i++) {
     /* Weed dead entries */
-    if (!file_in_new_list[i]) {
-      if (db->paths[i].path) free(db->paths[i].path);
-      db->paths[i].path = NULL;
-      ++n_pruned;
+    switch (db->type[i]) {
+      case MTY_FILE:
+        if (!file_in_new_list[i]) {
+          free(db->msgs[i].src.mpf.path);
+          db->msgs[i].src.mpf.path = NULL;
+          db->type[i] = MTY_DEAD;
+          ++n_newly_pruned;
+        }
+        break;
+      case MTY_MBOX:
+        {
+          int msg_index, file_index, number_valid;
+          int mbox_valid;
+          msg_index = db->msgs[i].src.mbox.msg_index;
+          file_index = db->msgs[i].src.mbox.file_index;
+          assert (file_index < db->n_mboxen);
+          mbox_valid = (db->mboxen[file_index].path) ? 1 : 0;
+          number_valid = db->mboxen[file_index].n_old_msgs_valid;
+          if (!mbox_valid || (msg_index >= number_valid)) {
+            db->type[i] = MTY_DEAD;
+            ++n_newly_pruned;
+          }
+        }
+        break;
+      case MTY_DEAD:
+        /* already dead */
+        ++n_already_dead;
+        break;
     }
   }
 
   if (verbose) {
-    fprintf(stderr, "%d paths no longer exist\n", n_pruned);
+    fprintf(stderr, "%d newly dead messages, %d messages now dead in total\n", n_newly_pruned, n_newly_pruned+n_already_dead);
   }
 
   any_new = 0;
-  for (i=0; i<n_paths; i++) {
+  for (i=0; i<n_msgs; i++) {
     if (!file_in_db[i]) {
       any_new = 1;
-      add_msg_path(db, sorted_paths[i].path, sorted_paths[i].mtime, sorted_paths[i].size);
+      /* The 'sorted_paths' array is only used for file-per-message folders. */
+      add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
     }
   }
-  
+
   if (any_new) {
     scan_new_messages(db, new_entries_start_at);
+  }
+
+  /* Add newly found mbox messages. */
+  any_new |= add_mbox_messages(db);
+  
+  if (any_new) {
     find_threading(db);
   } else {
     if (verbose) fprintf(stderr, "No new messages found\n");
@@ -639,15 +866,40 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_pat
   free(file_in_db);
   free(file_in_new_list);
 
-  return any_new || (n_pruned > 0);
+  return any_new || (n_newly_pruned > 0);
+}
+/*}}}*/
+static void recode_encoding(struct matches *m, int *new_idx)/*{{{*/
+{
+  unsigned char *new_enc, *old_enc;
+  unsigned char *j, *last_char;
+  int incr, idx, n_idx;
+
+  old_enc = m->msginfo;
+  j = old_enc;
+  last_char = old_enc + m->n;
+  
+  new_enc = new_array(unsigned char, m->max); /* Probably not bigger than this. */
+  m->n = 0;
+  m->highest = 0;
+  m->msginfo = new_enc;
+  idx = 0;
+
+  while (j < last_char) {
+    incr = read_increment(&j);
+    idx += incr;
+    n_idx = new_idx[idx];
+    if (n_idx >= 0) {
+      check_and_enlarge_encoding(m);
+      insert_index_on_encoding(m, n_idx);
+    }
+  }
+  free(old_enc);
 }
 /*}}}*/
 static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
 {
   /* Re-encode the vectors according to the new path indices */
-  unsigned char *new_enc, *old_enc;
-  unsigned char *j, *last_char;
-  int incr, idx, n_idx;
   int i;
   int any_dead = 0;
   int any_moved, pass;
@@ -655,27 +907,8 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
   for (i=0; i<tbl->size; i++) {
     struct token *tok = tbl->tokens[i];
     if (tok) {
-      old_enc = tok->msginfo;
-      j = old_enc;
-      last_char = old_enc + tok->n;
-      
-      new_enc = new_array(unsigned char, tok->max); /* Probably not bigger than this. */
-      tok->n = 0;
-      tok->highest = 0;
-      tok->msginfo = new_enc;
-      idx = 0;
-
-      while (j < last_char) {
-        incr = read_increment(&j);
-        idx += incr;
-        n_idx = new_idx[idx];
-        if (n_idx >= 0) {
-          check_and_enlarge_tok_encoding(tok);
-          insert_index_on_token(tok, n_idx);
-        }
-      }
-      free(old_enc);
-      if (tok->n == 0) {
+      recode_encoding(&tok->match0, new_idx);
+      if (tok->match0.n == 0) {
         /* Delete this token.  Gotcha - there may be tokens further on in the
          * array that didn't get their natural hash bucket due to collisions.
          * Need to shuffle such tokens up to guarantee that the buckets between
@@ -685,9 +918,7 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
 #if 0
         fprintf(stderr, "Token <%s> (bucket %d) no longer has files containing it, deleting\n", tok->text, i);
 #endif
-        free(tok->text);
-        free(new_enc);
-        free(tok);
+        free_token(tok);
         tbl->tokens[i] = NULL;
         --tbl->n; /* Maintain number in use counter */
         any_dead = 1;
@@ -696,6 +927,88 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
     }
   }
 
+
+  if (any_dead) {
+    /* Now close gaps.  This has to be done in a second pass, otherwise we get a
+     * problem with moving entries that need deleting back before the current
+       scan point. */
+
+    pass = 1;
+    for (;;) {
+      int i;
+
+      if (verbose) {
+        fprintf(stderr, "Pass %d\n", pass);
+      }
+
+      any_moved = 0;
+
+      for (i=0; i<tbl->size; i++) {
+        if (tbl->tokens[i]) {
+          int nat_bucket_i;
+          nat_bucket_i = tbl->tokens[i]->hashval & tbl->mask;
+          if (nat_bucket_i != i) {
+            /* Find earliest bucket that we could move i to */
+            int j = nat_bucket_i;
+            while (j != i) {
+              if (!tbl->tokens[j]) {
+                /* put it here */
+#if 0
+                fprintf(stderr, "Moved <%s> from bucket %d to %d (natural bucket %d)\n", tbl->tokens[i]->text, i, j, nat_bucket_i);
+#endif
+                tbl->tokens[j] = tbl->tokens[i];
+                tbl->tokens[i] = NULL;
+                any_moved = 1;
+                break;
+              } else {
+                j++;
+                j &= tbl->mask;
+              }
+            }
+            if (tbl->tokens[i]) {
+#if 0
+              fprintf(stderr, "NOT moved <%s> from bucket %d (natural bucket %d)\n", tbl->tokens[i]->text, i, nat_bucket_i);
+#endif
+            }
+          }
+        }
+      }
+
+      if (!any_moved) break;
+      pass++;
+    }
+  }
+}
+/*}}}*/
+static void recode_toktable2(struct toktable2 *tbl, int *new_idx)/*{{{*/
+{
+  /* Re-encode the vectors according to the new path indices */
+  int i;
+  int any_dead = 0;
+  int any_moved, pass;
+  
+  for (i=0; i<tbl->size; i++) {
+    struct token2 *tok = tbl->tokens[i];
+    if (tok) {
+      recode_encoding(&tok->match0, new_idx);
+      recode_encoding(&tok->match1, new_idx);
+      if ((tok->match0.n == 0) && (tok->match1.n == 0)) {
+        /* Delete this token.  Gotcha - there may be tokens further on in the
+         * array that didn't get their natural hash bucket due to collisions.
+         * Need to shuffle such tokens up to guarantee that the buckets between
+         * the natural one and the one where they are now are all occupied, to
+         * prevent their lookups failing. */
+
+#if 0
+        fprintf(stderr, "Token <%s> (bucket %d) no longer has files containing it, deleting\n", tok->text, i);
+#endif
+        free_token2(tok);
+        tbl->tokens[i] = NULL;
+        --tbl->n; /* Maintain number in use counter */
+        any_dead = 1;
+      }
+    }
+  }
 
   if (any_dead) {
     /* Now close gaps.  This has to be done in a second pass, otherwise we get a
@@ -764,15 +1077,19 @@ int cull_dead_messages(struct database *db)/*{{{*/
     fprintf(stderr, "Culling dead messages\n");
   }
 
-  n_old = db->n_paths;
+  n_old = db->n_msgs;
 
   new_idx = new_array(int, n_old);
   for (i=0, j=0; i<n_old; i++) {
-    if (db->paths[i].path) {
-      new_idx[i] = j++;
-    } else {
-      new_idx[i] = -1;
-      any_culled = 1;
+    switch (db->type[i]) {
+      case MTY_FILE:
+      case MTY_MBOX:
+        new_idx[i] = j++;
+        break;
+      case MTY_DEAD:
+        new_idx[i] = -1;
+        any_culled = 1;
+        break;
     }
   }
 
@@ -781,20 +1098,29 @@ int cull_dead_messages(struct database *db)/*{{{*/
   recode_toktable(db->from, new_idx);
   recode_toktable(db->subject, new_idx);
   recode_toktable(db->body, new_idx);
-  recode_toktable(db->msg_ids, new_idx);
+  recode_toktable2(db->msg_ids, new_idx);
   
   /* And crunch down the filename table */
   for (i=0, j=0; i<n_old; i++) {
-    if (db->paths[i].path) {
-      if (i > j) {
-        db->paths[j] = db->paths[i];
-      }
-      j++;
+    switch (db->type[i]) {
+      case MTY_DEAD:
+        break;
+      case MTY_FILE:
+      case MTY_MBOX:
+        if (i > j) {
+          db->msgs[j] = db->msgs[i];
+          db->type[j]  = db->type[i];
+        }
+        j++;
+        break;
     }
   }
-  db->n_paths = j;
+  db->n_msgs = j;
 
   free(new_idx);
+
+  /* .. and cull dead mboxen */
+  cull_dead_mboxen(db);
 
   return any_culled;
 }

@@ -20,16 +20,16 @@ static void do_toktable(struct toktable *x, int *lc, int *elc, int *ec, int size
       }
 
       /* Deal with encoding length */
-      if (tok->n > size) {
-        fprintf(stderr, "Token encoding length %d exceeds size\n", tok->n);
+      if (tok->match0.n > size) {
+        fprintf(stderr, "Token encoding length %d exceeds size\n", tok->match0.n);
       } else {
-        elc[tok->n]++;
-        if (tok->n > *mel) *mel = tok->n;
+        elc[tok->match0.n]++;
+        if (tok->match0.n > *mel) *mel = tok->match0.n;
       }
       
       /* Deal with encoding */
-      j = tok->msginfo;
-      last_char = j + tok->n;
+      j = tok->match0.msginfo;
+      last_char = j + tok->match0.n;
       while (j < last_char) {
         incr = read_increment(&j);
         if (incr > size) {
@@ -86,7 +86,11 @@ void get_db_stats(struct database *db)
   do_toktable(db->from, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
   do_toktable(db->subject, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
   do_toktable(db->body, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
+#if 0
+  /* no longer works now that the msg_ids table has 2 encoding chains.  fix
+   * this when required. */
   do_toktable(db->msg_ids, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
+#endif
 
   printf("Max token length : %d\n", max_len);
   print_table(len_counts, max_len);

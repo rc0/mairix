@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.12 2003/01/18 00:38:12 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.18 2003/11/21 22:09:46 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -23,6 +23,7 @@
  */
 
 #include "mairix.h"
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pwd.h>
@@ -37,8 +38,9 @@ int total_bytes=0;
 int verbose = 0;
 
 static char *folder_base = NULL;
-static char *folders = NULL;
+static char *maildir_folders = NULL;
 static char *mh_folders = NULL;
+static char *mboxen = NULL;
 static char *vfolder = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
@@ -83,6 +85,25 @@ static void add_folders(char **folders, char *extra_folders)/*{{{*/
   }
 }
 /*}}}*/
+static void parse_output_folder(char *p)/*{{{*/
+{
+  char *temp;
+  temp = copy_value(p);
+  if (!strncasecmp(temp, "mh", 2)) {
+    output_folder_type = FT_MH;
+  } else if (!strncasecmp(temp, "maildir", 7)) {
+    output_folder_type = FT_MAILDIR;
+  } else if (!strncasecmp(temp, "raw", 3)) {
+    output_folder_type = FT_RAW;
+  } else if (!strncasecmp(temp, "mbox", 4)) {
+    output_folder_type = FT_MBOX;
+  }
+  else {
+    fprintf(stderr, "Unrecognized vformat <%s>\n", temp);
+  }
+  free(temp);
+}
+/*}}}*/
 static void parse_rc_file(char *name)/*{{{*/
 {
   FILE *in;
@@ -99,7 +120,7 @@ static void parse_rc_file(char *name)/*{{{*/
     home = pw->pw_dir;
     if (!pw) {
       fprintf(stderr, "Cannot lookup passwd entry for this user\n");
-      exit(1);
+      exit(2);
     }
     home = pw->pw_dir;
     name = new_array(char, strlen(home) + 12);
@@ -111,7 +132,7 @@ static void parse_rc_file(char *name)/*{{{*/
   in = fopen(name, "r");
   if (!in) {
     fprintf(stderr, "Cannot open %s, exiting\n", name);
-    exit(1);
+    exit(2);
   }
 
   lineno = 0;
@@ -120,7 +141,7 @@ static void parse_rc_file(char *name)/*{{{*/
     len = strlen(line);
     if (len > sizeof(line) - 4) {
       fprintf(stderr, "Line %d in %s too long, exiting\n", lineno, name);
-      exit(1);
+      exit(2);
     }
 
     if (line[len-1] == '\n') {
@@ -144,32 +165,34 @@ static void parse_rc_file(char *name)/*{{{*/
     
     /* Now a real line to parse */
     if (!strncasecmp(p, "base", 4)) folder_base = copy_value(p);
-    else if (!strncasecmp(p, "folders", 7)) add_folders(&folders, copy_value(p));
-    else if (!strncasecmp(p, "mh_folders", 10)) add_folders(&mh_folders, copy_value(p));
-    else if (!strncasecmp(p, "vfolder_format", 14)) {
-      char *temp;
-      temp = copy_value(p);
-      if (!strncasecmp(temp, "mh", 2)) {
-        output_folder_type = FT_MH;
-      } else if (!strncasecmp(temp, "maildir", 7)) {
-        output_folder_type = FT_MAILDIR;
-      } else if (!strncasecmp(temp, "raw", 3)) {
-        output_folder_type = FT_RAW;
-      }
-      else {
-        fprintf(stderr, "Unrecognized vfolder_format <%s>\n", temp);
-      }
-      free(temp);
+    else if (!strncasecmp(p, "folders", 7)) {
+      fprintf(stderr, "'folders=' option in rc file is depracated, use 'maildir='\n");
+      add_folders(&maildir_folders, copy_value(p));
     }
-    else if (!strncasecmp(p, "vfolder", 7)) vfolder = copy_value(p);
-    else if (!strncasecmp(p, "database", 8)) database_path = copy_value(p);
+    else if (!strncasecmp(p, "maildir=", 8)) add_folders(&maildir_folders, copy_value(p));
+    else if (!strncasecmp(p, "mh_folders=", 11)) {
+      fprintf(stderr, "'mh_folders=' option in rc file is depracated, use 'mh='\n");
+      add_folders(&mh_folders, copy_value(p));
+    }
+    else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
+    else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
+      
+    else if (!strncasecmp(p, "vfolder_format=", 15)) {
+      fprintf(stderr, "'vfolder_format=' option in rc file is depracated, use 'vformat='\n");
+      parse_output_folder(p);
+    }
+    else if (!strncasecmp(p, "vformat=", 8)) {
+      parse_output_folder(p);
+    }
+    else if (!strncasecmp(p, "vfolder=", 8)) vfolder = copy_value(p);
+    else if (!strncasecmp(p, "database=", 9)) database_path = copy_value(p);
     else {
       if (verbose) {
         fprintf(stderr, "Unrecognized option at line %d in %s\n", lineno, name);
       }
     }
   }
-  
+
   fclose(in);
 
   if (used_default_name) free(name);
@@ -184,23 +207,29 @@ static int compare_strings(const void *a, const void *b)/*{{{*/
 /*}}}*/
 static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 {
+  /* Caveat : only examines the file-per-message case */
   char **sorted_paths;
-  int i, n;
+  int i, n, nn;
   int result;
 
   n = msgs->n;
   sorted_paths = new_array(char *, n);
-  for (i=0; i<n; i++) {
-    sorted_paths[i] = msgs->paths[i].path;
+  for (i=0, nn=0; i<n; i++) {
+    switch (msgs->type[i]) {
+      case MTY_MBOX:
+        break;
+      case MTY_DEAD:
+        assert(0);
+        break;
+      case MTY_FILE:
+        sorted_paths[nn++] = msgs->paths[i].src.mpf.path;
+        break;
+    }
   }
-  qsort(sorted_paths, n, sizeof(char *), compare_strings);
-#if 0
-  for (i=0; i<n; i++) {
-    printf("%4d : %s\n", i, sorted_paths[i]);
-  }
-#endif
+  qsort(sorted_paths, nn, sizeof(char *), compare_strings);
+
   result = 0;
-  for (i=1; i<n; i++) {
+  for (i=1; i<nn; i++) {
     if (!strcmp(sorted_paths[i-1], sorted_paths[i])) {
       result = 1;
       break;
@@ -258,13 +287,13 @@ volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
   write(2, ", ", 2);
   emit_int(size);
   write(2, msg2, sizeof(msg2));
-  exit(1); 
+  exit(2); 
 }
 /*}}}*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_11_pre1 $";
+  static char cvs_version[] = "$Name: V0_12 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -311,6 +340,7 @@ static void usage(void)/*{{{*/
          "-p          : purge messages that no longer exist\n"
          "-a          : add new matches to virtual folder (default : clear it first)\n"
          "-t          : include all messages in same threads as matching messages\n"
+         "-r          : force raw output regardless of vformat setting in mairixrc file\n"
          "expr_i      : search expression (all expr's AND'ed together):\n"
          "    word          : match word in whole message\n"
          "    t:word        : match word in To: header\n"
@@ -362,6 +392,7 @@ int main (int argc, char **argv)/*{{{*/
 
   char *arg_rc_file_path = NULL;
   char *arg_vfolder = NULL;
+  char *e;
   int do_augment = 0;
   int do_threads = 0;
   int do_search = 0;
@@ -369,6 +400,7 @@ int main (int argc, char **argv)/*{{{*/
   int any_updates = 0;
   int any_purges = 0;
   int do_help = 0;
+  int do_raw_output = 0;
 
   setlocale(LC_CTYPE, "");
 
@@ -389,6 +421,8 @@ int main (int argc, char **argv)/*{{{*/
       arg_vfolder = *argv;
     } else if (!strcmp(*argv, "-p") || !strcmp(*argv, "--purge")) {
       do_purge = 1;
+    } else if (!strcmp(*argv, "-r") || !strcmp(*argv, "--raw-output")) {
+      do_raw_output = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-h") ||
@@ -425,12 +459,16 @@ int main (int argc, char **argv)/*{{{*/
     folder_base = getenv("MAIRIX_FOLDER_BASE");
   }
 
-  if (getenv("MAIRIX_FOLDERS")) {
-    folders = getenv("MAIRIX_FOLDERS");
+  if (getenv("MAIRIX_MAILDIR_FOLDERS")) {
+    maildir_folders = getenv("MAIRIX_MAIDIR_FOLDERS");
   }
 
   if (getenv("MAIRIX_MH_FOLDERS")) {
     mh_folders = getenv("MAIRIX_MH_FOLDERS");
+  }
+
+  if ((e = getenv("MAIRIX_MBOXEN"))) {
+    mboxen = e;
   }
 
   if (getenv("MAIRIX_VFOLDER")) {
@@ -447,54 +485,61 @@ int main (int argc, char **argv)/*{{{*/
   
   if (!folder_base) {
     fprintf(stderr, "No folder_base/MAIRIX_FOLDER_BASE set\n");
-    exit(1);
+    exit(2);
   }
   
   if (!database_path) {
     fprintf(stderr, "No database/MAIRIX_DATABASE set\n");
-    exit(1);
+    exit(2);
   }
-  
+
+  if (do_raw_output) {
+    output_folder_type = FT_RAW;
+  }
+
   if (do_search) {
     if (!vfolder) {
       if (output_folder_type != FT_RAW) {
         fprintf(stderr, "No vfolder/MAIRIX_VFOLDER set\n");
-        exit(1);
+        exit(2);
       }
       vfolder = new_string("");
     }
 
-    search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type, verbose);
+    return search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type, verbose);
     
   } else {
-    if (!folders && !mh_folders) {
-      fprintf(stderr, "No [mh_]folders/MAIRIX_[MH_]FOLDERS set\n");
-      exit(1);
+    if (!maildir_folders && !mh_folders && !mboxen) {
+      fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
+      exit(2);
     }
     
     if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
-    if (folders) {
-      build_message_list(folder_base, folders, FT_MAILDIR, msgs);
+    if (maildir_folders) {
+      build_message_list(folder_base, maildir_folders, FT_MAILDIR, msgs);
     }
     if (mh_folders) {
       build_message_list(folder_base, mh_folders, FT_MH, msgs);
     }
 
+    /* The next call sorts the msgs array as part of looking for duplicates. */
     if (check_message_list_for_duplicates(msgs)) {
       fprintf(stderr, "Message list contains duplicates - check your 'folders' setting\n");
-      exit(1);
+      exit(2);
     }
 
     /* Try to open existing database */
     if (file_exists(database_path)) {
       if (verbose) printf("Reading existing database...\n");
       db = new_database_from_file(database_path);
-      if (verbose) printf("Loaded %d existing messages\n", db->n_paths);
+      if (verbose) printf("Loaded %d existing messages\n", db->n_msgs);
     } else {
       if (verbose) printf("Starting new database\n");
       db = new_database();
     }
+
+    build_mbox_lists(db, folder_base, mboxen);
     
     any_updates = update_database(db, msgs->paths, msgs->n);
     if (do_purge) {
@@ -511,9 +556,9 @@ int main (int argc, char **argv)/*{{{*/
 
     free_database(db);
     free_msgpath_array(msgs);
+
+    return 0;
   }
-  
-  return 0;
   
 }
 /*}}}*/

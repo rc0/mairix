@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.12 2003/03/12 23:51:57 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.23 2003/12/03 23:05:33 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -29,9 +29,11 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
 #include <dirent.h>
+#include <errno.h>
 
 /* Lame fix for systems where NAME_MAX isn't defined after including the above
  * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
@@ -54,7 +56,21 @@ static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int h
   first_char = (unsigned char *) db->data + tt->enc_offsets[hit_tok];
   for (j = first_char; *j != 0xff; ) {
     idx += read_increment(&j);
-    assert(idx < db->n_paths);
+    assert(idx < db->n_msgs);
+    hits[idx] = 1;
+  }
+}
+/*}}}*/
+static void mark_hits_in_table2(struct read_db *db, struct toktable2_db *tt, int hit_tok, char *hits)/*{{{*/
+{
+  /* mark files containing matched token */
+  int idx;
+  unsigned char *j, *first_char;
+  idx = 0;
+  first_char = (unsigned char *) db->data + tt->enc1_offsets[hit_tok];
+  for (j = first_char; *j != 0xff; ) {
+    idx += read_increment(&j);
+    assert(idx < db->n_msgs);
     hits[idx] = 1;
   }
 }
@@ -75,7 +91,7 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   len = strlen(substring);
   if (len > 31 || len == 0) {
     fprintf(stderr, "Can't match patterns longer than 31 characters or empty\n");
-    exit(1);
+    exit(2);
   }
   memset(a, 0xff, 256 * sizeof(unsigned long));
   for (p=substring, i=0; *p; p++, i++) {
@@ -257,6 +273,51 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
   if (nr) free(nr);
 }
 /*}}}*/
+static void match_substring_in_table2(struct read_db *db, struct toktable2_db *tt, char *substring, int max_errors, char *hits)/*{{{*/
+{
+
+  int i, got_hit;
+  unsigned long a[256];
+  unsigned long *r=NULL, *nr=NULL;
+  unsigned long hit;
+  char *token;
+
+  build_match_vector(substring, a, &hit);
+
+  got_hit = 0;
+  if (max_errors > 3) {
+    r = new_array(unsigned long, 1 + max_errors);
+    nr = new_array(unsigned long, 1 + max_errors);
+  }
+  for (i=0; i<tt->n; i++) {
+    token = db->data + tt->tok_offsets[i];
+    switch (max_errors) {
+      /* Optimise common cases for few errors to allow optimizer to keep bitmaps
+       * in registers */
+      case 0:
+        got_hit = substring_match_0(a, hit, token);
+        break;
+      case 1:
+        got_hit = substring_match_1(a, hit, token);
+        break;
+      case 2:
+        got_hit = substring_match_2(a, hit, token);
+        break;
+      case 3:
+        got_hit = substring_match_3(a, hit, token);
+        break;
+      default:
+        got_hit = substring_match_general(a, hit, token, max_errors, r, nr);
+        break;
+    }
+    if (got_hit) {
+      mark_hits_in_table2(db, tt, i, hits);
+    }
+  }
+  if (r)  free(r);
+  if (nr) free(nr);
+}
+/*}}}*/
 static void match_substring_in_paths(struct read_db *db, char *substring, int max_errors, char *hits)/*{{{*/
 {
 
@@ -272,7 +333,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
     r = new_array(unsigned long, 1 + max_errors);
     nr = new_array(unsigned long, 1 + max_errors);
   }
-  for (i=0; i<db->n_paths; i++) {
+  for (i=0; i<db->n_msgs; i++) {
     if (db->path_offsets[i]) {
       token = db->data + db->path_offsets[i];
       switch (max_errors) {
@@ -312,6 +373,19 @@ static void match_string_in_table(struct read_db *db, struct toktable_db *tt, ch
     if (!strcmp(key, db->data + tt->tok_offsets[i])) {
       /* get all matching files */
       mark_hits_in_table(db, tt, i, hits);
+    }
+  }
+}
+/*}}}*/
+static void match_string_in_table2(struct read_db *db, struct toktable2_db *tt, char *key, char *hits)/*{{{*/
+{
+  /* TODO : replace with binary search? */
+  int i;
+
+  for (i=0; i<tt->n; i++) {
+    if (!strcmp(key, db->data + tt->tok_offsets[i])) {
+      /* get all matching files */
+      mark_hits_in_table2(db, tt, i, hits);
     }
   }
 }
@@ -508,7 +582,7 @@ static void find_size_matches_in_table(struct read_db *db, char *size_expr, char
     }
   }
 
-  for (i=0; i<db->n_paths; i++) {
+  for (i=0; i<db->n_msgs; i++) {
     start_cond = has_start ? (db->size_table[i] > start) : 1;
     end_cond   = has_end   ? (db->size_table[i] < end  ) : 1;
     if (start_cond && end_cond) {
@@ -526,7 +600,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   
   status = scan_date_string(date_expr, &start, &has_start, &end, &has_end);
   if (status) {
-    exit (1);
+    exit (2);
   }
 
 #if 0
@@ -541,7 +615,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
     }
   }
 
-  for (i=0; i<db->n_paths; i++) {
+  for (i=0; i<db->n_msgs; i++) {
     start_cond = has_start ? (db->date_table[i] > start) : 1;
     end_cond   = has_end   ? (db->date_table[i] < end  ) : 1;
     if (start_cond && end_cond) {
@@ -551,21 +625,152 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
 }
 /*}}}*/
 
-static void do_search(struct read_db *db, char **args, char *output_dir, int show_threads, enum folder_type ft, int verbose)/*{{{*/
+static char *mk_maildir_path(int token, char *output_dir)/*{{{*/
+{
+  char *result; 
+  char uniq_buf[48];
+  int len;
+
+  len = strlen(output_dir) + 64; /* oversize */
+  result = new_array(char, len);
+  strcpy(result, output_dir);
+  strcat(result, "/cur/");
+  sprintf(uniq_buf, "mairix_%d:2,S", token);
+  strcat(result, uniq_buf);
+  return result;
+}
+/*}}}*/
+static char *mk_mh_path(int token, char *output_dir)/*{{{*/
+{
+  char *result; 
+  char uniq_buf[8];
+  int len;
+
+  len = strlen(output_dir) + 10; /* oversize */
+  result = new_array(char, len);
+  strcpy(result, output_dir);
+  strcat(result, "/");
+  sprintf(uniq_buf, "%d", token+1);
+  strcat(result, uniq_buf);
+  return result;
+}
+/*}}}*/
+static void create_symlink(char *link_target, char *new_link)/*{{{*/
+{
+  if (symlink(link_target, new_link) < 0) {
+    if (verbose) {
+      perror("symlink");
+      fprintf(stderr, "Failed path <%s> -> <%s>\n", link_target, new_link);
+    }
+  }
+}
+/*}}}*/
+static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
+{
+  unsigned char *data;
+  int len;
+  create_ro_mapping(path, &data, &len);
+  if (data) {
+    fprintf(out, "From mairix@mairix Mon Jan 1 12:34:56 1970\n");
+    fwrite (data, sizeof(unsigned char), len, out);
+    munmap(data, len);
+  }
+  return;
+}
+/*}}}*/
+
+static int had_failed_checksum;
+
+static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
+                                   int *mbox_index,
+                                   unsigned char **mbox_data, int *mbox_len,
+                                   unsigned char **msg_data,  int *msg_len)
+{
+  /* msg_data==NULL if checksum mismatches */
+  unsigned char *start;
+  checksum_t csum;
+  unsigned int mbi, msgi;
+
+  *msg_data = NULL;
+  *msg_len = 0;
+
+  *mbox_index = db->path_offsets[msg_index];
+  decode_mbox_indices(db->path_offsets[msg_index], &mbi, &msgi);
+  *mbox_index = mbi;
+
+  create_ro_mapping(db->data + db->mbox_paths_table[mbi], mbox_data, mbox_len);
+  if (!*mbox_data) return;
+
+  start = *mbox_data + db->mtime_table[msg_index];
+  *msg_len = db->size_table[msg_index];
+  compute_checksum(start, *msg_len, &csum);
+  if (!memcmp((db->data + db->mbox_checksum_table[mbi] + (msgi * sizeof(checksum_t))), &csum, sizeof(checksum_t))) {
+    *msg_data = start;
+  } else {
+    had_failed_checksum = 1;
+  }
+  return;
+}
+/*}}}*/
+static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)/*{{{*/
+{
+  /* Need to common up code with try_copy_to_path */
+  unsigned char *mbox_start, *msg_start;
+  int mbox_len, msg_len;
+  int mbox_index;
+
+  get_validated_mbox_msg(db, msg_index, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
+  if (msg_start) {
+    fprintf(out, "From mairix@mairix Mon Jan 1 12:34:56 1970\n");
+    fwrite(msg_start, sizeof(unsigned char), msg_len, out);
+  }
+  if (mbox_start) {
+    munmap(mbox_start, mbox_len);
+  }
+}
+/*}}}*/
+static void try_copy_to_path(struct read_db *db, int msg_index, char *target_path)/*{{{*/
+{
+  unsigned char *data;
+  int mbox_len, msg_len;
+  int mbi;
+  FILE *out;
+  unsigned char *start;
+
+  get_validated_mbox_msg(db, msg_index, &mbi, &data, &mbox_len, &start, &msg_len);
+
+  if (start) {
+    out = fopen(target_path, "wb");
+    if (out) {
+      /* Artificial from line, we don't have the envelope sender so this is
+         going to be artificial anyway. */
+      fwrite(start, sizeof(char), msg_len, out);
+      fclose(out);
+    }
+  }
+
+  if (data) {
+    munmap(data, mbox_len);
+  }
+  return;
+}
+/*}}}*/
+static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
-  int do_path;
+  int do_path, do_msgid;
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
   int i;
   int n_hits;
-  int mh_counter;
 
-  hit0 = new_array(char, db->n_paths);
-  hit1 = new_array(char, db->n_paths);
-  hit2 = new_array(char, db->n_paths);
-  hit3 = new_array(char, db->n_paths);
+  had_failed_checksum = 0;
+
+  hit0 = new_array(char, db->n_msgs);
+  hit1 = new_array(char, db->n_msgs);
+  hit2 = new_array(char, db->n_msgs);
+  hit3 = new_array(char, db->n_msgs);
 
   /* Argument structure is
    * x:tokena+tokenb,~tokenc,tokend+tokene
@@ -581,14 +786,14 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
   
   
   /* Everything matches until proven otherwise */
-  memset(hit3, 1, db->n_paths);
+  memset(hit3, 1, db->n_msgs);
   
   while (*args) {
     /* key is a single argument, separate args are and-ed together */
     key = *args++;
     
-    memset(hit2, 0, db->n_paths);
-    memset(hit1, 1, db->n_paths);
+    memset(hit2, 0, db->n_msgs);
+    memset(hit1, 1, db->n_msgs);
 
     do_to = 0;
     do_cc = 0;
@@ -598,6 +803,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
     do_date = 0;
     do_size = 0;
     do_path = 0;
+    do_msgid = 0;
     
     colon = strchr(key, ':');
 
@@ -615,6 +821,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
           case 'd': do_date = 1; break;
           case 'z': do_size = 1; break;
           case 'p': do_path = 1; break;
+          case 'm': do_msgid = 1; break;
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
@@ -625,67 +832,57 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
     }
 
     if (do_date || do_size) {
-      memset(hit0, 0, db->n_paths);
+      memset(hit0, 0, db->n_msgs);
       if (do_date) {
         find_date_matches_in_table(db, start_words, hit0);
       } else if (do_size) {
         find_size_matches_in_table(db, start_words, hit0);
       }
       /* AND-combine match vectors */
-      for (i=0; i<db->n_paths; i++) {
+      for (i=0; i<db->n_msgs; i++) {
         hit1[i] &= hit0[i];
       }
     } else {
 /*{{{  Scan over separate words within this argument */
-    /* Ideas dump:
-     * Need to extend this somewhat.  After a word, want to have maybe another
-       colon followed by what kind of matching to do.
-       :e (default) is exact
-       :g           is glob
-       :r           is regexp
-       :s           is substring
-       :a<n>        is approximate (to allow typos) - up to n errors
-     *
-       Exact matching should use binary chop on datafile for speed
-     */
-    
+
     do {
-      /* Scan over comma/plus-separated words in a single argument */
-      char *comma;
-      char *plus;
+      /* / = 'or' separator
+       * , = 'and' separator */
+      char *orsep;
+      char *andsep;
       char *word, *orig_word;
       char *equal;
       char *p;
       int negate;
-      int had_comma;
+      int had_orsep;
       int max_errors;
       
-      comma = strchr(start_words, ',');
-      plus  = strchr(start_words, '+');
-      had_comma = 0;
+      orsep = strchr(start_words, '/');
+      andsep  = strchr(start_words, ',');
+      had_orsep = 0;
 
-      if (plus && (!comma || (plus < comma))) {
+      if (andsep && (!orsep || (andsep < orsep))) {
         char *p, *q;
-        word = new_array(char, 1 + (plus - start_words)); /* maybe oversize */
-        for (p=word, q=start_words; q < plus; q++) {
+        word = new_array(char, 1 + (andsep - start_words)); /* maybe oversize */
+        for (p=word, q=start_words; q < andsep; q++) {
           if (!isspace(*q)) {
             *p++ = *q;
           }
         }
         *p = 0;
-        start_words = plus + 1;
-      } else if (comma) { /* comes before + if there's a + */
+        start_words = andsep + 1;
+      } else if (orsep) { /* comes before + if there's a + */
         char *p, *q;
-        word = new_array(char, 1 + (comma - start_words)); /* maybe oversize */
-        for (p=word, q=start_words; q < comma; q++) {
+        word = new_array(char, 1 + (orsep - start_words)); /* maybe oversize */
+        for (p=word, q=start_words; q < orsep; q++) {
           if (!isspace(*q)) {
             *p++ = *q;
           }
         }
         *p = 0;
-        start_words = comma + 1;
-        had_comma = 1;
-        
+        start_words = orsep + 1;
+        had_orsep = 1;
+
       } else {
         word = new_string(start_words);
         while (*start_words) ++start_words;
@@ -705,15 +902,17 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
         *equal = 0;
         max_errors = atoi(equal + 1);
         /* Extend this to do anchoring etc */
+      } else {
+        max_errors = 0; /* keep GCC quiet */
       }
-      
+
       /* Canonicalise search string to lowercase, since the database has all
        * tokens handled that way */
       for (p=word; *p; p++) {
         *p = tolower(*p);
       }
-      
-      memset(hit0, 0, db->n_paths);
+
+      memset(hit0, 0, db->n_msgs);
       if (equal) {
         if (do_to) match_substring_in_table(db, &db->to, word, max_errors, hit0);
         if (do_cc) match_substring_in_table(db, &db->cc, word, max_errors, hit0);
@@ -721,6 +920,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
         if (do_subject) match_substring_in_table(db, &db->subject, word, max_errors, hit0);
         if (do_body) match_substring_in_table(db, &db->body, word, max_errors, hit0);
         if (do_path) match_substring_in_paths(db, word, max_errors, hit0);
+        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, word, max_errors, hit0);
       } else {
         if (do_to) match_string_in_table(db, &db->to, word, hit0);
         if (do_cc) match_string_in_table(db, &db->cc, word, hit0);
@@ -729,10 +929,11 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
         if (do_body) match_string_in_table(db, &db->body, word, hit0);
         /* FIXME */
         if (do_path) match_substring_in_paths(db, word, 0, hit0);
+        if (do_msgid) match_string_in_table2(db, &db->msg_ids, word, hit0);
       }
-      
+
       /* AND-combine match vectors */
-      for (i=0; i<db->n_paths; i++) {
+      for (i=0; i<db->n_msgs; i++) {
         if (negate) {
           hit1[i] &= !hit0[i];
         } else {
@@ -740,12 +941,12 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
         }
       }
 
-      if (had_comma) {
+      if (had_orsep) {
         /* OR-combine match vectors */
-        for (i=0; i<db->n_paths; i++) {
+        for (i=0; i<db->n_msgs; i++) {
           hit2[i] |= hit1[i];
         }
-        memset(hit1, 1, db->n_paths);
+        memset(hit1, 1, db->n_msgs);
       }
       
       free(orig_word);
@@ -755,106 +956,150 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
     }
 
     /* OR-combine match vectors */
-    for (i=0; i<db->n_paths; i++) {
+    for (i=0; i<db->n_msgs; i++) {
       hit2[i] |= hit1[i];
     }
 
     /* AND-combine match vectors */
-    for (i=0; i<db->n_paths; i++) {
+    for (i=0; i<db->n_msgs; i++) {
       hit3[i] &= hit2[i];
     }
   }
 
   n_hits = 0;
 
-  if (show_threads) {
+  if (show_threads) {/*{{{*/
     char *tids;
-    tids = new_array(char, db->n_paths);
-    memset(tids, 0, db->n_paths);
-    for (i=0; i<db->n_paths; i++) {
+    tids = new_array(char, db->n_msgs);
+    memset(tids, 0, db->n_msgs);
+    for (i=0; i<db->n_msgs; i++) {
       if (hit3[i]) {
         tids[db->tid_table[i]] = 1;
       }
     }
-    for (i=0; i<db->n_paths; i++) {
+    for (i=0; i<db->n_msgs; i++) {
       if (tids[db->tid_table[i]]) {
         hit3[i] = 1;
       }
     }
     free(tids);
   }
-
+/*}}}*/
   switch (ft) {
-    case FT_MAILDIR:
-      for (i=0; i<db->n_paths; i++) {
+    case FT_MAILDIR:/*{{{*/
+      for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          if (db->path_offsets[i]) {
-            /* File is not dead */
-            char *target_path;
-            char uniq_buf[48];
-            int len;
-            
-            ++n_hits;
-            len = strlen(output_dir) + 64; /* oversize */
-            target_path = new_array(char, len);
-            strcpy(target_path, output_dir);
-            strcat(target_path, "/cur/");
-            sprintf(uniq_buf, "mairix_%d:2,S", i);
-            strcat(target_path, uniq_buf);
-            
-            if (symlink(db->data + db->path_offsets[i], target_path) < 0) {
-              if (verbose) {
-                perror("symlink");
-                fprintf(stderr, "Failed path <%s> -> <%s>\n", db->data + db->path_offsets[i], target_path);
+          switch (db->msg_type[i]) {
+            case DB_MSG_FILE:
+              {
+                char *target_path = mk_maildir_path(i, output_path);
+                create_symlink(db->data + db->path_offsets[i], target_path);
+                free(target_path);
+                ++n_hits;
               }
-            }
-            free(target_path);  
+              break;
+            case DB_MSG_MBOX:
+              {
+                char *target_path = mk_maildir_path(i, output_path);
+                try_copy_to_path(db, i, target_path);
+                free(target_path);
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_DEAD:
+              break;
           }
         }
       }
       break;
-    case FT_MH:
-      mh_counter = 1;
-      for (i=0; i<db->n_paths; i++) {
+/*}}}*/
+    case FT_MH:/*{{{*/
+      for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          if (db->path_offsets[i]) {
-            /* File is not dead */
-            char *target_path;
-            char uniq_buf[8];
-            int len;
-            
-            ++n_hits;
-            len = strlen(output_dir) + 10;
-            target_path = new_array(char, len);
-            strcpy(target_path, output_dir);
-            strcat(target_path, "/");
-            sprintf(uniq_buf, "%d", i + 1 /* mh_counter++ */);
-            strcat(target_path, uniq_buf);
-            
-            if (symlink(db->data + db->path_offsets[i], target_path) < 0) {
-              if (verbose) {
-                perror("symlink");
-                fprintf(stderr, "Failed path <%s> -> <%s>\n", db->data + db->path_offsets[i], target_path);
+          switch (db->msg_type[i]) {
+            case DB_MSG_FILE:
+              {
+                char *target_path = mk_mh_path(i, output_path);
+                create_symlink(db->data + db->path_offsets[i], target_path);
+                free(target_path);
+                ++n_hits;
               }
-            }
-            free(target_path);  
+              break;
+            case DB_MSG_MBOX:
+              {
+                char *target_path = mk_mh_path(i, output_path);
+                try_copy_to_path(db, i, target_path);
+                free(target_path);
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_DEAD:
+              break;
           }
         }
+      }
+      break;
+/*}}}*/
+    case FT_MBOX:/*{{{*/
+      {
+        FILE *out;
+        out = fopen(output_path, "ab");
+
+        for (i=0; i<db->n_msgs; i++) {
+          if (hit3[i]) {
+            switch (db->msg_type[i]) {
+              case DB_MSG_FILE:
+                {
+                  append_file_to_mbox(db->data + db->path_offsets[i], out);
+                  ++n_hits;
+                }
+                break;
+              case DB_MSG_MBOX:
+                {
+                  append_mboxmsg_to_mbox(db, i, out);
+                  ++n_hits;
+                }
+                break;
+              case DB_MSG_DEAD:
+                break;
+            }
+          }
+        }
+        fclose(out);
       }
 
       break;
-    case FT_RAW:
-      for (i=0; i<db->n_paths; i++) {
+/*}}}*/
+    case FT_RAW:/*{{{*/
+      for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          if (db->path_offsets[i]) {
-            /* File is not dead */
-            ++n_hits;
-            printf("%s\n", db->data + db->path_offsets[i]);
+          switch (db->msg_type[i]) {
+            case DB_MSG_FILE:
+              {
+                ++n_hits;
+                printf("%s\n", db->data + db->path_offsets[i]);
+              }
+              break;
+            case DB_MSG_MBOX:
+              {
+                int mbix, msgix;
+                int start, len, after_end;
+                start = db->mtime_table[i];
+                len   = db->size_table[i];
+                after_end = start + len;
+                ++n_hits;
+                decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+                printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
+              }
+              break;
+            case DB_MSG_DEAD:
+              break;
           }
         }
       }
       printf("\n");
       break;
+/*}}}*/
     default:
       assert(0);
       break;
@@ -865,6 +1110,17 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
   free(hit2);
   free(hit3);
   printf("Matched %d messages\n", n_hits);
+  fflush(stdout);
+
+  if (had_failed_checksum) {
+    fprintf(stderr,
+            "WARNING : \n"
+            "Matches were found in mbox folders but the message checksums failed.\n"
+            "You may need to run mairix in indexing mode then repeat your search.\n");
+  }
+  
+  /* Return error code 1 to the shell if no messages were matched. */
+  return (n_hits == 0) ? 1 : 0;
 }
 /*}}}*/
 
@@ -882,22 +1138,39 @@ static int directory_exists(char *name)/*{{{*/
   }
 }
 /*}}}*/
+static int is_file_or_nothing(char *name)/*{{{*/
+{
+  struct stat sb;
+  if (stat(name, &sb) < 0) {
+    if (errno == ENOENT)
+      return 1;
+    else
+      return 0;
+  }
+  if (S_ISREG(sb.st_mode))
+    return 1;
+  else
+    return 0;
+}
+/*}}}*/
 static void create_dir(char *path)/*{{{*/
 {
   if (mkdir(path, 0700) < 0) {
     perror("mkdir");
-    exit(1);
+    exit(2);
   }
   fprintf(stderr, "Created directory %s\n", path);
   return;
 }
 /*}}}*/
-static void create_maildir(char *path)/*{{{*/
+static void maybe_create_maildir(char *path)/*{{{*/
 {
   char *subdir, *tailpos;
   int len;
   
-  create_dir(path);
+  if (!directory_exists(path)) {
+    create_dir(path);
+  }
 
   len = strlen(path);
   subdir = new_array(char, len + 5);
@@ -906,11 +1179,18 @@ static void create_maildir(char *path)/*{{{*/
   tailpos = subdir + len + 1;
 
   strcpy(tailpos,"cur");
-  create_dir(subdir);
+  if (!directory_exists(subdir)) {
+    create_dir(subdir);
+  }
   strcpy(tailpos,"new");
-  create_dir(subdir);
+  if (!directory_exists(subdir)) {
+    create_dir(subdir);
+  }
   strcpy(tailpos,"tmp");
-  create_dir(subdir);
+  if (!directory_exists(subdir)) {
+    create_dir(subdir);
+  }
+  free(subdir);
   return;
 }
 /*}}}*/
@@ -938,7 +1218,9 @@ static void clear_maildir_subfolder(char *path, char *subdir)/*{{{*/
       strcat(fpath, "/");
       strcat(fpath, de->d_name);
       if (lstat(fpath, &sb) >= 0) {
-        if (S_ISLNK(sb.st_mode)) {
+        /* Deal with both symlinks to maildir/MH messages as well as real files
+         * where mbox messages have been written. */
+        if (S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode)) {
           /* FIXME : Can you unlink from a directory while doing a readdir loop over it? */
           if (unlink(fpath) < 0) {
             fprintf(stderr, "Unlinking %s failed\n", fpath);
@@ -973,7 +1255,8 @@ static void clear_mh_folder(char *path)/*{{{*/
         strcat(fpath, "/");
         strcat(fpath, de->d_name);
         if (lstat(fpath, &sb) >= 0) {
-          if (S_ISLNK(sb.st_mode)) {
+          /* See under maildir above for explanation */
+          if (S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode)) {
             /* FIXME : Can you unlink from a directory while doing a readdir loop over it? */
             if (unlink(fpath) < 0) {
               fprintf(stderr, "Unlinking %s failed\n", fpath);
@@ -988,7 +1271,13 @@ static void clear_mh_folder(char *path)/*{{{*/
   free(fpath);
 }
 /*}}}*/
-void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
+static void clear_mbox_folder(char *path)/*{{{*/
+{
+  unlink(path);
+}
+/*}}}*/
+
+int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
 {
   struct read_db *db;
   char *complete_vfolder;
@@ -1006,19 +1295,22 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
     strcat(complete_vfolder, vfolder);
   }
 
-  if (!directory_exists(complete_vfolder)) {
-    switch (ft) {
-      case FT_MAILDIR:
-        create_maildir(complete_vfolder);
-        break;
-      case FT_MH:
+  switch (ft) {
+    case FT_MAILDIR:
+      maybe_create_maildir(complete_vfolder);
+      break;
+    case FT_MH:
+      if (!directory_exists(complete_vfolder)) {
         create_dir(complete_vfolder);
-        break;
-      case FT_RAW:
-        break;
-      default:
-        assert(0);
-    }
+      }
+      break;
+    case FT_MBOX:
+      /* Nothing to do */
+      break;
+    case FT_RAW:
+      break;
+    default:
+      assert(0);
   }
 
   if (!do_augment) {
@@ -1030,6 +1322,9 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
       case FT_MH:
         clear_mh_folder(complete_vfolder);
         break;
+      case FT_MBOX:
+        clear_mbox_folder(complete_vfolder);
+        break;
       case FT_RAW:
         break;
       default:
@@ -1037,7 +1332,7 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
     }
   }
 
-  do_search(db, argv, complete_vfolder, do_threads, ft, verbose);
+  return do_search(db, argv, complete_vfolder, do_threads, ft, verbose);
 
   close_db(db);
 }

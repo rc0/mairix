@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/reader.c,v 1.2 2002/07/24 22:50:13 richard Exp $
+  $Header: /cvs/src/mairix/reader.c,v 1.8 2003/11/27 23:18:37 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -72,6 +72,16 @@ static void read_toktable_db(char *data, struct toktable_db *toktable, int start
   return;
 }
 /*}}}*/
+static void read_toktable2_db(char *data, struct toktable2_db *toktable, int start, unsigned int *uidata)/*{{{*/
+{
+  int n;
+  n = toktable->n = uidata[start];
+  toktable->tok_offsets = uidata + uidata[start+1];
+  toktable->enc0_offsets = uidata + uidata[start+2];
+  toktable->enc1_offsets = uidata + uidata[start+3];
+  return;
+}
+/*}}}*/
 struct read_db *open_db(char *filename)/*{{{*/
 {
   int fd, len;
@@ -84,34 +94,34 @@ struct read_db *open_db(char *filename)/*{{{*/
   fd = open(filename, O_RDONLY);
   if (fd < 0) {
     perror("open");
-    exit (1);
+    exit (2);
   }
 
   if (fstat(fd, &sb) < 0) {
     perror("stat");
-    exit(1);
+    exit(2);
   }
 
   len = sb.st_size;
 
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
-  if ((int)data < 0) {
+  if (data == MAP_FAILED) {
     perror("mmap");
-    exit(1);
+    exit(2);
   }
 
   if (!data) {
     /* Empty file opened => database corrupt for sure */
     if (close(fd) < 0) {
       perror("close");
-      exit(1);
+      exit(2);
     }
     return NULL;
   }
   
   if (close(fd) < 0) {
     perror("close");
-    exit(1);
+    exit(2);
   }
 
   result = new(struct read_db);
@@ -126,42 +136,57 @@ struct read_db *open_db(char *filename)/*{{{*/
       ucdata[2] == HEADER_MAGIC2) {
     if (ucdata[3] != HEADER_MAGIC3) {
       fprintf(stderr, "Another version of this program produced the existing database!  Please rebuild.\n");
-      exit(1);
+      exit(2);
     }
   } else {
     fprintf(stderr, "The existing database wasn't produced by this program!  Please rebuild.\n");
-    exit(1);
+    exit(2);
   }
   /*}}}*/
   /* {{{ Endianness check */
-  if (uidata[1] == 0x11223344) {
+  if (uidata[UI_ENDIAN] == 0x11223344) {
     fprintf(stderr, "The endianness of the database is reversed for this machine\n");
-    exit(1);
-  } else if (uidata[1] != 0x44332211) {
+    exit(2);
+  } else if (uidata[UI_ENDIAN] != 0x44332211) {
     fprintf(stderr, "The endianness of this machine is strange (or database is corrupt)\n");
-    exit(1);
+    exit(2);
   }
   /* }}} */
 
   /* Now build tables of where things are in the file */
-  result->n_paths = uidata[2];
-  result->path_offsets = uidata + uidata[3];
-  result->mtime_table = uidata + uidata[4];
-  result->date_table = uidata + uidata[5];
-  result->size_table = uidata + uidata[6];
-  result->tid_table  = uidata + uidata[7];
+  result->n_msgs = uidata[UI_N_MSGS];
+  result->msg_type    = ucdata + uidata[UI_MSG_TYPE];
+  result->path_offsets = uidata + uidata[UI_MSG_CDATA];
+  result->mtime_table = uidata + uidata[UI_MSG_MTIME];
+  result->size_table = uidata + uidata[UI_MSG_SIZE];
+  result->date_table = uidata + uidata[UI_MSG_DATE];
+  result->tid_table  = uidata + uidata[UI_MSG_TID];
 
-  read_toktable_db(data, &result->to, 8, uidata);
-  read_toktable_db(data, &result->cc, 11, uidata);
-  read_toktable_db(data, &result->from, 14, uidata);
-  read_toktable_db(data, &result->subject, 17, uidata);
-  read_toktable_db(data, &result->body, 20, uidata);
-  read_toktable_db(data, &result->msg_ids, 23, uidata);
+  result->n_mboxen            = uidata[UI_MBOX_N];
+  result->mbox_paths_table    = uidata + uidata[UI_MBOX_PATHS];
+  result->mbox_entries_table  = uidata + uidata[UI_MBOX_ENTRIES];
+  result->mbox_mtime_table    = uidata + uidata[UI_MBOX_MTIME];
+  result->mbox_size_table     = uidata + uidata[UI_MBOX_SIZE];
+  result->mbox_checksum_table = uidata + uidata[UI_MBOX_CKSUM];
+
+  result->hash_key = uidata[UI_HASH_KEY];
+  
+  read_toktable_db(data, &result->to, UI_TO_BASE, uidata);
+  read_toktable_db(data, &result->cc, UI_CC_BASE, uidata);
+  read_toktable_db(data, &result->from, UI_FROM_BASE, uidata);
+  read_toktable_db(data, &result->subject, UI_SUBJECT_BASE, uidata);
+  read_toktable_db(data, &result->body, UI_BODY_BASE, uidata);
+  read_toktable2_db(data, &result->msg_ids, UI_MSGID_BASE, uidata);
 
   return result;
 }
 /*}}}*/
 static void free_toktable_db(struct toktable_db *x)/*{{{*/
+{
+  /* Nothing to do */
+}
+/*}}}*/
+static void free_toktable2_db(struct toktable2_db *x)/*{{{*/
 {
   /* Nothing to do */
 }
@@ -173,11 +198,11 @@ void close_db(struct read_db *x)/*{{{*/
   free_toktable_db(&x->from);
   free_toktable_db(&x->subject);
   free_toktable_db(&x->body);
-  free_toktable_db(&x->msg_ids);
+  free_toktable2_db(&x->msg_ids);
 
   if (munmap(x->data, x->len) < 0) {
     perror("munmap");
-    exit(1);
+    exit(2);
   }
   free(x);
   return;

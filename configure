@@ -1,0 +1,254 @@
+#!/bin/sh
+#########################################################################
+#
+# $Id: configure,v 1.5 2003/12/04 23:06:35 richard Exp $
+#
+# =======================================================================
+#
+# mairix - message index builder and finder for maildir folders.
+#
+# Copyright (C) Richard P. Curnow  2003
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of version 2 of the GNU General Public License as
+# published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+#
+# =======================================================================
+
+if [ -f config.log ]; then rm -f config.log ; fi
+exec 5>config.log
+
+if [ "x${CC}" = "x" ]; then
+  MYCC="gcc"
+else
+  MYCC="${CC}"
+fi
+
+if [ "x${CFLAGS}" = "x" ]; then
+  MYCFLAGS="-O2 -Wall"
+else
+  MYCFLAGS="${CFLAGS}"
+fi
+
+# =======================================================================
+# Functions
+
+#{{{ cleanup
+cleanup () {
+  if [ -f docheck.c ]; then rm -f docheck.c ; fi
+  if [ -f docheck.o ]; then rm -f docheck.o ; fi
+  if [ -f docheck   ]; then rm -f docheck   ; fi
+  rm -rf docheck.c docheck.o docheck
+}
+#}}}
+
+#{{{ test_cc : basic compiler sanity check
+test_cc () {
+  printf "Testing whether your compiler \"$MYCC $MYCFLAGS\" works : "
+  cat >docheck.c <<EOF;
+#include <stdio.h>
+int main (int argc, char **argv)
+{
+  return 0;
+}
+EOF
+  ${MYCC} ${MYCFLAGS} -o docheck docheck.c 1>&5 2>&5
+  if [ $? -eq 0 ]
+  then
+    printf "it works\n"
+  else
+    printf "it doesn't work\n"
+    printf "Failed program was\n" 1>&5
+    cat docheck.c 1>&5
+    rm -f docheck.c docheck
+    exit 1
+  fi
+  cleanup
+}
+#}}}
+
+#{{{ test_for_stdint_h
+test_for_stdint_h () {
+  cat >docheck.c <<EOF;
+#include <stdint.h>
+int main(int argc, char **argv) {
+  return 0;
+}
+EOF
+
+  ${MYCC} ${MYCFLAGS} -c -o docheck.o docheck.c >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+
+  rm -f docheck.c docheck.o
+  echo $result
+}
+#}}}
+#{{{ test_for_inttypes_h
+test_for_inttypes_h () {
+  cat >docheck.c <<EOF;
+#include <inttypes.h>
+int main(int argc, char **argv) {
+  return 0;
+}
+EOF
+
+  ${MYCC} ${MYCFLAGS} -c -o docheck.o docheck.c >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+
+  rm -f docheck.c docheck.o
+  echo $result
+}
+#}}}
+#{{{ usage
+usage () {
+  cat <<EOF;
+\`configure' configures tdl to adapt to many kinds of systems.
+
+Usage: ./configure [OPTION]...
+
+Defaults for the options are specified in brackets.
+
+Configuration:
+  -h, --help              display this help and exit
+
+Installation directories:
+  --prefix=PREFIX         install architecture-independent files in PREFIX
+                          [/usr/local]
+
+By default, \`make install' will install all the files in
+\`/usr/local/bin', \`/usr/local/lib' etc.  You can specify
+an installation prefix other than \`/usr/local' using \`--prefix',
+for instance \`--prefix=$HOME'.
+
+Fine tuning of the installation directories:
+  --bindir=DIR           user executables [EPREFIX/bin]
+  --infodir=DIR          info documentation [PREFIX/info]
+  --mandir=DIR           man documentation [PREFIX/man]
+  --docdir=DIR           other documentation [PREFIX/doc/mairix-\$version]
+
+Some influential environment variables:
+  CC          C compiler command
+  CFLAGS      C compiler flags
+  LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
+              nonstandard directory <lib dir>
+
+Use these variables to override the choices made by \`configure' or to help
+it to find libraries and programs with nonstandard names/locations.
+
+Report bugs to <rc@rc0.org.uk>.
+EOF
+}
+#}}}
+# =======================================================================
+
+# Defaults for variables
+PREFIX=/usr/local
+
+use_readline=yes
+bad_options=no
+
+# Parse options to configure
+for option
+do
+	case "$option" in
+
+  --prefix=* | --install-prefix=* )
+    PREFIX=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  --bindir=* )
+    BINDIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  --mandir=* )
+    MANDIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  --infodir=* )
+    INFODIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  --docdir=* )
+    DOCDIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  -h | --help )
+    usage
+    exit 1
+    ;;
+  * )
+    printf "Unrecognized option : $option\n"
+    bad_options=yes
+    ;;
+  esac
+done
+
+if [ ${bad_options} = yes ]; then
+  exit 1
+fi
+
+DEFS=""
+test_cc
+
+printf "Checking for <stdint.h> : "
+if [ `test_for_stdint_h` -eq 0 ]; then
+  printf "Yes\n"
+  DEFS="${DEFS} -DHAS_STDINT_H"
+else
+  printf "No\n"
+fi
+
+printf "Checking for <inttypes.h> : "
+if [ `test_for_inttypes_h` -eq 0 ]; then
+  printf "Yes\n"
+  DEFS="${DEFS} -DHAS_INTTYPES_H"
+else
+  printf "No\n"
+fi
+
+#{{{ Determine version number of the program.
+# (CVS tags are of the form V1_0 for version 1.0)
+Name="ZZZ"
+revision="$Name: V0_12 $";
+if [ "$revision" = "ZZZ\$" ]; then revision="dev"; fi
+
+revision=`echo $revision | sed 's/_/./g;' | sed 's/ZZZ: V//;' | sed 's/ \$$//;'`
+#}}}
+if [ "x" = "x${BINDIR}" ]; then BINDIR=${PREFIX}/bin ; fi
+if [ "x" = "x${MANDIR}" ]; then MANDIR=${PREFIX}/man ; fi
+if [ "x" = "x${INFODIR}" ]; then INFODIR=${PREFIX}/info ; fi
+if [ "x" = "x${DOCDIR}" ]; then DOCDIR=${PREFIX}/doc/mairix-${revision} ; fi
+
+echo "Generating Makefile"
+
+rm -f Makefile
+sed -e "s%@cc@%${MYCC}%; \
+        s%@defs@%${DEFS}%; \
+        s%@cflags@%${MYCFLAGS}%; \
+        s%@prefix@%${PREFIX}%; \
+        s%@bindir@%${BINDIR}%; \
+        s%@mandir@%${MANDIR}%; \
+        s%@infodir@%${INFODIR}%; \
+        s%@docdir@%${DOCDIR}%; \
+       " < Makefile.in > Makefile
+
+# Avoid editing Makefile instead of Makefile.in
+chmod ugo-w Makefile
+
+# =======================================================================
+# vim:et:sw=2:ht=2:sts=2:fdm=marker:cms=#%s
+

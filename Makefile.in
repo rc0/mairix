@@ -1,6 +1,6 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Attic/Makefile,v 1.7 2003/03/12 23:57:40 richard Exp $
+# $Header: /cvs/src/mairix/Makefile.in,v 1.5 2003/12/04 22:18:07 richard Exp $
 #
 # =======================================================================
 #
@@ -25,23 +25,31 @@
 
 #########################################################################
 # Edit the following variables as required
-CC=gcc
-#CFLAGS=-O2
-#CFLAGS=-O2 -pg
-CFLAGS=-Wall -g
+CC=@cc@
+CFLAGS=@cflags@ @defs@
 
-prefix=/usr/local
-bindir=$(prefix)/bin
-mandir=$(prefix)/man
+#######################################################################
+# If you're generating a package, you may want to use
+# 	make DESTDIR=temporary_dir install
+# to get the software installed to a directory where you can create
+# a tdl.tar.gz from it
+DESTDIR=
+
+#######################################################################
+
+prefix=$(DESTDIR)@prefix@
+bindir=$(DESTDIR)@bindir@
+mandir=$(DESTDIR)@mandir@
 man1dir=$(mandir)/man1
-infodir=$(prefix)/info
-docdir=$(prefix)/docs
+infodir=$(DESTDIR)@infodir@
+docdir=$(DESTDIR)@docdir@
 
 #########################################################################
 # Things below this point shouldn't need to be edited.
 
 OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
-      reader.o search.o stats.o dates.o datescan.o
+      reader.o search.o stats.o dates.o datescan.o mbox.o md5.o \
+  	  fromcheck.o glob.o
 
 all : mairix
 
@@ -54,13 +62,20 @@ mairix : $(OBJ)
 datescan.c : datescan.nfa dfasyn/dfasyn
 	dfasyn/dfasyn -o datescan.c -v -u datescan.nfa
 
+fromcheck.c : fromcheck.nfa dfasyn/dfasyn
+	dfasyn/dfasyn -o fromcheck.c -v -u fromcheck.nfa
+
 dfasyn/dfasyn:
 	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi
 
 clean:
 	-rm -f *~ *.o mairix *.s core mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info
 	-rm -f mairix.cp mairix.fn mairix.aux mairix.log mairix.ky mairix.pg mairix.toc mairix.tp mairix.vr
+	-rm -f fromcheck.c datescan.c
 	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
+
+distclean: clean
+	-rm -f Makefile config.log
 
 install:
 	[ -d $(prefix) ] || mkdir -p $(prefix)

@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/tok.c,v 1.1 2002/07/03 22:16:00 richard Exp $
+  $Header: /cvs/src/mairix/tok.c,v 1.4 2003/11/27 23:18:37 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002
+ * Copyright (C) Richard P. Curnow  2002, 2003
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -28,27 +28,58 @@
 #include <ctype.h>
 #include "mairix.h"
 
+static void init_matches(struct matches *m) {/*{{{*/
+  m->msginfo = NULL;
+  m->n = 0;
+  m->max = 0;
+  m->highest = 0;
+}
+/*}}}*/
 struct token *new_token(void)/*{{{*/
 {
   struct token *result = new(struct token);
   result->text = NULL;
-  result->msginfo = NULL;
-  result->n = 0;
-  result->max = 0;
-  result->highest = 0;
+  init_matches(&result->match0);
+  return result;
+}
+/*}}}*/
+struct token2 *new_token2(void)/*{{{*/
+{
+  struct token2 *result = new(struct token2);
+  result->text = NULL;
+  init_matches(&result->match0);
+  init_matches(&result->match1);
   return result;
 }
 /*}}}*/
 void free_token(struct token *x)/*{{{*/
 {
   if (x->text) free(x->text);
-  if (x->msginfo) free(x->msginfo);
+  if (x->match0.msginfo) free(x->match0.msginfo);
+  free(x);
+}
+/*}}}*/
+void free_token2(struct token2 *x)/*{{{*/
+{
+  if (x->text) free(x->text);
+  if (x->match0.msginfo) free(x->match0.msginfo);
+  if (x->match1.msginfo) free(x->match1.msginfo);
   free(x);
 }
 /*}}}*/
 struct toktable *new_toktable(void)/*{{{*/
 {
   struct toktable *result = new(struct toktable);
+  result->tokens = NULL;
+  result->n = 0;
+  result->hwm = 0;
+  result->size = 0;
+  return result;
+}
+/*}}}*/
+struct toktable2 *new_toktable2(void)/*{{{*/
+{
+  struct toktable2 *result = new(struct toktable2);
   result->tokens = NULL;
   result->n = 0;
   result->hwm = 0;
@@ -70,6 +101,21 @@ void free_toktable(struct toktable *x)/*{{{*/
   free(x);
 }
 /*}}}*/
+void free_toktable2(struct toktable2 *x)/*{{{*/
+{
+  if (x->tokens) {
+    int i;
+    for (i=0; i<x->size; i++) {
+      if (x->tokens[i]) {
+        free_token2(x->tokens[i]);
+      }
+    }
+    free(x->tokens);
+  }
+  free(x);
+}
+/*}}}*/
+/* FIXME : This stuff really needs cleaning up. */
 static void enlarge_toktable(struct toktable *table)/*{{{*/
 {
   if (table->size == 0) {
@@ -107,7 +153,45 @@ static void enlarge_toktable(struct toktable *table)/*{{{*/
     free(old_tokens);
   }
   table->hwm = (table->size >> 2) + (table->size >> 3); /* allow 3/8 of nodes to be used */
-  table->hwm = (table->size >> 3); /* allow 1/8 of nodes to be used */
+}
+/*}}}*/
+static void enlarge_toktable2(struct toktable2 *table)/*{{{*/
+{
+  if (table->size == 0) {
+    int i;
+    /* initial allocation */
+    table->size = 1024;
+    table->mask = table->size - 1;
+    table->tokens = new_array(struct token2 *, table->size);
+    for (i=0; i<table->size; i++) {
+      table->tokens[i] = NULL;
+    }
+  } else {
+    struct token2 **old_tokens;
+    int old_size = table->size;
+    int i;
+    /* reallocate */
+    old_tokens = table->tokens;
+    table->size <<= 1;
+    table->mask = table->size - 1;
+    table->tokens = new_array(struct token2 *, table->size);
+    for (i=0; i<table->size; i++) {
+      table->tokens[i] = NULL;
+    }
+    for (i=0; i<old_size; i++) {
+      unsigned long new_index;
+      if (old_tokens[i]) {
+        new_index = old_tokens[i]->hashval & table->mask;
+        while (table->tokens[new_index]) {
+          new_index++;
+          new_index &= table->mask;
+        }
+        table->tokens[new_index] = old_tokens[i];
+      }
+    }
+    free(old_tokens);
+  }
+  table->hwm = (table->size >> 2) + (table->size >> 3); /* allow 3/8 of nodes to be used */
 }
 /*}}}*/
 static int insert_value(unsigned char *x, int val)/*{{{*/
@@ -131,36 +215,36 @@ static int insert_value(unsigned char *x, int val)/*{{{*/
   }
 }
 /*}}}*/
-void check_and_enlarge_tok_encoding(struct token *tok)/*{{{*/
+void check_and_enlarge_encoding(struct matches *m)/*{{{*/
 {
-  if (tok->n + 4 >= tok->max) {
-    if (tok->max == 0) {
-      tok->max = 16;
+  if (m->n + 4 >= m->max) {
+    if (m->max == 0) {
+      m->max = 16;
     } else {
-      tok->max += (tok->max >> 1);
+      m->max += (m->max >> 1);
     }
-    tok->msginfo = grow_array(unsigned char, tok->max, tok->msginfo);
+    m->msginfo = grow_array(unsigned char, m->max, m->msginfo);
   }
 }
 /*}}}*/
-void insert_index_on_token(struct token *tok, int idx)/*{{{*/
+void insert_index_on_encoding(struct matches *m, int idx)/*{{{*/
 {
-  if (tok->n == 0) {
+  if (m->n == 0) {
     /* Always encode value */
-    tok->n += insert_value(tok->msginfo + tok->n, idx);
+    m->n += insert_value(m->msginfo + m->n, idx);
   } else {
-    assert(idx >= tok->highest);
-    if (idx > tok->highest) {
-      int increment = idx - tok->highest;
-      tok->n += insert_value(tok->msginfo + tok->n, increment);
+    assert(idx >= m->highest);
+    if (idx > m->highest) {
+      int increment = idx - m->highest;
+      m->n += insert_value(m->msginfo + m->n, increment);
     } else {
       /* token has already been seen in this file */
     }
   }
-  tok->highest = idx;
+  m->highest = idx;
 }
 /*}}}*/
-void add_token_in_file(int file_index, char *tok_text, struct toktable *table)/*{{{*/
+void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table)/*{{{*/
 {
   unsigned long hash;
   int index;
@@ -173,7 +257,7 @@ void add_token_in_file(int file_index, char *tok_text, struct toktable *table)/*
     *p = tolower(*p);
   }
   /* 2nd arg is string length */
-  hash = hashfn(lc_tok_text, p - lc_tok_text, 0);
+  hash = hashfn(lc_tok_text, p - lc_tok_text, hash_key);
 
   if (table->n >= table->hwm) {
     enlarge_toktable(table);
@@ -202,8 +286,58 @@ void add_token_in_file(int file_index, char *tok_text, struct toktable *table)/*
    
   tok = table->tokens[index];
   
-  check_and_enlarge_tok_encoding(tok);
-  insert_index_on_token(tok, file_index);
+  check_and_enlarge_encoding(&tok->match0);
+  insert_index_on_encoding(&tok->match0, file_index);
+}
+/*}}}*/
+void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1)/*{{{*/
+{
+  unsigned long hash;
+  int index;
+  struct token2 *tok;
+  char *lc_tok_text;
+  char *p;
+
+  lc_tok_text = new_string(tok_text);
+  for (p = lc_tok_text; *p; p++) {
+    *p = tolower(*p);
+  }
+  /* 2nd arg is string length */
+  hash = hashfn(lc_tok_text, p - lc_tok_text, hash_key);
+
+  if (table->n >= table->hwm) {
+    enlarge_toktable2(table);
+  }
+
+  index = hash & table->mask;
+  while (table->tokens[index]) {
+    /* strcmp ok as text has been tolower'd earlier */
+    if (!strcmp(lc_tok_text, table->tokens[index]->text)) 
+      break;
+    index++;
+    index &= table->mask;
+  }
+
+  if (!table->tokens[index]) {
+    /* Allocate new */
+    struct token2 *new_tok = new_token2();
+    /* New token takes ownership of lc_tok_text, no need to free that later. */
+    new_tok->text = lc_tok_text;
+    new_tok->hashval = hash; /* save full width for later */
+    table->tokens[index] = new_tok;
+    ++table->n;
+  } else {
+    free(lc_tok_text);
+  }
+   
+  tok = table->tokens[index];
+  
+  check_and_enlarge_encoding(&tok->match0);
+  insert_index_on_encoding(&tok->match0, file_index);
+  if (add_to_chain1) {
+    check_and_enlarge_encoding(&tok->match1);
+    insert_index_on_encoding(&tok->match1, file_index);
+  }
 }
 /*}}}*/
 

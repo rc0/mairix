@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/dirscan.c,v 1.8 2003/01/18 00:38:12 richard Exp $
+  $Header: /cvs/src/mairix/dirscan.c,v 1.12 2003/12/03 23:56:08 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -24,28 +24,20 @@
 
 /* Traverse a directory tree and find maildirs, then list files in them. */
 
-#include "mairix.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <assert.h>
-
-/* Lame fix for systems where NAME_MAX isn't defined after including the above
- * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
- * it'll do. */
-
-#if !defined(NAME_MAX)
-#define NAME_MAX 4096
-#endif
+#include "mairix.h"
 
 struct msgpath_array *new_msgpath_array(void)/*{{{*/
 {
   struct msgpath_array *result;
   result = new(struct msgpath_array);
   result->paths = NULL;
+  result->type = NULL;
   result->n = 0;
   result->max = 0;
   return result;
@@ -56,8 +48,17 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
   int i;
   if (x->paths) {
     for (i=0; i<x->n; i++) {
-      if (x->paths[i].path) free(x->paths[i].path);
+      switch (x->type[i]) {
+        case MTY_FILE:
+          free(x->paths[i].src.mpf.path);
+          break;
+        case MTY_MBOX:
+          break;
+        case MTY_DEAD:
+          break;
+      }
     }
+    free(x->type);
     free(x->paths);
   }
   free(x);
@@ -67,16 +68,18 @@ static void add_file_to_list(char *x, unsigned long mtime, size_t message_size, 
   char *y = new_string(x);
   if (arr->n == arr->max) {
     arr->max += 1024;
-    arr->paths = grow_array(struct msgpath, arr->max, arr->paths);
+    arr->paths = grow_array(struct msgpath,    arr->max, arr->paths);
+    arr->type  = grow_array(enum message_type, arr->max, arr->type);
   }
-  arr->paths[arr->n].path = y;
-  arr->paths[arr->n].mtime = mtime;
-  arr->paths[arr->n].size = message_size;
+  arr->type[arr->n] = MTY_FILE;
+  arr->paths[arr->n].src.mpf.path = y;
+  arr->paths[arr->n].src.mpf.mtime = mtime;
+  arr->paths[arr->n].src.mpf.size = message_size;
   ++arr->n;
   return;
 }
 /*}}}*/
-static void get_maildir_message_paths(char *folder_base, char *mdir, struct msgpath_array *arr)/*{{{*/
+static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
 {
   char *subdir, *fname;
   int i;
@@ -84,22 +87,21 @@ static void get_maildir_message_paths(char *folder_base, char *mdir, struct msgp
   DIR *d;
   struct dirent *de;
   struct stat sb;
-  int folder_base_len = strlen(folder_base);
-  int mdir_len = strlen(mdir);
+  int folder_len = strlen(folder);
 
   /* FIXME : just store mdir-rooted paths in array and have common prefix elsewhere. */
   
-  subdir = new_array(char, folder_base_len + mdir_len + 6);
-  fname = new_array(char, folder_base_len + mdir_len + 8 + NAME_MAX);
+  subdir = new_array(char, folder_len + 6);
+  fname = new_array(char, folder_len + 8 + NAME_MAX);
   for (i=0; i<2; i++) { 
-    strcpy(subdir, folder_base);
-    strcat(subdir, "/");
-    strcat(subdir, mdir);
+    strcpy(subdir, folder);
     strcat(subdir, "/");
     strcat(subdir, subdirs[i]);
     d = opendir(subdir);
     if (d) {
       while ((de = readdir(d))) {
+        /* TODO : Perhaps we ought to do some validation on the path here?
+           i.e. check that the filename looks valid for a maildir message. */
         strcpy(fname, subdir);
         strcat(fname, "/");
         strcat(fname, de->d_name);
@@ -130,26 +132,19 @@ int is_integer_string(char *x)/*{{{*/
   return 1;
 }
 /*}}}*/
-static void get_mh_message_paths(char *folder_base, char *mdir, struct msgpath_array *arr)/*{{{*/
+static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
 {
-  char *subdir, *fname;
+  char *fname;
   DIR *d;
   struct dirent *de;
   struct stat sb;
-  int folder_base_len = strlen(folder_base);
-  int mdir_len = strlen(mdir);
+  int folder_len = strlen(folder);
 
-  /* FIXME : just store mdir-rooted paths in array and have common prefix elsewhere. */
-  
-  subdir = new_array(char, folder_base_len + mdir_len + 2);
-  fname = new_array(char, folder_base_len + mdir_len + 8 + NAME_MAX);
-  strcpy(subdir, folder_base);
-  strcat(subdir, "/");
-  strcat(subdir, mdir);
-  d = opendir(subdir);
+  fname = new_array(char, folder_len + 8 + NAME_MAX);
+  d = opendir(folder);
   if (d) {
     while ((de = readdir(d))) {
-      strcpy(fname, subdir);
+      strcpy(fname, folder);
       strcat(fname, "/");
       strcat(fname, de->d_name);
       if (stat(fname, &sb) >= 0) {
@@ -162,61 +157,57 @@ static void get_mh_message_paths(char *folder_base, char *mdir, struct msgpath_a
     }
     closedir(d);
   }
-  free(subdir);
   free(fname);
   return;
 }
 /*}}}*/
-static int has_child_dir(char *folder_base, char *parent, char *buffer, char *child)/*{{{*/
+static int has_child_dir(const char *base, const char *child)/*{{{*/
 {
-  struct stat sb;
   int result = 0;
+  struct stat sb;
+  char *scratch;
+  int len;
+
+  len = strlen(base) + strlen(child) + 2;
+  scratch = new_array(char, len);
+
+  strcpy(scratch, base);
+  strcat(scratch, "/");
+  strcat(scratch, child);
   
-  strcpy(buffer, folder_base);
-  strcat(buffer, "/");
-  strcat(buffer, parent);
-  strcat(buffer, "/");
-  strcat(buffer, child);
-  
-  if (stat(buffer,&sb) >= 0) {
+  if (stat(scratch,&sb) >= 0) {
     if (S_ISDIR(sb.st_mode)) {
       result = 1;
     }
   }
 
+  free(scratch);
   return result;
-
 }
 /*}}}*/
-static int looks_like_maildir(char *folder_base, char *name)/*{{{*/
+static int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
 {
-  char *child_name;
-  char *full_path;
-  struct stat sb;
-  int result = 0;
-  
-  child_name = new_array(char, strlen(folder_base) + strlen(name) + 6);
-  full_path = new_array(char, strlen(folder_base) + strlen(name) + 2);
-  strcpy(full_path, folder_base);
-  strcat(full_path, "/");
-  strcat(full_path, name);
-  
-  if (stat(full_path, &sb) >= 0) {
-    if (S_ISDIR(sb.st_mode)) {
-      if (has_child_dir(folder_base, name, child_name, "new") &&
-          has_child_dir(folder_base, name, child_name, "cur") &&
-          has_child_dir(folder_base, name, child_name, "tmp")) {
-        result = 1;
-      }
+  if (S_ISDIR(sb->st_mode)) {
+    if (has_child_dir(path, "new") &&
+        has_child_dir(path, "tmp") &&
+        has_child_dir(path, "cur")) {
+      return 1;
     }
   }
-
-  free(child_name);
-  free(full_path);
-
-  return result;
+  return 0;
 }
 /*}}}*/
+static int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
+{
+  /* At this stage, just check it's a directory. */
+  if (S_ISDIR(sb->st_mode)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+/*}}}*/
+#if 0
 static void scan_directory(char *folder_base, char *this_folder, enum folder_type ft, struct msgpath_array *arr)/*{{{*/
 {
   DIR *d;
@@ -279,11 +270,14 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
   return;
 }
 /*}}}*/
+#endif
 static int message_compare(const void *a, const void *b)/*{{{*/
 {
+  /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
   struct msgpath *aa = (struct msgpath *) a;  
-  struct msgpath *bb = (struct msgpath *) b;  
-  return strcmp(aa->path, bb->path);
+  struct msgpath *bb = (struct msgpath *) b;
+  /* This should only get called on 'file' type messages - TBC! */
+  return strcmp(aa->src.mpf.path, bb->src.mpf.path);
 }
 /*}}}*/
 static void sort_message_list(struct msgpath_array *arr)/*{{{*/
@@ -322,16 +316,35 @@ static char *copy_folder_name(const char *start, const char *end)/*{{{*/
   return result;
 }
 /*}}}*/
-void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs)/*{{{*/
+void string_list_to_array(struct string_list *list, int *n, char ***arr)/*{{{*/
 {
-  char *left_to_do;
-  
-  left_to_do = folders;
+  int N, i;
+  struct string_list *a, *next_a;
+  char **result;
+  for (N=0, a=list->next; a!=list; a=a->next, N++) ;
+
+  result = new_array(char *, N);
+  for (i=0, a=list->next; i<N; a=next_a, i++) {
+    result[i] = a->data;
+    next_a = a->next;
+    free(a);
+  }
+
+  *n = N;
+  *arr = result;
+}
+/*}}}*/
+void split_on_colons(const char *str, int *n, char ***arr)/*{{{*/
+{
+  struct string_list list, *new_cell;
+  const char *left_to_do;
+
+  list.next = list.prev = &list;
+  left_to_do = str;
   do {
     char *colon;
-    char *this_folder;
-    int len;
-    
+    char *xx;
+
     colon = strchr(left_to_do, ':');
     /* Allow backslash-escaped colons in filenames */
     if (colon && (colon > left_to_do) && (colon[-1]=='\\')) {
@@ -343,40 +356,51 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft, s
     }
     /* 'colon' now points to the first non-escaped colon or is null if there
        were no more such colons in the rest of the line. */
-    
-    this_folder = copy_folder_name(left_to_do, colon);
+
+    xx = copy_folder_name(left_to_do, colon);
     if (colon) {
       left_to_do = colon + 1;
     } else {
       while (*left_to_do) ++left_to_do;
     }
 
-    len = strlen(this_folder);
-    if ((len >= 4) &&
-        !strcmp(this_folder + (len - 3), "...")) {
-      /* Multiple folder */
-      this_folder[len - 3] = '\0';
-      scan_directory(folder_base, this_folder, ft, msgs);
-    } else {
-      /* Single folder */
-      switch (ft) {
-        case FT_MAILDIR:
-          if (looks_like_maildir(folder_base, this_folder)) {
-            get_maildir_message_paths(folder_base, this_folder, msgs);
-          }
-          break;
-        case FT_MH:
-          get_mh_message_paths(folder_base, this_folder, msgs);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-    }
-
-    free(this_folder);
-
+    new_cell = new(struct string_list);
+    new_cell->data = xx;
+    new_cell->next = &list;
+    new_cell->prev = list.prev;
+    list.prev->next = new_cell;
+    list.prev = new_cell;
   } while (*left_to_do);
+
+  string_list_to_array(&list, n, arr);
+
+}
+/*}}}*/
+void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs)/*{{{*/
+{
+  char **raw_paths, **paths;
+  int n_raw_paths, n_paths, i;
+
+  split_on_colons(folders, &n_raw_paths, &raw_paths);
+  switch (ft) {
+    case FT_MAILDIR:
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir);
+      for (i=0; i<n_paths; i++) {
+        get_maildir_message_paths(paths[i], msgs);
+      }
+      break;
+    case FT_MH:
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh);
+      for (i=0; i<n_paths; i++) {
+        get_mh_message_paths(paths[i], msgs);
+      }
+      break;
+    default:
+      assert(0);
+      break;
+  }
+      
+  if (paths) free(paths);
 
   sort_message_list(msgs);
   return;

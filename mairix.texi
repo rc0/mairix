@@ -47,36 +47,25 @@ Copyright @copyright{} 2002, 2003 Richard P. Curnow
 @node Background
 @section Background
 The @emph{mairix} program arose from a need to index and search 100's or 1000's
-of email messages in an efficient way.  It started off supporting just Maildir
-format folder, but now MH format is also supported.
+of email messages in an efficient way.  It began life supporting just Maildir
+format folder, but now MH and mbox formats are also supported.
 
-I use the @emph{mutt} email client.  There are many features I like about mutt,
-including
-
-@itemize @bullet
-@item Speed (typical of many command line tools versus GUI counterparts)
-@item Threaded message display
-@item Customizability (e.g. varying my signature depending on who I'm replying
-to)
-@item Little things, like if I reply to a message I wrote, it starts a new
-message to the same recipients (obvious, but which other mailers do this?)
-@end itemize
-
-@emph{mutt} has a feature called @emph{limit}, where the display of messages in
-the current folder can be filtered based on matching regular expressions in
-particular parts of the messages.  I find this really useful.  But there is a
-snag - it only works on the current folder.  If you have messages spread across
-many folders, you're out of luck with limit.  OK - so why not keep all messages
-in a single folder?  The problem is that the performance drops badly.  (I think
-this is true regardless of folder format - mbox, maildir etc, though probably
-worse for some formats than others.)
+I use the @emph{mutt} email client.  @emph{mutt} has a feature called
+@emph{limit}, where the display of messages in the current folder can be
+filtered based on matching regular expressions in particular parts of the
+messages.  I find this really useful.  But there is a snag - it only works on
+the current folder.  If you have messages spread across many folders, you're
+out of luck with limit.  OK - so why not keep all messages in a single folder?
+The problem is that the performance drops badly.  This is true regardless of
+folder format - mbox, maildir etc, though probably worse for some formats than
+others depending on the sizes of messages in the folders.
 
 So on the one hand, we want small folders to keep the performance high.  But on
 the other hand, we want useful searching.
 
-I use the maildir format for my folders.  This scheme has one file per message.
-On my inboxes@footnote{of which I have many, because I (naturally) use
-@emph{procmail} to split my incoming mail}, I like this for 2 reasons :
+I use the maildir format for my incoming folders.  This scheme has one file per
+message.  On my inboxes@footnote{of which I have many, because I (naturally)
+use @emph{procmail} to split my incoming mail}, I like this for 2 reasons :
 
 @itemize @bullet
 @item Fast deletion of messages I don't want to keep (spam, circulars, mailing
@@ -84,11 +73,13 @@ list threads I'm not interested in etc).  (Compare mbox, where the whole file
 would need to be rewritten.)
 @item No locking issues whatever.  Maybe I'm over cautious, but I don't really
 trust all that locking stuff to protect a single mbox file in all cases, and a
-single file seems just too vulnerable to corruption.)
+single file seems just too vulnerable to corruption.)  Also, I sometimes read
+the mail over NFS mounted filesystems, where locking tends to be a real
+disaster area.
 @end itemize
 
-Since I'm using maildir for inboxes, I just use it for all my folders, for
-uniformity.
+Since I'm using maildir for inboxes, I've traditionally used it for all my
+folders, for uniformity.
 
 So, I hear you ask, if you use a one-file-per-message format, why not just use
 find + egrep to search for messages?  I saw the following problems with this:
@@ -106,8 +97,8 @@ folder to allow browsing with mutt?
 matching the above condition?
 @item If I had 1000's of messages, this wasn't going to be quick, especially if
 I wanted to keep tuning the search condition.@footnote{This may be a non-issue
-for people with the lastest technology under their desk, but I have a 1996
-model 486 at home}.
+for people with the lastest technology under their desk, but at the time I
+started writing mairix, I had a 1996 model 486 at home}.
 @end itemize
 
 So find + egrep was a non-starter.  I looked around for other technology.  I
@@ -115,24 +106,40 @@ found @emph{grepmail}, but this only works for mbox format folders, and
 involved scanning each message every time (so lost on the speed issue).
 
 I decided that this was going to be my next project, and mairix was born.  By
-the way, the name comes by abbreviating @emph{MAildIR IndeX}.
+the way, the name originally came from abbreviating @emph{MAildIR IndeX}, but
+this is now an anachronism since MH and mbox are supported too.
 
 @node Installation
 @chapter Installation
 
-There is not much to this.
+There is not much to this.  In the simplest case you can just do
 
-Edit the @file{Makefile} to set @samp{CC}, @samp{CFLAGS} and @samp{prefix} as you want.
+@example
+./configure
+make
+make install
+@end example
 
-Type @command{make}.
+You need to be root to run the final step unless you're installing under your
+own home directory somewhere.
 
-Type @command{make install} (for which you may need to be root)
+However, you might want to tune the options further.  The @file{configure}
+script shares its common options with the usual autoconf-generated scripts,
+even though it's not autoconf-generated itself.  For example, a fuller build could use
 
-Type @command{make docs} (or @command{make mairix.txt}, @command{make
-mairix.html} or whatever.)
+@example
+CC=gcc CFLAGS="-O2 -Wall" ./configure \
+    --prefix=/opt/mairix \
+    --infodir=/usr/share/info
+make
+make install
+make docs
+make install_docs
+@end example
 
-Create a @file{~/.mairixrc} file.  An example is included in the file
-@file{mairixrc.eg}.  Just copy that to @file{~/.mairixrc} and edit it.
+The final step is to create a @file{~/.mairixrc} file.  An example is included
+in the file @file{dotmairixrc.eg}.  Just copy that to @file{~/.mairixrc} and edit
+it.
 
 @node Use
 @chapter Use
@@ -153,20 +160,34 @@ Create a @file{~/.mairixrc} file.  An example is included in the file
 searching mode runs whenever the command line contains any expressions to
 search for.  Otherwise, the indexing mode is run.
 
-The output of the search mode is usually placed in a @emph{virtual folder}.  This is
-just a normal maildir directory (i.e. containing @file{new}, @file{tmp} and
-@file{cur}) subdirectories, or a MH directory, so you can open it as a normal
-folder in your mail program.  You configure the path for this virtual folder in
-your @file{~/.mairixrc} file.  mairix will populate the virtual folder with
+To begin with, an indexing run must be performed before searching will work at
+all.  Otherwise your search will be operating on an empty database and won't
+produce any output.
+
+The output of the search mode is usually placed in a @emph{virtual folder}. You
+can select the type of folder that is used.  For Maildir, it is just a normal
+maildir directory (i.e. containing @file{new}, @file{tmp} and @file{cur})
+subdirectories.  If you select MH it is a directory containing entries with
+numerical filenames, so you can open it as a normal MH folder in your mail
+program.  If you select mbox, it is a single file in mbox format.
+
+You configure the path for the virtual folder in your @file{~/.mairixrc} file.
+When writing to a vfolder in maildir or MH format, mairix will populate it with
 symbolic links pointing to the paths of the real messages that were matched by
 the search expression.@footnote{Although symlinks use up more inodes than hard
 links, I decided they were more useful because it makes it possible to see the
-filenames of the original messages via @command{ls -l}.}
+filenames of the original messages via @command{ls -l}.}  If a message in a
+mbox folder matches, mairix will copy the message contents to a single file in
+the vfolder directory.
 
-If desired, mairix can produce just a list of files that match the
-search expression and omit the building of the virtual folder.  This
-mode of operation may be useful in communicating the results of the
-search to other programs.
+If the vfolder is in mbox format, mairix will copy the message contents of each
+matching message into the vfolder file.  (There is no way of exploiting
+symlinks to avoid the copying in this case.)
+
+If desired, mairix can produce just a list of files that match the search
+expression and omit the building of the virtual folder (the so-called 'raw'
+output mode).  This mode of operation may be useful in communicating the
+results of the search to other programs.
 
 @node capabilities
 @section Indexing strategy and search capabilities
@@ -219,7 +240,7 @@ hierarchy, for example.
 @node mairixrc
 @section The @file{~/.mairixrc} file
 
-This file contains information about where you keep your maildir folders, where
+This file contains information about where you keep your mail folders, where
 you want the index file to be stored and where you want the virtual folder to
 be, into which the search mode places the symlinks.
 
@@ -230,17 +251,18 @@ If a # character appears in the file, the rest of that line is ignored.  This
 allows you to specify comments.
 
 There are 3 entries (@samp{base}, @samp{vfolder} and @samp{database}) that must
-appear in the file.  Also, either @samp{folders} or @samp{mh_folders} (or both)
-must appear.  Optionally, the @samp{vfolder_format} entry may appear.  An
-example illustrates:
+appear in the file.  Also at least one of @samp{maildir}, @samp{mh} and
+@samp{mbox} must appear.  Optionally, the @samp{vformat} entry may
+appear.  An example illustrates:
 
 @example
 base=/home/richard/mail
-folders=new-mail:new-chrony:new-lojban:new-jbofihe
-folders=recent...:ancient...
-mh_folders=an_mh_folder
+maildir=new-mail:new-chrony
+maildir=recent...:ancient...
+mh=an_mh_folder
+mbox=archive1:archive2
 vfolder=vfolder
-vfolder_format=maildir
+vformat=maildir
 database=/home/richard/.mairix_database
 @end example
 
@@ -249,33 +271,134 @@ The keys are as follows:
 @table @asis
 @item base
 This is the path to the common parent directory of all your maildir folders.
-@item folders
+@item maildir
 This is a colon-separated list of the Maildir folders (relative to @samp{base})
 that you want indexed.  Any entry that ends @samp{...} is recursively scanned
 to find any Maildir folders underneath it.
 
-More than one line starting with @samp{folders} can be included.  In this case,
+More than one line starting with @samp{maildir} can be included.  In this case,
 mairix joins the lines together with colons as though a single list of folders had
 been given on a single very long line.
+
+Each colon-separated entry may be a wildcard.  See the discussion under mbox (below) for the
+wildcard syntax.  For example
+
+@example
+maildir=zzz/foo*...
+@end example
+
+will match maildir folders like these (relative to the folder_base)
+
+@example
+zzz/foobar/xyz
+zzz/fooquux
+zzz/foo
+zzz/fooabc/u/v/w
+@end example
+
+and 
+
+@example
+maildir=zzz/foo[abc]*
+@end example
+
+will match maildir folders like these (relative to the folder_base)
+
+@example
+zzz/fooa
+zzz/fooaaaxyz
+zzz/foobcd
+zzz/fooccccccc
+@end example
 
 If a folder name contains a colon, you can write this by using the sequence
 @samp{\:} to escape the colon.  Otherwise, the backslash character is treated
 normally.  (If the folder name actually contains the sequence @samp{\:}, you're
 out of luck.)
 
-@item mh_folders
+@item mh
 This is a colon-separated list of the MH folders (relative to @samp{base}) that
 you want indexed.  Any entry that ends @samp{...} is recursively scanned to
 find any MH folders underneath it.
 
-More than one line starting with @samp{mh_folders} can be included.  In this case,
+More than one line starting with @samp{mh} can be included.  In this case,
 mairix joins the lines together with colons as though a single list of folders had
 been given on a single very long line.
+
+Each colon-separated entry may be a wildcard, see the discussion under maildir
+(above) and mbox (below) for the syntax and semantics of specifying wildcards.
+
+@item mbox
+This is a colon-separated list of the mbox folders (relative to @samp{base}) that
+you want indexed.
+
+Each colon-separated item in the list can be suffixed by @samp{...}.  If the
+item matches a regular file, that file is treated as a mbox folder and the
+@samp{...} suffix is ignored.  If the item matches a directory, a recursive
+scan of everything inside that directory is made, and all regular files are
+initially considered as mbox folders.  (Any directories found in this scan are
+themselves scanned, since the scan is recursive.)
+
+Each colon-separated item may contain wildcard operators, but only in its final
+path component.  The wildcard operators currently supported are
+
+@table @asis
+@item *
+Match zero or more characters (each character matched is arbitrary)
+@item ?
+Match exactly one arbitrary character
+@item [abcs-z]
+Character class : match a single character from the set a, b, c, s, t, u, v, w,
+x, y and z.
+
+To include a literal @samp{]} in the class, place it immediately after the opening @samp{[}.
+To include a literal @samp{-} in the class, place it immediately before the closing @samp{]}.
+
+@end table
+
+If these metacharacters are included in non-final path components, they have no
+special meaning.
+
+Here are some examples
+
+@table @asis
+@item mbox=foo/bar*
+matches @file{foo/bar}, @file{foo/bar1}, @file{foo/barrrr} etc
+@item mbox=foo*/bar*
+matches @file{foo*/bar}, @file{foo*/bar1}, @file{foo*/barrrr} etc
+@item mbox=foo/*
+matches @file{foo/bar}, @file{foo/bar1}, @file{foo/barrrr}, @file{foo/foo}, @file{foo/x} etc
+@item mbox=foo...
+matches any regular file in the tree rooted at @file{foo}
+@item mbox=foo/*...
+same as before
+@item mbox=foo/[a-z]*...
+matches @file{foo/a}, @file{foo/aardvark/xxx}, @file{foo/zzz/foobar},
+@file{foo/w/x/y/zzz}, but @b{not} @file{foo/A/foobar}
+@end table
+
+Regular files that are mbox folder candidates are examined internally.  Only
+files containing standard mbox @samp{From } separator lines will be scanned for
+messages.
+
+More than one line starting with @samp{mbox} can be included.  In this case,
+mairix joins the lines together with colons as though a single list of folders had
+been given on a single very long line.
+
+mairix performs @b{no} locking of mbox folders when it is accessing them.  If a
+mail delivery program is modifying the mbox at the same time, it is likely that
+one or messages in the mbox will never get indexed by mairix (until the
+database is removed and recreated from scratch, anyway.)  The assumption is
+that mairix will be used to index archive folders rather than incoming ones, so
+this is unlikely to be much of a problem in reality.
+
+@emph{mairix} can support a maximum of 65536 separate mboxes, and a maximum of
+65536 messages within any one mbox.
 
 @item vfolder
 This defines the name of the @emph{virtual} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
-(If the vfolder_format used is @samp{raw}, then this setting is not
+(If the vformat used is @samp{raw}, then this setting is not
 used and may be excluded.)
 
 If the first character of the @b{vfolder} value is @samp{/} or @samp{.}, it is
@@ -284,13 +407,14 @@ paths and paths relative to the current directory where the vfolder should be
 written.  Otherwise, the value of @b{vfolder} is appended to the value of
 @b{base}, in the same way as for the source folders.
 
-@item vfolder_format
+@item vformat
 This defines the type of folder used for the @emph{virtual folder} where the
-search results go.  There are three valid settings for this @samp{mh},
-@samp{maildir} or @samp{raw}.  If the @samp{raw} setting is used then
+search results go.  There are four valid settings for this @samp{mh},
+@samp{maildir}, @samp{mbox} or @samp{raw}.  If the @samp{raw} setting is used then
 mairix will just print out the path names of the files that match and
 no virtual folder will be created.  @samp{maildir} is the default if this
 option is not defined.  The setting is case-insensitive.
+
 @item database
 This defines the path where mairix's index database is kept.  You can keep this
 file anywhere you like.
@@ -305,8 +429,8 @@ prevent corrupting the index database file.
 @node vfolder_setup
 @section Setting up the virtual folder
 If the virtual folder does not exist when running in search mode, it is
-automatically created.  For @samp{vfolder_format=maildir} (the default), this
-should be all you need to do.  If you use @samp{vfolder_format=mh}, you may
+automatically created.  For @samp{vformat=maildir} (the default), this
+should be all you need to do.  If you use @samp{vformat=mh}, you may
 have to run some commands before your mailer will recognize the folder.  e.g.
 for mutt, you could do
 
@@ -329,7 +453,7 @@ need to do.
 The command line syntax is
 
 @example
-mairix [-f path] [-p] [-v] [-t] [-a] [-o vfolder] [expr1] ... [exprn]
+mairix [-f path] [-p] [-v] [-t] [-a] [-r] [-o vfolder] [expr1] ... [exprn]
 @end example
 
 The @samp{-f} or @samp{--rcfile} flag allows a different path to the
@@ -340,7 +464,9 @@ incrementally.  When new messages are found, they are scanned and information
 about the words they contain is appended onto the existing information.  When
 messages are deleted, holes are normally left in the message sequence.  These
 holes take up space in the database file.  This flag will compress the deleted
-paths out of the database to save space.
+paths out of the database to save space.  Additionally, where @samp{mbox}
+folders are in use, information in the database about folders that no longer
+exist, or which are no longer referenced in the rc-file, will be purged also.
 
 The @samp{-v} or @samp{--verbose} flag is used in indexing mode.  It causes
 more information to be shown during the indexing process.  In search mode, it
@@ -357,7 +483,8 @@ the same thread as one of the matched messages will be included too.  Note, the
 threading is based on processing the @t{Message-ID}, @t{In-Reply-To} and
 @t{References} headers in the messages.  Some mailers don't generate these
 headers in a co-operative way and will cause problems with this threading
-support.  (Outlook seems to be one culprit.)
+support.  (Outlook seems to be one culprit.)  If you are plagued by this
+problem, the 'edit threads' patch to mutt may be useful to you.
 
 The @samp{-a} or @samp{--augment} option also applies to search mode.
 Normally, the first action of the search mode is to clear any existing message
@@ -365,6 +492,14 @@ links from the virtual folder.  With the @samp{-a} flag, this step is
 suppressed.  It allows the folder contents to be built up by matching with 2 or
 more diverse sets of match expressions.  If this mode is used, and a message
 matches multiple queries, only a single symlink will be created for it.
+
+The @samp{-r} or @samp{--raw-output} option is used to force the raw output
+mode for a particular search, in preference to the output format defined by the
+@samp{vformat} line in the @file{mairixrc} file.  This may be useful for
+identifying which mbox contains a particular match, since there is way to see
+this when the matching messages are placed in the vfolder in this case.  (Note
+for matches in maildir and MH folders when @samp{vformat} is maildir or MH, the
+symbolic links in the vfolder will show the path to the matching message.)
 
 The @samp{-o} or @samp{--vfolder} option is used in search mode to specify a
 virtual folder different to the one specified in the @file{mairixrc} to be
@@ -380,11 +515,11 @@ base=/home/foobar/Mail
 and you run mairix like this
 
 @example
-mairix -o vfolder2 make+money+fast
+mairix -o vfolder2 make,money,fast
 @end example
 
-mairix will find some of your saved junk emails and put the results into
-@file{/home/foobar/Mail/vfolder2}.
+mairix will find all of your saved junk emails containing these three words and
+put the results into @file{/home/foobar/Mail/vfolder2}.
 
 The @samp{-o} argument obeys the same conventions regarding initial @samp{/}
 and @samp{.} characters as the @b{vfolder} line in the @file{.mairixrc} file
@@ -437,6 +572,8 @@ to match @samp{pointer} in the @t{From:} header,
 to match @samp{pointer} in the @t{Subject:} header, 
 @item @t{b:pointer}
 to match @samp{pointer} in the message body.
+@item @t{m:pointer}
+to match messages having a Message-ID header of @samp{pointer}. 
 @end table
 
 Multiple fields may be specified, e.g. @t{sb:pointer} to match in the
@@ -455,12 +592,12 @@ substring with at most one error, e.g. @samp{jointed} contains @samp{joint}
 which can be got from @samp{point} with one letter changed.  An error can be a
 single letter changed, inserted or deleted.
 
-@item A disjunction, e.g. @samp{s:pointer,dereference}.  This matches all
+@item A disjunction, e.g. @samp{s:pointer/dereference}.  This matches all
 messages with one or both of the words @samp{pointer} and @samp{dereference} in
 their subject lines.
 
 @item Each disjunction may be a conjunction, e.g.
-@samp{s:null+pointer,dereference=2} matches all messages whose subject lines
+@samp{s:null,pointer/dereference=2} matches all messages whose subject lines
 either contain both the words @samp{null} and @samp{pointer}, or contain the
 word @samp{dereference} with up to 2 errors (or both).
 
