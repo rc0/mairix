@@ -1,0 +1,4 @@
+#!/usr/bin/env perl
+system("make mairix.txt");
+unlink "build_kit";
+

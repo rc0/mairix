@@ -1,0 +1,14 @@
+# Set this to the directory where your maildir folders live
+base=/home/richard/mail
+
+# Set this to a list of folders within 'base'.  3 dots at the end
+# means there are sub-folders within this folder.
+folders=new-mail:new-chrony:new-lojban:new-jbofihe:recent...:ancient...
+
+# Set this to the folder within 'base' where you want the search mode
+# to write its output
+vfolder=vfolder
+
+# Set this to the path where the index database file will be kept
+database=/home/richard/mail/mairix_database
+

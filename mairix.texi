@@ -1,0 +1,412 @@
+\input texinfo
+@c {{{ Main header stuff
+@afourwide
+@paragraphindent 0
+@setfilename mairix.info
+@settitle User guide for the mairix program
+@c @setchapternewpage off
+
+@ifinfo
+@dircategory Utilities
+@direntry
+* mairix: (mairix).			Indexing/searching utility for maildir folders
+@end direntry
+@end ifinfo
+
+@titlepage
+@sp 10
+@title The mairix program
+@subtitle This manual describes how to use
+@subtitle the mairix program for indexing and
+@subtitle searching email messages stored in maildir folders.
+@author Richard P. Curnow
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2002 Richard P. Curnow
+@end titlepage
+
+@contents
+@c }}}
+
+@ifnottex
+@node Top
+@top
+@menu
+* Introduction::    
+* Installation::    Compiling and installing the software
+* Use::             Quickstart guide and examples of use
+@end menu
+@end ifnottex
+
+@node Introduction
+@chapter Introduction
+@menu
+* Background::      How mairix came to be written.
+@end menu
+
+@node Background
+@section Background
+The @emph{mairix} program arose from a need to index and search 100's or 1000's
+of email messages in an efficient way.  Currently it supports emails stored in
+maildir-format folders.
+
+I use the @emph{mutt} email client.  There are many features I like about mutt, including
+
+@itemize @bullet
+@item Speed (typical of many command line tools versus GUI counterparts)
+@item Threaded message display
+@item Customizability (e.g. varying my signature depending on who I'm replying
+to)
+@item Little things, like if I reply to a message I wrote, it starts a new
+message to the same recipients (obvious, but which other mailers do this?)
+@end itemize
+
+@emph{mutt} has a feature called @emph{limit}, where the display of messages in
+the current folder can be filtered based on matching regular expressions in
+particular parts of the messages.  I find this really useful.  But there is a
+snag - it only works on the current folder.  If you have messages spread across
+many folders, you're out of luck with limit.  OK - so why not keep all messages
+in a single folder?  The problem is that the performance drops badly.  (I think
+this is true regardless of folder format - mbox, maildir etc, though probably
+worse for some formats than others.)
+
+So on the one hand, we want small folders to keep the performance high.  But on
+the other hand, we want useful searching.
+
+I use the maildir format for my folders.  This scheme has one file per message.
+On my inboxes@footnote{of which I have many, because I (naturally) use
+@emph{procmail} to split my incoming mail}, I like this for 2 reasons :
+
+@itemize @bullet
+@item Fast deletion of messages I don't want to keep (spam, circulars, mailing
+list threads I'm not interested in etc).  (Compare mbox, where the whole file
+would need to be rewritten.)
+@item No locking issues whatever.  Maybe I'm over cautious, but I don't really
+trust all that locking stuff to protect a single mbox file in all cases, and a
+single file seems just too vulnerable to corruption.)
+@end itemize
+
+Since I'm using maildir for inboxes, I just use it for all my folders, for
+uniformity.
+
+So, I hear you ask, if you use a one-file-per-message format, why not just use
+find + egrep to search for messages?  I saw the following problems with this:
+
+@itemize @bullet
+@item What if I want to find all messages to/cc me, from Homer Simpson, dated
+between 1 and 2 months ago, with the word "wubble" in the body?  This would
+involve a pretty nasty set of regexps in a pipeline of separate egreps (and
+bear in mind, headers could be split over line boundaries...)
+@item What if the message body has quoted-printable (or worse, base64) transfer
+encoding?  The egrep for "wubble" could come very unstuck.
+@item How would the matching messages be conveniently arranged into a new
+folder to allow browsing with mutt?
+@item What if I wanted to see all messages in the same threads as those
+matching the above condition?
+@item If I had 1000's of messages, this wasn't going to be quick, especially if
+I wanted to keep tuning the search condition.@footnote{This may be a non-issue
+for people with the lastest technology under their desk, but I have a 1996
+model 486 at home}.
+@end itemize
+
+So find + egrep was a non-starter.  I looked around for other technology.  I
+found @emph{grepmail}, but this only works for mbox format folders, and
+involved scanning each message every time (so lost on the speed issue).
+
+I decided that this was going to be my next project, and mairix was born.  By
+the way, the name comes by abbreviating @emph{MAildIR IndeX}.
+
+@node Installation
+@chapter Installation
+
+There is not much to this.
+
+Edit the @file{Makefile} to set @samp{CC}, @samp{CFLAGS} and @samp{prefix} as you want.
+
+Type @command{make}.
+
+Type @command{make install} (for which you may need to be root)
+
+Type @command{make docs} (or @command{make mairix.txt}, @command{make
+mairix.html} or whatever.)
+
+Create a @file{~/.mairixrc} file.  An example is included in the file
+@file{mairixrc.eg}.  Just copy that to @file{~/.mairixrc} and edit it.
+
+@node Use
+@chapter Use
+
+@menu
+* use_intro::       Overview of use
+* capabilities::    Indexing strategy and search capabilities
+* mairixrc::        The @file{~/.mairixrc} file 
+* command_line::    Command line options
+@end menu
+
+@node use_intro
+@section Overview of use
+
+@emph{mairix} has two modes of use : index building and searching.  The
+searching mode runs whenever the command line contains any expressions to
+search for.  Otherwise, the indexing mode is run.
+
+The output of the search mode is placed in a @emph{virtual folder}.  This is
+just a normal maildir directory (i.e. containing @file{new}, @file{tmp} and
+@file{cur}) subdirectories, so you can open it as a normal folder in your mail
+program.  You configure the path for this virtual folder in your
+@file{~/.mairixrc} file.  mairix will popululate the @file{cur} directory of
+the virtual folder with symbolic links pointing to the paths of the real
+messages that were matched by the search expression.@footnote{Although symlinks
+use up more inodes than hard links, I decided they were more useful because it
+makes it possible to see the filenames of the original messages via @command{ls
+-l}.}
+
+@node capabilities
+@section Indexing strategy and search capabilities
+
+@emph{mairix} works exclusively in terms of @emph{words}.  The index that's
+built in non-search mode contains a table of which words occur in which
+messages.  Hence, the search capability is based on finding messages that
+contain particular words.  @emph{mairix} defines a word as any string of
+alphanumeric characters + underscore.  Any whitespace, punctuation, hyphens etc
+are treated as word boundaries.
+
+It should be clear by now that the searching cannot be used to find messages
+matching general regular expressions.  Personally, I don't find that much use
+anyway for locating old messages - I'm far more likely to remember particular
+keywords that were in the messages, or details of the recipients, or the
+approximate date.
+
+It's also worth pointing out that there is no 'locality' information stored, so
+you can't search for messages that have one words 'close' to some other word.
+For every message and every word, there is a simple yes/no condition stored -
+whether the message contains the word in a particular header or in the body.
+
+There are two further searching criteria that are supported (besides word
+searching):
+
+@itemize @bullet
+@item Searching for messages whose @t{Date:} header is in a particular range
+@item Searching for messages whose size is in a particular range.  (I see this
+being used mainly for finding 'huge' messages, as you're most likely to want to
+cull these to recover disc space.)
+@end itemize
+
+@node mairixrc
+@section The @file{~/.mairixrc} file
+
+This file contains information about where you keep your maildir folders, where
+you want the index file to be stored and where you want the virtual folder to
+be, into which the search mode places the symlinks.
+
+mairix searches for this file at @file{~/.mairixrc} unless you specify the
+@samp{-f} command line option.
+
+If a # character appears in the file, the rest of that line is ignored.  This
+allows you to specify comments.
+
+There are 4 entries that must appear in the file.  An example illustrates:
+
+@example
+base=/home/richard/mail
+folders=new-mail:new-chrony:new-lojban:new-jbofihe:recent...:ancient...
+vfolder=vfolder
+database=/home/richard/.mairix_database
+@end example
+
+The keys are as follows:
+
+@table @asis
+@item base
+This is the path to the common parent directory of all your maildir folders.
+@item folders
+This is a colon-separated list of the folders (relative to @samp{base}) that
+you want indexed.  Any entry that ends @samp{...} is recursively scanned to
+find any maildir directories underneath it.
+@item vfolder
+This defines the name of the @emph{virtual} folder (within the directory
+specified by @samp{base}) into which the search mode writes its output.
+@item database
+This defines the path where mairix's index database is kept.  You can keep this
+file anywhere you like.
+@end table
+
+It is illegal to have a folder listed twice.  Once mairix has built a list of
+all the messages currently in your folders, it will search for duplicates
+before proceeding.  If any duplicates are found (arising from the same folder
+being specified twice), it will give an error message and exit.  This is to
+prevent corrupting the index database file.
+
+@node command_line
+@section Command line options
+
+The command line syntax is
+
+@example
+mairix [-f path] [-p] [-v] [-t] [-a] [expr1] ... [exprn]
+@end example
+
+The @samp{-f} flag allows a different path to the @file{mairixrc} file to be
+given, replacing the default of @file{~/.mairixrc}.
+
+The @samp{-p} flag is used in indexing mode.  Indexing works incrementally.
+When new messages are found, they are scanned and information about the words
+they contain is appended onto the existing information.  When messages are
+deleted, holes are normally left in the message sequence.  These holes take up
+space in the database file.  The @samp{-p} flag (meaning @emph{purge}) will
+compress the deleted paths out of the database to save space.
+
+The @samp{-v} flag is used in indexing mode.  It stands for @emph{verbose}, and
+causes more information to be shown during the indexing process.
+
+The @samp{-t} flag stands for @emph{threads}.  It applies to search mode.
+Normally, only the messages matching all the specified expressions are included
+in the @emph{virtual folder} that is built.  With the @samp{-t} flag, any
+message in the same thread as one of the matched messages will be included too.
+Note, the threading is based on processing the @t{Message-ID}, @t{In-Reply-To}
+and @t{References} headers in the messages.  Some mailers don't generate these
+headers in a co-operative way and will cause problems with this threading
+support.  (Outlook seems to be one culprit.)
+
+The @samp{-a} flag stands for @emph{augment}.  It also applies to search mode.
+Normally, the first action of the search mode is to clear any existing message
+links from the virtual folder.  With the @samp{-a} flag, this step is
+suppressed.  It allows the folder contents to be built up by matching with 2 or
+more diverse sets of match expressions.
+
+The search mode runs when there is at least one search expression.  Search
+expressions can take forms such as (in increasing order of complexity):
+
+@itemize @bullet
+@item A date expression.  This matches all messages whose @samp{Date:} header
+lies within the given range.  Note, the time of day and timezone of the
+@samp{Date:} header are ignored for simplicity.  For example, to match all
+messages sent between 3 months ago and 1 month ago the following command can be
+used:
+
+@example
+mairix d:3m-1m
+@end example
+
+To match all messages older than 2 years, the following command can be used:
+
+@example
+mairix d:-2y
+@end example
+
+To match all messages newer than 2 weeks, the following command can be used:
+
+@example
+mairix d:2w-
+@end example
+
+@item A size expression.  This matches all messages whose size in bytes is in a
+particular range.  For example, to match all messages bigger than 1 Megabyte
+the following command can be used
+
+@example
+mairix z:1m-
+@end example
+
+To match all messages between 10kbytes and 20kbytes in size, the following
+command can be used:
+
+@example
+mairix z:10k-20k
+@end example
+
+@item A word, e.g. @samp{pointer}.  This matches any message with the word
+@samp{pointer} in the @t{To}, @t{Cc}, @t{From} or @t{Subject} headers, or in
+the message body.@footnote{Message body is taken to mean any body part of type
+text/plain or text/html.  For text/html, text within meta tags is ignored.  In
+particular, the URLs inside <A HREF="..."> tags are not currently indexed.
+Non-text attachments are ignored.  If there's an attachment of type
+message/rfc822, this is parsed and the match is performed on this sub-message
+too.  If a hit occurs, the enclosing message is treated as having a hit.}
+
+@item A word in a particular part of the message, e.g. @samp{s:pointer}.  This
+matches any message with the word @samp{pointer} in the subject.  The
+qualifiers for this are :
+
+@table @asis
+@item @t{t:pointer}
+to match @samp{pointer} in the @t{To:} header, 
+@item @t{c:pointer}
+to match @samp{pointer} in the @t{Cc:} header, 
+@item @t{a:pointer}
+to match @samp{pointer} in the @t{To:}, @t{Cc:} or @t{From:} headers (@samp{a} meaning @samp{address}), 
+@item @t{f:pointer}
+to match @samp{pointer} in the @t{From:} header, 
+@item @t{s:pointer}
+to match @samp{pointer} in the @t{Subject:} header, 
+@item @t{b:pointer}
+to match @samp{pointer} in the message body.
+@end table
+
+Multiple fields may be specified, e.g. @t{sb:pointer} to match in the
+@t{Subject:} header or the body.
+
+@item A negated word, e.g. @samp{s:~pointer}.  This matches all messages that
+don't have the word @samp{pointer} in the subject line.
+
+@item A substring match, e.g. @samp{s:point/}.  This matches all messages
+containing a word in their subject line where the word has @samp{point} as a
+substring, e.g. @samp{pointer}, @samp{disappoint}.
+
+@item An approximate match, e.g. @samp{s:point/1}.  This matches all messages
+containing a word in their subject line where the word has @samp{point} as a
+substring with at most one error, e.g. @samp{jointed} contains @samp{joint}
+which can be got from @samp{point} with one letter changed.  An error can be a
+single letter changed, inserted or deleted.
+
+@item A disjunction, e.g. @samp{s:pointer,dereference}.  This matches all
+messages with one or both of the words @samp{pointer} and @samp{dereference} in
+their subject lines.
+
+@item Each disjunction may be a conjunction, e.g.
+@samp{s:null+pointer,dereference/2} matches all messages whose subject lines
+either contain both the words @samp{null} and @samp{pointer}, or contain the
+word @samp{dereference} with up to 2 errors (or both).
+
+@end itemize
+
+The binding order of the constructions is:
+
+@enumerate
+@item Individual command line arguments define separate conditions which are
+AND-ed together
+
+@item Within a single argument, the letters before the colon define which
+message parts the expression applies to.  If there is no colon, the expression
+applies to all the headers listed earlier and the  body.
+
+@item After the colon, commas delineate separate disjuncts, which are OR-ed together.
+
+@item Each disjunct may contain separate conjuncts, which are separated by plus
+signs.  These conditions are AND-ed together.
+
+@item Each conjunct may start with a tilde to negate it, and may be followed by
+a slash to indicate a substring match, optionally followed by an integer to
+define the maximum number of errors allowed.
+
+@end enumerate
+
+Now some examples.  Suppose my email address is @email{richard@@doesnt.exist}.
+
+The following will match all messages newer than 3 months from me with the word
+@samp{chrony} in the subject line:
+
+@example
+mairix d:3m- f:richard+doesnt+exist s:chrony
+@end example
+
+Suppose I don't mind a few spurious matches on the address, I want a wider date
+range, and I suspect that some messages I replied to might have had the subject
+keyword spelt wrongly (let's allow up to 2 errors):
+
+@example
+mairix d:6m- f:richard s:chrony/2
+@end example
+
+@bye
+@c vim:cms=@c\ %s:fdm=marker:fdc=5:syntax=off

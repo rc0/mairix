@@ -1,0 +1,32 @@
+Summary: A maildir indexer and searcher
+Name: mairix
+Version: 0.1
+Release: 1
+Copyright: GPL
+Group: Application/Mail
+Packager: Richard P. Curnow
+BuildRoot: /home/richard/rpm/root
+
+%description
+mairix is a tool for indexing email messages stored in maildir format folders
+and performing fast searches on the resulting index.  The output is a new
+maildir folder containing symbolic links to the matched messages.
+
+%prep
+rm -rf $RPM_BUILD_DIR/mairix-0.1
+tar xzvf $RPM_SOURCE_DIR/mairix-0.1.tar.gz
+
+%build
+cd mairix-0.1
+make CC=gcc CFLAGS=-O2 prefix=/usr
+make mairix.txt prefix=/usr
+
+%install
+rm -rf $RPM_BUILD_ROOT
+cd $RPM_BUILD_DIR/mairix-0.1
+make install prefix=$RPM_BUILD_ROOT/usr
+
+%files
+/usr/bin/mairix
+
+
