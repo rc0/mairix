@@ -1196,24 +1196,12 @@ static void clear_mbox_folder(char *path)/*{{{*/
 }
 /*}}}*/
 
-int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *mfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
 {
   struct read_db *db;
-  char *complete_mfolder;
-  int len;
   int result;
 
   db = open_db(database_path);
-
-  if ((mfolder[0] == '/') || (mfolder[0] == '.')) {
-    complete_mfolder = new_string(mfolder);
-  } else {
-    len = strlen(folder_base) + strlen(mfolder) + 2;
-    complete_mfolder = new_array(char, len);
-    strcpy(complete_mfolder, folder_base);
-    strcat(complete_mfolder, "/");
-    strcat(complete_mfolder, mfolder);
-  }
 
   switch (ft) {
     case FT_MAILDIR:

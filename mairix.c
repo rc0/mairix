@@ -56,6 +56,56 @@ static int file_exists(char *name)/*{{{*/
   return 1;
 }
 /*}}}*/
+/*{{{ member of*/
+/* returns 1 iff COMPLETE_MFOLDER (i.e. the match folder with
+   folder_base prepended if needed) matches one of the FOLDERS after
+   expanding the wildcards and recursion. Used to make sure that the
+   match folder will not overwrite a valuable mail file or
+   directory.  */
+int member_of (const char *complete_mfolder,
+    const char *folder_base,
+    const char *folders,
+    enum folder_type ft,
+    struct globber_array *omit_globs) {
+  char **raw_paths, **paths;
+  int n_raw_paths, n_paths, i;
+
+  if (!folders)
+    return 0;
+  split_on_colons(folders, &n_raw_paths, &raw_paths);
+  switch (ft) {
+    case FT_MAILDIR:
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir, omit_globs);
+      break;
+    case FT_MH:
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh, omit_globs);
+      break;
+    case FT_MBOX:
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_file, omit_globs);
+      break;
+    case FT_RAW:			/* cannot happen but to keep compiler happy */
+      break;    
+  }
+  for (i=0; i<n_paths; i++) {
+    struct stat mfolder_sb, src_folder_sb; /* for checking inode numbers */
+
+    /* if the complete path names are the same, definitely a match */
+    if (strcmp (complete_mfolder, paths[i]) == 0)
+      return 1;
+    /* also a match if they point to the same file or directory but
+       via different routes (e.g. absolute path for one but path with
+       ../.. for the other), so check inode numbers */
+    /* if cannot even get stat() info, probably not wrecking any mail
+       files or dirs, so continue, i.e. skip inode check. */
+    if (stat (complete_mfolder, &mfolder_sb) != 0 ||
+        stat (paths[i], &src_folder_sb) != 0)
+      continue;
+    if (mfolder_sb.st_ino == src_folder_sb.st_ino)
+      return 1;
+  }
+  return 0;  
+}
+/*}}}*/
 static char *copy_value(char *text)/*{{{*/
 {
   char *p;
@@ -350,20 +400,21 @@ static void usage(void)/*{{{*/
    ancestor, because it'll pick up its own mfolders.  So, use environment
    variables to tailor the folders.
  
-   MAIRIX_FOLDER_BASE is the common ancestor directory of the folders (aka
+   MAIRIX_FOLDER_BASE is the common parent directory of the folders (aka
    mutt's 'folder' variable)
 
-   MAIRIX_FOLDERS is a colon-separated list of folders underneath that, with
-   the feature that '...' after a component means any maildir underneath that,
-   e.g.
+   MAIRIX_MAILDIR_FOLDERS, MAIRIX_MH_FOLDERS, MAIRIX_MBOXEN are
+   colon-separated lists of folders to index, with '...' after a
+   component meaning any maildir underneath it.
 
-   MAIRIX_MFOLDER is the parent of the mfolders underneath the base
-   
+   MAIRIX_MFOLDER is the folder to put the match data.
+
+   For example, if
    MAIRIX_FOLDER_BASE = "/home/foobar/mail"
    MAIRIX_FOLDERS = "inbox:lists...:action:archive..."
    MAIRIX_MFOLDER = "mf"
 
-   so /home/foobar/mail/vf/search1/{new,cur,tmp} contain the output for search1 etc.
+   then /home/foobar/mail/mf/{new,cur,tmp} contain the output of the search.
    }}} */
 
 int main (int argc, char **argv)/*{{{*/
@@ -384,6 +435,8 @@ int main (int argc, char **argv)/*{{{*/
   int do_raw_output = 0;
   int do_dump = 0;
   int do_integrity_checks = 1;
+
+  struct globber_array *omit_globs;
 
   setlocale(LC_CTYPE, "");
 
@@ -488,11 +541,20 @@ int main (int argc, char **argv)/*{{{*/
     output_folder_type = FT_RAW;
   }
 
+  if (omit) {
+    omit_globs = colon_sep_string_to_globber_array(omit);
+  } else {
+    omit_globs = NULL;
+  }
+    
   if (do_dump) {
     dump_database(database_path);
     return 0;
 
   } else if (do_search) {
+    int len;
+    char *complete_mfolder;
+
     if (!mfolder) {
       if (output_folder_type != FT_RAW) {
         fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
@@ -501,22 +563,39 @@ int main (int argc, char **argv)/*{{{*/
       mfolder = new_string("");
     }
 
-    return search_top(do_threads, do_augment, database_path, folder_base, mfolder, argv, output_folder_type, verbose);
+    /* complete_mfolder is needed by search_top() and member_of() so
+       compute it once here rather than in search_top() as well */
+    if ((mfolder[0] == '/') || (mfolder[0] == '.')) {
+      complete_mfolder = new_string(mfolder);
+    } else {
+      len = strlen(folder_base) + strlen(mfolder) + 2;
+      complete_mfolder = new_array(char, len);
+      strcpy(complete_mfolder, folder_base);
+      strcat(complete_mfolder, "/");
+      strcat(complete_mfolder, mfolder);
+    }
+    /* check whether mfolder output would destroy a mail folder or mbox */
+    if (output_folder_type != FT_RAW &&	/* raw output cannot damage a folder */
+        (member_of(complete_mfolder,folder_base, maildir_folders, FT_MAILDIR, omit_globs)||
+         member_of (complete_mfolder, folder_base, mh_folders, FT_MH, omit_globs) ||
+         member_of (complete_mfolder, folder_base, mboxen, FT_MBOX, omit_globs))) {
+      fprintf (stderr,
+          "You asked search results to go to the folder '%s'.\n"
+          "That folder appears to be one of the indexed mail folders!\n"
+          "For your own good, I refuse to output search results to an indexed mail folder.\n",
+          mfolder);
+      exit(3);
+    }
+
+    return search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
     
   } else {
-    struct globber_array *omit_globs;
-    
+
     if (!maildir_folders && !mh_folders && !mboxen) {
       fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
       exit(2);
     }
 
-    if (omit) {
-      omit_globs = colon_sep_string_to_globber_array(omit);
-    } else {
-      omit_globs = NULL;
-    }
-    
     if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
     if (maildir_folders) {

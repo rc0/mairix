@@ -635,7 +635,7 @@ static void handle_single(char *path, int base_len, struct string_list *list,/*{
   }
 }
 /*}}}*/
-static int filter_is_file(const char *x, struct stat *sb)/*{{{*/
+int filter_is_file(const char *x, struct stat *sb)/*{{{*/
 {
   if (S_ISREG(sb->st_mode))
     return 1;

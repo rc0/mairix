@@ -265,6 +265,8 @@ void string_list_to_array(struct string_list *list, int *n, char ***arr);
 void split_on_colons(const char *str, int *n, char ***arr);
 void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs, struct globber_array *omit_globs);
+int filter_is_maildir(const char *path, struct stat *sb);
+int filter_is_mh(const char *path, struct stat *sb);
   
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
@@ -304,12 +306,20 @@ unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
 void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
 int verify_mbox_size_constraints(struct database *db);
 void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *), struct globber_array *omit_globs);
+int filter_is_file(const char *x, struct stat *sb);
+
+/* In glob.c */
+struct globber;
+
+struct globber *make_globber(const char *wildstring);
+void free_globber(struct globber *old);
+int is_glob_match(struct globber *g, const char *s);
 
 /* In writer.c */
 void write_database(struct database *db, char *filename, int do_integrity_checks);
 
 /* In search.c */
-int search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *mfolder, char **argv, enum folder_type ft, int verbose);
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose);
   
 /* In stats.c */
 void get_db_stats(struct database *db);

@@ -183,7 +183,7 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   return result;
 }
 /*}}}*/
-static int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
+int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
 {
   if (S_ISDIR(sb->st_mode)) {
     if (has_child_dir(path, "new") &&
@@ -195,7 +195,7 @@ static int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
   return 0;
 }
 /*}}}*/
-static int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
+int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
 {
   /* At this stage, just check it's a directory. */
   if (S_ISDIR(sb->st_mode)) {

@@ -615,6 +615,13 @@ The @samp{-o} argument obeys the same conventions regarding initial @samp{/}
 and @samp{.} characters as the @b{mfolder} line in the @file{.mairixrc} file
 does.
 
+@emph{Mairix} will refuse to output search results (whether specified
+by the @samp{-o} or in the @file{.mairixrc} file) into one of the
+folders that are indexed; it figures out that list by looking in the
+@file{.mairixrc} file, or in the file you specify using the @samp{-f}
+option.  This sanity check prevents you inadvertantly destroying one
+of your important folders (but won't catch all such cases, sadly).
+
 The search mode runs when there is at least one search expression.  Search
 expressions can take forms such as (in increasing order of complexity):
 
