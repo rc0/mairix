@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.3 2002/07/29 23:03:47 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.4 2002/07/30 22:35:21 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -772,7 +772,6 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
 
   switch (ft) {
     case FT_MAILDIR:
-      fprintf(stderr, "Doing Maildir output\n");
       for (i=0; i<db->n_paths; i++) {
         if (hit3[i]) {
           if (db->path_offsets[i]) {
@@ -799,7 +798,6 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
       }
       break;
     case FT_MH:
-      fprintf(stderr, "Doing MH output\n");
       mh_counter = 1;
       for (i=0; i<db->n_paths; i++) {
         if (hit3[i]) {

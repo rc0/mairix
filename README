@@ -1,5 +1,5 @@
-mairix is a program for indexing and searching email messages stored in maildir
-folders.
+mairix is a program for indexing and searching email messages stored in Maildir
+or MH folders.
 
 * Indexing is fast.  It runs incrementally on new messages - any particular
   message only gets scanned once in the lifetime of the index file.
@@ -13,6 +13,10 @@ folders.
 * Indexing and searching works on the basis of words.  The index file tabulates
   which words occur in which parts (particular headers + body) of which
   messages.
+
+The program is a very useful complement to mail programs like mutt
+(http://www.mutt.org/, which supports Maildir and MH folders) and Sylpheed
+(which supports MH folders).
 
 See also the mairix.txt file.
 

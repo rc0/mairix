@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.2 2002/07/29 23:03:47 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.4 2002/07/30 23:03:01 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -123,12 +123,9 @@ static void parse_rc_file(char *name)/*{{{*/
     else if (!strncasecmp(p, "vfolder_format", 14)) {
       char *temp;
       temp = copy_value(p);
-      fprintf(stderr, "Parsed vfolder_format as <%s>\n", temp);
       if (!strncasecmp(temp, "mh", 2)) {
         output_folder_type = FT_MH;
-        fprintf(stderr, "Parsed vfolder_format as MH\n");
       } else if (!strncasecmp(temp, "maildir", 7)) {
-        fprintf(stderr, "Parsed vfolder_format as Maildir\n");
         output_folder_type = FT_MAILDIR;
       } else {
         fprintf(stderr, "Unrecognized vfolder_format <%s>\n", temp);
@@ -184,7 +181,76 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 }
 /*}}}*/
 
-/* Notes on folder management:
+static char *get_version(void)/*{{{*/
+{
+  static char buffer[256];
+  static char cvs_version[] = "$Name: V0_4 $";
+  char *p, *q;
+  for (p=cvs_version; *p; p++) {
+    if (*p == ':') {
+      p++;
+      break;
+    }
+  }
+  while (isspace(*p)) p++;
+  if (*p == '$') {
+    strcpy(buffer, "development version");
+  } else {
+    for (q=buffer; *p && *p != '$'; p++) {
+      if (!isspace(*p)) {
+        if (*p == '_') *q++ = '.';
+        else *q++ = *p;
+      }
+    }
+    *q = 0;
+  }
+
+  return buffer;
+}
+/*}}}*/
+static void print_copyright(void)/*{{{*/
+{
+  fprintf(stderr,
+          "mairix %s, Copyright (C) 2002 Richard P. Curnow\n"
+          "mairix comes with ABSOLUTELY NO WARRANTY.\n"
+          "This is free software, and you are welcome to redistribute it\n"
+          "under certain conditions; see the GNU General Public License for details.\n\n",
+          get_version());
+}
+/*}}}*/
+static void usage(void)
+{
+  print_copyright();
+  
+  printf("mairix [-h]                                    : Show help\n"
+         "mairix [-f <rcfile>] [-v] [-p]                 : Build index\n"
+         "mairix [-f <rcfile>] [-a] [-t] expr1 ... exprN : Run search\n"
+         "-h          : show this help\n"
+         "-f <rcfile> : use alternative rc file (default ~/.mairixrc)\n"
+         "-v          : be verbose\n"
+         "-p          : purge messages that no longer exist\n"
+         "-a          : add new matches to virtual folder (default : clear it first)\n"
+         "-t          : include all messages in same threads as matching messages\n"
+         "expr_i      : search expression (all expr's AND'ed together):\n"
+         "    word          : match word in whole message\n"
+         "    t:word        : match word in To: header\n"
+         "    c:word        : match word in Cc: header\n"
+         "    f:word        : match word in From: header\n"
+         "    a:word        : match word in To:, Cc: or From: headers (address)\n"
+         "    s:word        : match word in Subject: header\n"
+         "    b:word        : match word in message body\n"
+         "    bs:word       : match word in Subject: header or body (or any other group of prefixes)\n"
+         "    s:word1+word2 : match both words in Subject:\n"
+         "    s:word1,word2 : match either word or both words in Subject:\n"
+         "    s:~word       : match messages not containing word in Subject:\n"
+         "    s:substring=  : match substring in any word in Subject:\n"
+         "    s:substring=2 : match substring with <=2 errors in any word in Subject:\n"
+         "\n"
+         "    (See documentation for more examples)\n"
+         );
+}
+    
+/* Notes on folder management: {{{
  
    Assumption is that the user wants to keep the 'vfolder' directories under a
    common root with the real maildir folders.  This allows a common value for
@@ -207,9 +273,9 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
    MAIRIX_VFOLDER = "vf"
 
    so /home/foobar/mail/vf/search1/{new,cur,tmp} contain the output for search1 etc.
-   */
+   }}} */
 
-int main (int argc, char **argv)
+int main (int argc, char **argv)/*{{{*/
 {
   struct msgpath_array *msgs;
   struct database *db;
@@ -221,6 +287,7 @@ int main (int argc, char **argv)
   int do_purge = 0;
   int any_updates = 0;
   int any_purges = 0;
+  int do_help = 0;
 
   while (++argv, --argc) {
     if (!*argv) {
@@ -238,6 +305,9 @@ int main (int argc, char **argv)
       do_purge = 1;
     } else if (!strcmp(*argv, "-v")) {
       verbose = 1;
+    } else if (!strcmp(*argv, "-h") ||
+               !strcmp(*argv, "--help")) {
+      do_help = 1;
     } else if ((*argv)[0] == '-') {
       fprintf(stderr, "Unrecognized option %s\n", *argv);
     } else if (!strcmp(*argv, "--")) {
@@ -249,6 +319,15 @@ int main (int argc, char **argv)
     }
   }
 
+  if (do_help) {
+    usage();
+    exit(0);
+  }
+
+  if (verbose) {
+    print_copyright();
+  }
+  
   if (*argv) {
     /* There are still args to process */
     do_search = 1;
@@ -343,4 +422,4 @@ int main (int argc, char **argv)
   return 0;
   
 }
-
+/*}}}*/

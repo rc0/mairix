@@ -1,11 +1,25 @@
+NEW IN VERSION 0.4
+==================
+
+* Support for MH folders
+* Create database with mode 0600 instead of 0644 (better security).
+* Add Makefile target to install whichever forms of the documentation have been
+  built.
+
+NEW IN VERSION 0.3
+==================
+
+* Various bug fixes
+
 NEW IN VERSION 0.2
 ==================
 
 * Substrings of message paths can be used as search expressions (p:substring
   option)
-
 * = now used instead of / as the delimiter for number of errors in an
   approximate match (to help with path search)
-
 * Bug fix when using -t mode for search with unpurged dead messages still in
   the database.
+
+==================
+# vim:comments-=mb\:*:comments+=fb\:*
