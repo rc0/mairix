@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002-2004
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * 
  * This program is free software; you can redistribute it and/or modify

@@ -22,7 +22,7 @@
 @author Richard P. Curnow
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2002-2004 Richard P. Curnow
+Copyright @copyright{} 2002,2003,2004,2005 Richard P. Curnow
 @end titlepage
 
 @contents
@@ -398,7 +398,7 @@ this is unlikely to be much of a problem in reality.
 @emph{mairix} can support a maximum of 65536 separate mboxes, and a maximum of
 65536 messages within any one mbox.
 
-@item{omit}
+@item omit 
 This is a colon-separated list of glob patterns for folders to be
 omitted from the indexing.  This allows wide wildcards to be used in the
 @emph{maildir}, @emph{mh} and @emph{mbox} arguments, with the @emph{omit}
