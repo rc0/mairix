@@ -39,6 +39,7 @@
 static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const char *title)
 {
   int i, n, j, incr;
+  int on_line;
   unsigned char *foo;
   printf("Contents of <%s> table\n", title);
   n = tbl->n;
@@ -47,11 +48,17 @@ static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const cha
     printf("Word %d : <%s>\n", i, db->data + tbl->tok_offsets[i]);
     foo = db->data + tbl->enc_offsets[i];
     j = 0;
+    on_line = 0;
     printf("  ");
     while (*foo != 0xff) {
+      if (on_line > 15) {
+        printf("\n");
+        on_line = 0;
+      }
       incr = read_increment(&foo);
       j += incr;
       printf("%d ", j);
+      on_line++;
     }
     printf("\n");
   }
@@ -93,7 +100,11 @@ void dump_database(char *filename)
     printf("\nMBOX INFORMATION\n");
     printf("%d mboxen\n", db->n_mboxen);
     for (i=0; i<db->n_mboxen; i++) {
-      printf("%4d: %d msgs in %s\n", i, db->mbox_entries_table[i], db->data + db->mbox_paths_table[i]);
+      if (db->mbox_paths_table[i]) {
+        printf("%4d: %d msgs in %s\n", i, db->mbox_entries_table[i], db->data + db->mbox_paths_table[i]);
+      } else {
+        printf("%4d: dead\n", i);
+      }
     }
     printf("\n");
   }

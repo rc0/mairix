@@ -500,6 +500,7 @@ int main (int argc, char **argv)/*{{{*/
 
   if (do_dump) {
     dump_database(database_path);
+    return 0;
 
   } else if (do_search) {
     if (!mfolder) {
