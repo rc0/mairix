@@ -27,13 +27,13 @@ mbox=mboxen/folder1:mboxen/folder2:mboxen/foobar
 #######################################################################
 # Set this to the folder within 'base' where you want the search mode
 # to write its output.
-vfolder=vfolder
+mfolder=mfolder
 
-# Set this if you want the format of vfolder to be mh or mbox (the default is
+# Set this if you want the format of mfolder to be mh or mbox (the default is
 # maildir).
 #
-# vformat=mh
-# vformat=mbox
+# mformat=mh
+# mformat=mbox
 
 #######################################################################
 # Set this to the path where the index database file will be kept
