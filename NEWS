@@ -1,3 +1,16 @@
+NEW IN VERSION 0.5
+==================
+
+* When -a option is used for search, avoid symlinking the same message twice if
+  it matches more than one query.
+* Fixes to rpm spec file.
+* Fix handling of = in base64-encoded attachments.
+* Support non POSIX locales.
+* Support rfc2047 encoding in headers.
+* Create vfolder if it doesn't already exist.
+* Allow searching on complete email addresses as well as individual words in
+  to, cc and from fields.
+
 NEW IN VERSION 0.4
 ==================
 

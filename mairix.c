@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.5 2002/09/09 20:45:43 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.7 2002/09/11 22:06:53 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -28,6 +28,7 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <locale.h>
 
 int verbose = 0;
 
@@ -135,7 +136,9 @@ static void parse_rc_file(char *name)/*{{{*/
     else if (!strncasecmp(p, "vfolder", 7)) vfolder = copy_value(p);
     else if (!strncasecmp(p, "database", 8)) database_path = copy_value(p);
     else {
-      fprintf(stderr, "Unrecognized option at line %d in %s\n", lineno, name);
+      if (verbose) {
+        fprintf(stderr, "Unrecognized option at line %d in %s\n", lineno, name);
+      }
     }
   }
   
@@ -184,7 +187,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_5_pre1 $";
+  static char cvs_version[] = "$Name: V0_5_pre3 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -218,7 +221,7 @@ static void print_copyright(void)/*{{{*/
           get_version());
 }
 /*}}}*/
-static void usage(void)
+static void usage(void)/*{{{*/
 {
   print_copyright();
   
@@ -249,7 +252,7 @@ static void usage(void)
          "    (See documentation for more examples)\n"
          );
 }
-    
+    /*}}}*/
 /* Notes on folder management: {{{
  
    Assumption is that the user wants to keep the 'vfolder' directories under a
@@ -288,6 +291,8 @@ int main (int argc, char **argv)/*{{{*/
   int any_updates = 0;
   int any_purges = 0;
   int do_help = 0;
+
+  setlocale(LC_CTYPE, "");
 
   while (++argv, --argc) {
     if (!*argv) {

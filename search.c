@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.5 2002/09/09 20:45:43 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.6 2002/09/11 21:21:09 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -840,6 +840,52 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
 }
 /*}}}*/
 
+static int directory_exists(char *name)/*{{{*/
+{
+  struct stat sb;
+
+  if (stat(name, &sb) < 0) {
+    return 0;
+  }
+  if (S_ISDIR(sb.st_mode)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+/*}}}*/
+static void create_dir(char *path)/*{{{*/
+{
+  if (mkdir(path, 0700) < 0) {
+    perror("mkdir");
+    exit(1);
+  }
+  fprintf(stderr, "Created directory %s\n", path);
+  return;
+}
+/*}}}*/
+static void create_maildir(char *path)/*{{{*/
+{
+  char *subdir, *tailpos;
+  int len;
+  
+  create_dir(path);
+
+  len = strlen(path);
+  subdir = new_array(char, len + 5);
+  strcpy(subdir, path);
+  strcpy(subdir+len, "/");
+  tailpos = subdir + len + 1;
+
+  strcpy(tailpos,"cur");
+  create_dir(subdir);
+  strcpy(tailpos,"new");
+  create_dir(subdir);
+  strcpy(tailpos,"tmp");
+  create_dir(subdir);
+  return;
+}
+/*}}}*/
 static void clear_maildir_subfolder(char *path, char *subdir)/*{{{*/
 {
   char *sdir;
@@ -927,6 +973,19 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
   strcpy(complete_vfolder, folder_base);
   strcat(complete_vfolder, "/");
   strcat(complete_vfolder, vfolder);
+
+  if (!directory_exists(complete_vfolder)) {
+    switch (ft) {
+      case FT_MAILDIR:
+        create_maildir(complete_vfolder);
+        break;
+      case FT_MH:
+        create_dir(complete_vfolder);
+        break;
+      default:
+        assert(0);
+    }
+  }
 
   if (!do_augment) {
     switch (ft) {

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.3 2002/07/28 23:18:16 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.4 2002/09/11 22:07:20 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -295,17 +295,36 @@ static void add_angled_terms(int file_index, struct toktable *table, char *s)/*{
 /*}}}*/
 
 /* Macro for what characters can make up token strings */
-#define CHAR_VALID(x) (isalnum(x) || ((x) == '_'))
+static unsigned char special_table[256] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 00-0f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 10-1f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, /* 20-2f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 30-3f */
+  2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 40-4f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, /* 50-5f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 60-6f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 70-7f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 80-8f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 90-9f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* a0-af */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* b0-bf */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* c0-cf */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* d0-df */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* e0-ef */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  /* f0-ff */
+};
 
-static void tokenise_string(int file_index, struct toktable *table, char *data)/*{{{*/
+#define CHAR_VALID(x,mask) (isalnum(x) || (special_table[(unsigned int)(unsigned char) x] & mask))
+
+static void tokenise_string(int file_index, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
   char *ss, *es, old_es;
   ss = data;
   for (;;) {
-    while (*ss && !CHAR_VALID(*ss)) ss++;
+    while (*ss && !CHAR_VALID(*ss,match_mask)) ss++;
     if (!*ss) break;
     es = ss + 1;
-    while (*es && CHAR_VALID(*es)) es++;
+    while (*es && CHAR_VALID(*es,match_mask)) es++;
     
     /* deal with token [ss,es) */
     old_es = *es;
@@ -328,7 +347,7 @@ static void tokenise_html_string(int file_index, struct toktable *table, char *d
   ss = data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
-    while (*ss && !CHAR_VALID(*ss)) {
+    while (*ss && !CHAR_VALID(*ss, 1)) {
       if (*ss++ == '<') {
         /* Skip over HTML tag */
         while (*ss && (*ss != '>')) ss++;
@@ -337,7 +356,7 @@ static void tokenise_html_string(int file_index, struct toktable *table, char *d
     if (!*ss) break;
     
     es = ss + 1;
-    while (*es && CHAR_VALID(*es)) es++;
+    while (*es && CHAR_VALID(*es, 1)) es++;
     
     /* deal with token [ss,es) */
     old_es = *es;
@@ -355,15 +374,25 @@ static void tokenise_message(int file_index, struct database *db, struct rfc822 
 {
   struct attachment *a;
 
-  if (msg->hdrs.to) tokenise_string(file_index, db->to, msg->hdrs.to);
-  if (msg->hdrs.cc) tokenise_string(file_index, db->cc, msg->hdrs.cc);
-  if (msg->hdrs.from) tokenise_string(file_index, db->from, msg->hdrs.from);
-  if (msg->hdrs.subject) tokenise_string(file_index, db->subject, msg->hdrs.subject);
+  /* Match on whole addresses in these headers as well as the individual words */
+  if (msg->hdrs.to) {
+    tokenise_string(file_index, db->to, msg->hdrs.to, 1);
+    tokenise_string(file_index, db->to, msg->hdrs.to, 2);
+  }
+  if (msg->hdrs.cc) {
+    tokenise_string(file_index, db->cc, msg->hdrs.cc, 1);
+    tokenise_string(file_index, db->cc, msg->hdrs.cc, 2);
+  }
+  if (msg->hdrs.from) {
+    tokenise_string(file_index, db->from, msg->hdrs.from, 1);
+    tokenise_string(file_index, db->from, msg->hdrs.from, 2);
+  }
+  if (msg->hdrs.subject) tokenise_string(file_index, db->subject, msg->hdrs.subject, 1);
 
   for (a=msg->atts.next; a!=&msg->atts; a=a->next) {
     switch (a->ct) {
       case CT_TEXT_PLAIN:
-        tokenise_string(file_index, db->body, a->data.normal.bytes);
+        tokenise_string(file_index, db->body, a->data.normal.bytes, 1);
         break;
       case CT_TEXT_HTML:
         tokenise_html_string(file_index, db->body, a->data.normal.bytes);

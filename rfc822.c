@@ -1,10 +1,11 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.3 2002/07/28 23:18:16 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.7 2002/09/11 22:13:23 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002
+ * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -21,7 +22,6 @@
  * 
  **********************************************************************
  */
-
 
 #include "mairix.h"
 
@@ -124,12 +124,159 @@ static int match_string(char *ref, char *candidate)/*{{{*/
   return !strncasecmp(ref, candidate, len);
 }
 /*}}}*/
+
+static char equal_table[] = {/*{{{*/
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 00-0f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 10-1f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 20-2f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,  /* 30-3f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 40-4f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 50-5f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 60-6f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 70-7f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 80-8f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 90-9f */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* a0-af */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* b0-bf */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* c0-cf */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* d0-df */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* e0-ef */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   /* f0-ff */
+};
+/*}}}*/
+static int base64_table[] = {/*{{{*/
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 00-0f */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 10-1f */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  62,  -1,  -1,  -1,  63,  /* 20-2f */
+   52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  -1,  -1,  -1,   0,  -1,  -1,  /* 30-3f */
+   -1,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  /* 40-4f */
+   15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  -1,  -1,  -1,  -1,  -1,  /* 50-5f */
+   -1,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  /* 60-6f */
+   41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  -1,  -1,  -1,  -1,  -1,  /* 70-7f */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 80-8f */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 90-9f */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* a0-af */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* b0-bf */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* c0-cf */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* d0-df */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* e0-ef */
+   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1   /* f0-ff */
+};
+/*}}}*/
+static int hex_to_val(char x) {/*{{{*/
+  switch (x) {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      return (x - '0');
+      break;
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+      return 10 + (x - 'a');
+      break;
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'E':
+    case 'F':
+      return 10 + (x - 'A');
+      break;
+    default:
+      return 0;
+  }
+}
+/*}}}*/
+static void decode_header_value(char *text){/*{{{*/
+  /* rfc2047 decode, written by Mikael Ylikoski */
+
+  char *s, *a, *b, *e, *p, *q;
+
+  for (p = q = s = text; (s = strstr(s, "=?")); s = e + 2) {
+    if (p == q)
+      p = q = s;
+    else
+      while (q != s)
+        *p++ = *q++;
+    s += 2;
+    a = strchr(s, '?');
+    if (!a) break;
+    a++;
+    b = strchr(a, '?');
+    if (!b) break;
+    b++;
+    e = strstr(b, "?=");
+    if (!e) break;
+    /* have found an encoded-word */
+    if (b - a != 2)
+      continue; /* unknown encoding */
+    if (*a == 'q' || *a == 'Q') {
+      int val;
+      q = b;
+      while (q < e) {
+        if (*q == '_') {
+          *p++ = 0x20;
+          q++;
+        } else if (*q == '=') {
+          q++;
+          val = hex_to_val(*q++) << 4;
+          val += hex_to_val(*q++);
+          *p++ = val;
+        } else
+          *p++ = *q++;
+      }
+    } else if (*a == 'b' || *a == 'B') {
+      int reg, nc, eq; /* register, #characters in reg, #equals */
+      int dc; /* decoded character */
+      eq = reg = nc = 0;
+      for (q = b; q < e; q++) {
+        unsigned char cq = *(unsigned char *)q;
+        dc = base64_table[cq];
+        eq += equal_table[cq];
+
+        if (dc >= 0) {
+          reg <<= 6;
+          reg += dc;
+          nc++;
+          if (nc == 4) {
+            *p++ = ((reg >> 16) & 0xff);
+            if (eq < 2) *p++ = ((reg >> 8) & 0xff);
+            if (eq < 1) *p++ = reg & 0xff;
+            nc = reg = 0;
+            if (eq) break;
+          }
+        }
+      }
+    } else {
+      continue;	/* unknown encoding */
+    }
+    q = e + 2;
+  }
+  if (p == q) return;
+  while (*q != '\0')
+    *p++ = *q++;
+  *p = '\0';
+}
+/*}}}*/
 static char *copy_header_value(char *text){/*{{{*/
   char *p;
   for (p = text; *p && (*p != ':'); p++) ;
   if (!*p) return NULL;
   p++;
-  return new_string(p);
+  p = new_string(p);
+  decode_header_value(p);
+  return p;
 }
 /*}}}*/
 static enum encoding_type decode_encoding_type(char *e)/*{{{*/
@@ -252,80 +399,7 @@ static char *looking_at_ws_then_newline(char *start)/*{{{*/
   assert(0);
 }
 /*}}}*/
-static int hex_to_val(char x) {/*{{{*/
-  switch (x) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-      return (x - '0');
-      break;
-    case 'a':
-    case 'b':
-    case 'c':
-    case 'd':
-    case 'e':
-    case 'f':
-      return 10 + (x - 'a');
-      break;
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-    case 'E':
-    case 'F':
-      return 10 + (x - 'A');
-      break;
-    default:
-      return 0;
-  }
-}
-/*}}}*/
 
-static char equal_table[] = {/*{{{*/
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 00-0f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 10-1f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  /* 20-2f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 30-3f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 40-4f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 50-5f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 60-6f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 70-7f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 80-8f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 90-9f */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* a0-af */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* b0-bf */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* c0-cf */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* d0-df */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* e0-ef */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   /* f0-ff */
-};
-/*}}}*/
-static int base64_table[] = {/*{{{*/
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 00-0f */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 10-1f */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  62,  -1,  -1,  -1,  63,  /* 20-2f */
-   52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  -1,  -1,  -1,  -1,  -1,  -1,  /* 30-3f */
-   -1,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  /* 40-4f */
-   15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  -1,  -1,  -1,  -1,  -1,  /* 50-5f */
-   -1,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  /* 60-6f */
-   41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  -1,  -1,  -1,  -1,  -1,  /* 70-7f */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 80-8f */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 90-9f */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* a0-af */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* b0-bf */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* c0-cf */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* d0-df */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* e0-ef */
-   -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1   /* f0-ff */
-};
-/*}}}*/
 static char *unencode_data(char *input, int input_len, char *enc, int *output_len)/*{{{*/
 {
   enum encoding_type encoding;
@@ -527,6 +601,7 @@ static void do_body(char *body_start, int body_len, char *content_type, char *co
     /* Add null termination on the end */
     new_att->data.normal.bytes = new_array(char, decoded_body_len + 1);
     memcpy(new_att->data.normal.bytes, decoded_body, decoded_body_len + 1);
+    free(decoded_body);
     enqueue(atts, new_att);/*}}}*/
   }
 }
@@ -786,7 +861,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   if (close(fd) < 0)
     perror("close");
-  if ((int) data < 0) {
+  if ((int) data <= 0) {
     perror("mmap");
     return NULL;
   }

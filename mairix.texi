@@ -172,6 +172,18 @@ contain particular words.  @emph{mairix} defines a word as any string of
 alphanumeric characters + underscore.  Any whitespace, punctuation, hyphens etc
 are treated as word boundaries.
 
+@emph{mairix} has special handling for the @t{To:}, @t{Cc:} and @t{From:}
+headers.  Besides the normal word scan, these headers are scanned a second
+time, where the characters @samp{@@}, @samp{-} and @samp{.} are also treated as
+word characters.  This allows most (if not all) email addresses to appear in
+the database as single words.  So if you have a mail from
+@t{wibble@@foobar.zzz}, it will match on both these searches
+
+@example
+mairix f:foobar
+mairix f:wibble@@foobar.zzz
+@end example
+
 It should be clear by now that the searching cannot be used to find messages
 matching general regular expressions.  Personally, I don't find that much use
 anyway for locating old messages - I'm far more likely to remember particular
