@@ -403,6 +403,11 @@ This is a colon-separated list of glob patterns for folders to be
 omitted from the indexing.  This allows wide wildcards to be used in the
 @emph{maildir}, @emph{mh} and @emph{mbox} arguments, with the @emph{omit}
 option used to selectively remove unwanted folders from the folder lists.
+Within the glob patterns, a single @samp{*} matches any sequence of characters
+other than @samp{/}.  However @samp{**} matches any sequence of characters
+including @samp{/}.  This allows glob patterns to be constructed which have a
+wildcard for just one directory component, or for any number of directory
+components.
 
 The @emph{omit} option can be specified as many times as required so that the
 list of patterns doesn't all have to fit on one line.
@@ -416,7 +421,17 @@ omit=bulk/spam*
 
 will index all mbox folders at any level under the @file{bulk} subdirectory of
 the base folder, except for those folders whose names start @file{bulk/spam},
-e.g. @file{bulk/spam}, @file{bulk/spam2005}, @file{bulk/spam/2005} etc.
+e.g. @file{bulk/spam}, @file{bulk/spam2005} etc.  In constrast, 
+
+@example
+mbox=bulk...
+omit=bulk/spam**
+@end example
+
+will index all mbox folders at any level under the @file{bulk} subdirectory of
+the base folder, except for those folders whose names start @file{bulk/spam},
+e.g. @file{bulk/spam}, @file{bulk/spam2005}, @file{bulk/spam/2005},
+@file{bulk/spam/2005/jan} etc.
 
 @item nochecks
 This takes no arguments.  If a line starting with @samp{nochecks} is present,

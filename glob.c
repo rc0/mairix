@@ -30,6 +30,7 @@
 struct globber {
   unsigned int pat[256];
   unsigned int starpat;
+  unsigned int twostarpat;
   unsigned int hit;
 };
 
@@ -98,6 +99,7 @@ struct globber *make_globber(const char *wildstring)/*{{{*/
   result = new(struct globber);
   memset(&result->pat, 0x00, 256*sizeof(unsigned long));
   memset(&result->starpat, 0x00, sizeof(unsigned long));
+  memset(&result->twostarpat, 0x00, sizeof(unsigned long));
   mask = 0x1;
 
   n = 0;
@@ -106,8 +108,13 @@ struct globber *make_globber(const char *wildstring)/*{{{*/
     c = *p;
     switch (c) {
       case '*':/*{{{*/
-        /* Match zero or more of anything */
-        result->starpat |= mask;
+        if (p[1] == '*') {
+          result->twostarpat |= mask;
+          p++;
+        } else {
+          /* Match zero or more of anything */
+          result->starpat |= mask;
+        }
         break;
 /*}}}*/
       case '[':/*{{{*/
@@ -148,22 +155,30 @@ int is_glob_match(struct globber *g, const char *s)/*{{{*/
 {
   unsigned int reg;
   unsigned int stars;
+  unsigned int twostars;
+  unsigned int stars2;
   int index;
 
   reg = 0x1;
   while (*s) {
     index = 0xff & (int) *s;
 #if DODEBUG
-    printf("*s=%c index=%02x old_reg=%08lx pat=%08lx ",
+    printf("*s=%c index=%02x old_reg=%08lx pat=%08lx //",
            *s, index, reg, g->pat[index]);
 #endif
     stars = (reg & g->starpat);
+    twostars = (reg & g->twostarpat);
+    if (index != '/') {
+      stars2 = stars | twostars;
+    } else {
+      stars2 = twostars;
+    }
     reg &= g->pat[index];
     reg <<= 1;
-    reg |= stars;
+    reg |= stars2;
 #if DODEBUG
-    printf("new_reg=%08lx ", reg);
-    printf("starpat=%08lx stars=%08lx\n", g->starpat, stars);
+    printf(" new_reg=%08lx ", reg);
+    printf("starpat=%08lx stars=%08lx stars2=%08lx\n", g->starpat, stars, stars2);
 #endif
     s++;
   }
@@ -220,6 +235,98 @@ void free_globber_array(struct globber_array *in)/*{{{*/
 }
 /*}}}*/
 
+static char *copy_folder_name(const char *start, const char *end)/*{{{*/
+{
+  /* 'start' points to start of string to copy.
+     Any '\:' sequence is replaced by ':' .
+     Otherwise \ is treated normally.
+     'end' can be 1 beyond the end of the string to copy.  Otherwise it can be
+     null, meaning treat 'start' as the start of a normal null-terminated
+     string. */
+  char *p;
+  const char *q;
+  int len;
+  char *result;
+  if (end) {
+    len = end - start;
+  } else {
+    len = strlen(start);
+  }
+  result = new_array(char, len + 1);
+  for (p=result, q=start;
+       end ? (q < end) : *q;
+       q++) {
+    if ((q[0] == '\\') && (q[1] == ':')) {
+      /* Escaped colon : drop the backslash */
+    } else {
+      *p++ = *q;
+    }
+  }
+  *p = '\0';
+  return result;
+}
+/*}}}*/
+void string_list_to_array(struct string_list *list, int *n, char ***arr)/*{{{*/
+{
+  int N, i;
+  struct string_list *a, *next_a;
+  char **result;
+  for (N=0, a=list->next; a!=list; a=a->next, N++) ;
+
+  result = new_array(char *, N);
+  for (i=0, a=list->next; i<N; a=next_a, i++) {
+    result[i] = a->data;
+    next_a = a->next;
+    free(a);
+  }
+
+  *n = N;
+  *arr = result;
+}
+/*}}}*/
+void split_on_colons(const char *str, int *n, char ***arr)/*{{{*/
+{
+  struct string_list list, *new_cell;
+  const char *left_to_do;
+
+  list.next = list.prev = &list;
+  left_to_do = str;
+  do {
+    char *colon;
+    char *xx;
+
+    colon = strchr(left_to_do, ':');
+    /* Allow backslash-escaped colons in filenames */
+    if (colon && (colon > left_to_do) && (colon[-1]=='\\')) {
+      int is_escaped;
+      do {
+        colon = strchr(colon + 1, ':');
+        is_escaped = (colon && (colon[-1] == '\\'));
+      } while (colon && is_escaped);
+    }
+    /* 'colon' now points to the first non-escaped colon or is null if there
+       were no more such colons in the rest of the line. */
+
+    xx = copy_folder_name(left_to_do, colon);
+    if (colon) {
+      left_to_do = colon + 1;
+    } else {
+      while (*left_to_do) ++left_to_do;
+    }
+
+    new_cell = new(struct string_list);
+    new_cell->data = xx;
+    new_cell->next = &list;
+    new_cell->prev = list.prev;
+    list.prev->next = new_cell;
+    list.prev = new_cell;
+  } while (*left_to_do);
+
+  string_list_to_array(&list, n, arr);
+
+}
+/*}}}*/
+
 #if defined (TEST)
 void run1(char *ref, char *s, int expected)/*{{{*/
 {
@@ -271,6 +378,15 @@ int main (int argc, char **argv)/*{{{*/
   run1("*a", "", 0);
   run1("a", "", 0);
 
+  run1("*abc*", "x/abc/y", 0);
+  run1("**abc**", "x/abc/y", 1);
+  run1("x/*/abc**", "x/z/abc/y", 1);
+  run1("x/*/abc**", "x/z/w/abc/y", 0);
+  run1("x/*/abc**", "x/zz/w/abc/y", 0);
+  run1("x/*/abc**", "x/z/ww/abc/y", 0);
+  run1("x/**/abc**", "x/z/w/abc/y", 1);
+  run1("x/**/abc**", "x/zz/w/abc/y", 1);
+  
   return 0;
 }
 /*}}}*/
