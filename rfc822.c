@@ -754,8 +754,8 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
   /* Scan input to look for boundary markers */
   be = strstr(input, end_boundary);
   if (!be) {
-    fprintf(stderr, "Can't process multipart message without end boundary!\n");
-    goto cleanup;
+    fprintf(stderr, "Can't find end boundary in multipart message!\n");
+    be = strchr(input, 0); /* tolerate missing end boundary */
   }
 
   line_after_b0 = input;
@@ -768,8 +768,13 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
       b1 = strstr(start_b1_search_from, normal_boundary);
 
       if (!b1) {
-        fprintf(stderr, "Oops, didn't find another normal boundary?\n");
-        goto cleanup;
+        if (*be) {
+          fprintf(stderr, "Oops, didn't find another normal boundary?\n");
+          goto cleanup;
+        } else {
+          b1 = be; /* tolerate missing end boundary */
+          break;
+        }
       }
       
       looking_at_end_boundary = (b1 == be);
