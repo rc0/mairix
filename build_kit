@@ -15,3 +15,5 @@ close (OUT);
 
 unlink "mairix.spec.sample";
 
+system("cvs export -d dfasyn dfasyn V0_2");
+

@@ -1,6 +1,6 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Attic/Makefile,v 1.5 2003/02/24 23:56:40 richard Exp $
+# $Header: /cvs/src/mairix/Attic/Makefile,v 1.6 2003/03/03 00:08:56 richard Exp $
 #
 # =======================================================================
 #
@@ -51,12 +51,16 @@ mairix : $(OBJ)
 %.o : %.c memmac.h mairix.h reader.h Makefile
 	$(CC) -c $(CFLAGS) $<
 
-datescan.c : datescan.nfa
-	dfasyn -o datescan.c -v -u datescan.nfa
+datescan.c : datescan.nfa dfasyn/dfasyn
+	dfasyn/dfasyn -o datescan.c -v -u datescan.nfa
+
+dfasyn/dfasyn:
+	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi
 
 clean:
 	-rm -f *~ *.o mairix *.s core mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info
 	-rm -f mairix.cp mairix.fn mairix.aux mairix.log mairix.ky mairix.pg mairix.toc mairix.tp mairix.vr
+	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
 
 install:
 	[ -d $(prefix) ] || mkdir -p $(prefix)
