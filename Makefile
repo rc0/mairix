@@ -1,6 +1,6 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Attic/Makefile,v 1.1 2002/07/03 22:15:58 richard Exp $
+# $Header: /cvs/src/mairix/Attic/Makefile,v 1.2 2002/07/29 23:03:03 richard Exp $
 #
 # =======================================================================
 #
@@ -30,10 +30,12 @@ CC=gcc
 #CFLAGS=-O2 -pg
 CFLAGS=-Wall -g
 
-prefix=/usr/local
+prefix=/other/mairix/0.3-1
 bindir=$(prefix)/bin
 mandir=$(prefix)/man
 man1dir=$(mandir)/man1
+infodir=$(prefix)/info
+docdir=$(prefix)/docs
 
 #########################################################################
 # Things below this point shouldn't need to be edited.
@@ -60,6 +62,13 @@ install:
 	[ -d $(man1dir) ] || mkdir -p $(man1dir)
 	cp -f mairix $(bindir)
 	chmod 555 $(bindir)/mairix
+
+install_docs:
+	if [ -f mairix.info ]; then [ -d $(infodir) ] || mkdir -p $(infodir) ; cp -f mairix.info* $(infodir) ; chmod 444 $(infodir)/mairix.info* ; fi
+	if [ -f mairix.txt ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.txt $(docdir) ; chmod 444 $(docdir)/mairix.txt ; fi
+	if [ -f mairix.html ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.html $(docdir) ; chmod 444 $(docdir)/mairix.html ; fi
+	if [ -f mairix.dvi ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.dvi $(docdir) ; chmod 444 $(docdir)/mairix.dvi ; fi
+	if [ -f mairix.pdf ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.pdf $(docdir) ; chmod 444 $(docdir)/mairix.pdf ; fi
 
 docs : mairix.info mairix.txt mairix.html mairix.dvi mairix.pdf
 

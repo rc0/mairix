@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.2 2002/07/24 22:53:06 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.3 2002/07/29 23:03:47 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <dirent.h>
 
+#include "mairix.h"
 #include "reader.h"
 #include "memmac.h"
 
@@ -534,7 +535,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
 }
 /*}}}*/
 
-static void do_search(struct read_db *db, char **args, char *output_dir, int show_threads)/*{{{*/
+static void do_search(struct read_db *db, char **args, char *output_dir, int show_threads, enum folder_type ft)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
@@ -545,6 +546,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
   int pid = getpid();
   time_t time_now = time(NULL);
   int n_hits;
+  int mh_counter;
 
   hit0 = new_array(char, db->n_paths);
   hit1 = new_array(char, db->n_paths);
@@ -768,30 +770,69 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
     free(tids);
   }
 
-  for (i=0; i<db->n_paths; i++) {
-    if (hit3[i]) {
-      if (db->path_offsets[i]) {
-        /* File is not dead */
-        char *target_path;
-        char uniq_buf[48];
-        int len;
-        
-        ++n_hits;
-        len = strlen(output_dir) + 64; /* slight oversize */
-        target_path = new_array(char, len);
-        strcpy(target_path, output_dir);
-        strcat(target_path, "/cur/");
-        sprintf(uniq_buf, "mairix_%d_%ld_%d:2,S", pid, time_now, i);
-        strcat(target_path, uniq_buf);
-        
-        if (symlink(db->data + db->path_offsets[i], target_path) < 0) {
-          perror("symlink");
-          /* Don't exit */
+  switch (ft) {
+    case FT_MAILDIR:
+      fprintf(stderr, "Doing Maildir output\n");
+      for (i=0; i<db->n_paths; i++) {
+        if (hit3[i]) {
+          if (db->path_offsets[i]) {
+            /* File is not dead */
+            char *target_path;
+            char uniq_buf[48];
+            int len;
+            
+            ++n_hits;
+            len = strlen(output_dir) + 64; /* slight oversize */
+            target_path = new_array(char, len);
+            strcpy(target_path, output_dir);
+            strcat(target_path, "/cur/");
+            sprintf(uniq_buf, "mairix_%d_%ld_%d:2,S", pid, time_now, i);
+            strcat(target_path, uniq_buf);
+            
+            if (symlink(db->data + db->path_offsets[i], target_path) < 0) {
+              perror("symlink");
+              /* Don't exit */
+            }
+            free(target_path);  
+          }
         }
-        free(target_path);  
       }
-    }
+      break;
+    case FT_MH:
+      fprintf(stderr, "Doing MH output\n");
+      mh_counter = 1;
+      for (i=0; i<db->n_paths; i++) {
+        if (hit3[i]) {
+          if (db->path_offsets[i]) {
+            /* File is not dead */
+            char *target_path;
+            char uniq_buf[8];
+            int len;
+            
+            ++n_hits;
+            len = strlen(output_dir) + 10;
+            target_path = new_array(char, len);
+            strcpy(target_path, output_dir);
+            strcat(target_path, "/");
+            sprintf(uniq_buf, "%d", mh_counter++);
+            strcat(target_path, uniq_buf);
+            
+            if (symlink(db->data + db->path_offsets[i], target_path) < 0) {
+              perror("symlink");
+              fprintf(stderr, "Failed path <%s>\n", target_path);
+              /* Don't exit */
+            }
+            free(target_path);  
+          }
+        }
+      }
+
+      break;
+    default:
+      assert(0);
+      break;
   }
+
   free(hit0);
   free(hit1);
   free(hit2);
@@ -800,7 +841,7 @@ static void do_search(struct read_db *db, char **args, char *output_dir, int sho
 }
 /*}}}*/
 
-static void clear_directory(char *path, char *subdir)/*{{{*/
+static void clear_maildir_subfolder(char *path, char *subdir)/*{{{*/
 {
   char *sdir;
   char *fpath;
@@ -839,7 +880,42 @@ static void clear_directory(char *path, char *subdir)/*{{{*/
   free(sdir);
 }
 /*}}}*/
-void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv)/*{{{*/
+static void clear_mh_folder(char *path)/*{{{*/
+{
+  char *fpath;
+  int len;
+  DIR *d;
+  struct dirent *de;
+  struct stat sb;
+
+  len = strlen(path);
+
+  fpath = new_array(char, len + 3 + NAME_MAX);
+
+  d = opendir(path);
+  if (d) {
+    while ((de = readdir(d))) {
+      if (is_integer_string(de->d_name)) {
+        strcpy(fpath, path);
+        strcat(fpath, "/");
+        strcat(fpath, de->d_name);
+        if (lstat(fpath, &sb) >= 0) {
+          if (S_ISLNK(sb.st_mode)) {
+            /* FIXME : Can you unlink from a directory while doing a readdir loop over it? */
+            if (unlink(fpath) < 0) {
+              fprintf(stderr, "Unlinking %s failed\n", fpath);
+            }
+          }
+        }
+      }
+    }
+    closedir(d);
+  }
+
+  free(fpath);
+}
+/*}}}*/
+void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft)/*{{{*/
 {
   struct read_db *db;
   char *complete_vfolder;
@@ -854,11 +930,20 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
   strcat(complete_vfolder, vfolder);
 
   if (!do_augment) {
-    clear_directory(complete_vfolder, "new");
-    clear_directory(complete_vfolder, "cur");
+    switch (ft) {
+      case FT_MAILDIR:
+        clear_maildir_subfolder(complete_vfolder, "new");
+        clear_maildir_subfolder(complete_vfolder, "cur");
+        break;
+      case FT_MH:
+        clear_mh_folder(complete_vfolder);
+        break;
+      default:
+        assert(0);
+    }
   }
 
-  do_search(db, argv, complete_vfolder, do_threads);
+  do_search(db, argv, complete_vfolder, do_threads, ft);
 
   close_db(db);
 }

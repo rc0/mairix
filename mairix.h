@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.h,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/mairix.h,v 1.2 2002/07/29 23:03:47 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -133,6 +133,12 @@ struct database {/*{{{*/
 };
 /*}}}*/
 
+enum folder_type {/*{{{*/
+  FT_MAILDIR,
+  FT_MH
+};
+/*}}}*/
+
 extern int verbose; /* cmd line -v switch */
 
 /* In hash.c */
@@ -140,8 +146,9 @@ unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval
 
 /* In dirscan.c */
 struct msgpath_array *new_msgpath_array(void);
+int is_integer_string(char *x);
 void free_msgpath_array(struct msgpath_array *x);
-struct msgpath_array *build_message_list(char *folder_base, char *folders);
+void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs);
   
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
@@ -166,7 +173,7 @@ int cull_dead_messages(struct database *db);
 void write_database(struct database *db, char *filename);
 
 /* In search.c */
-void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv);
+void search_top(int do_threads, int do_augment, char *database_path, char *folder_base, char *vfolder, char **argv, enum folder_type ft);
   
 /* In stats.c */
 void get_db_stats(struct database *db);

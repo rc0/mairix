@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.1 2002/07/03 22:15:59 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.2 2002/07/29 23:03:47 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -33,8 +33,10 @@ int verbose = 0;
 
 static char *folder_base = NULL;
 static char *folders = NULL;
+static char *mh_folders = NULL;
 static char *vfolder = NULL;
 static char *database_path = NULL;
+static enum folder_type output_folder_type = FT_MAILDIR;
 
 static int file_exists(char *name)/*{{{*/
 {
@@ -117,6 +119,22 @@ static void parse_rc_file(char *name)/*{{{*/
     /* Now a real line to parse */
     if (!strncasecmp(p, "base", 4)) folder_base = copy_value(p);
     else if (!strncasecmp(p, "folders", 7)) folders = copy_value(p);
+    else if (!strncasecmp(p, "mh_folders", 10)) mh_folders = copy_value(p);
+    else if (!strncasecmp(p, "vfolder_format", 14)) {
+      char *temp;
+      temp = copy_value(p);
+      fprintf(stderr, "Parsed vfolder_format as <%s>\n", temp);
+      if (!strncasecmp(temp, "mh", 2)) {
+        output_folder_type = FT_MH;
+        fprintf(stderr, "Parsed vfolder_format as MH\n");
+      } else if (!strncasecmp(temp, "maildir", 7)) {
+        fprintf(stderr, "Parsed vfolder_format as Maildir\n");
+        output_folder_type = FT_MAILDIR;
+      } else {
+        fprintf(stderr, "Unrecognized vfolder_format <%s>\n", temp);
+      }
+      free(temp);
+    }
     else if (!strncasecmp(p, "vfolder", 7)) vfolder = copy_value(p);
     else if (!strncasecmp(p, "database", 8)) database_path = copy_value(p);
     else {
@@ -196,10 +214,6 @@ int main (int argc, char **argv)
   struct msgpath_array *msgs;
   struct database *db;
 
-  char *arg_folder_base = NULL;
-  char *arg_folders = NULL;
-  char *arg_vfolder = NULL;
-  char *arg_database_path = NULL;
   char *arg_rc_file_path = NULL;
   int do_augment = 0;
   int do_threads = 0;
@@ -250,6 +264,10 @@ int main (int argc, char **argv)
     folders = getenv("MAIRIX_FOLDERS");
   }
 
+  if (getenv("MAIRIX_MH_FOLDERS")) {
+    mh_folders = getenv("MAIRIX_MH_FOLDERS");
+  }
+
   if (getenv("MAIRIX_VFOLDER")) {
     vfolder = getenv("MAIRIX_VFOLDER");
   }
@@ -274,15 +292,22 @@ int main (int argc, char **argv)
       exit(1);
     }
 
-    search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv);
+    search_top(do_threads, do_augment, database_path, folder_base, vfolder, argv, output_folder_type);
     
   } else {
-    if (!folders) {
-      fprintf(stderr, "No folders/MAIRIX_FOLDERS set\n");
+    if (!folders && !mh_folders) {
+      fprintf(stderr, "No [mh_]folders/MAIRIX_[MH_]FOLDERS set\n");
       exit(1);
     }
     
-    msgs = build_message_list(folder_base, folders);
+    msgs = new_msgpath_array();
+    if (folders) {
+      build_message_list(folder_base, folders, FT_MAILDIR, msgs);
+    }
+    if (mh_folders) {
+      build_message_list(folder_base, mh_folders, FT_MH, msgs);
+    }
+
     if (check_message_list_for_duplicates(msgs)) {
       fprintf(stderr, "Message list contains duplicates - check your 'folders' setting\n");
       exit(1);

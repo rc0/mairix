@@ -47,10 +47,11 @@ Copyright @copyright{} 2002 Richard P. Curnow
 @node Background
 @section Background
 The @emph{mairix} program arose from a need to index and search 100's or 1000's
-of email messages in an efficient way.  Currently it supports emails stored in
-maildir-format folders.
+of email messages in an efficient way.  It started off supporting just Maildir
+format folder, but now MH format is also supported.
 
-I use the @emph{mutt} email client.  There are many features I like about mutt, including
+I use the @emph{mutt} email client.  There are many features I like about mutt,
+including
 
 @itemize @bullet
 @item Speed (typical of many command line tools versus GUI counterparts)
@@ -140,6 +141,7 @@ Create a @file{~/.mairixrc} file.  An example is included in the file
 * use_intro::       Overview of use
 * capabilities::    Indexing strategy and search capabilities
 * mairixrc::        The @file{~/.mairixrc} file 
+* vfolder_setup::   Setting up the virtual folder
 * command_line::    Command line options
 @end menu
 
@@ -152,14 +154,13 @@ search for.  Otherwise, the indexing mode is run.
 
 The output of the search mode is placed in a @emph{virtual folder}.  This is
 just a normal maildir directory (i.e. containing @file{new}, @file{tmp} and
-@file{cur}) subdirectories, so you can open it as a normal folder in your mail
-program.  You configure the path for this virtual folder in your
-@file{~/.mairixrc} file.  mairix will popululate the @file{cur} directory of
-the virtual folder with symbolic links pointing to the paths of the real
-messages that were matched by the search expression.@footnote{Although symlinks
-use up more inodes than hard links, I decided they were more useful because it
-makes it possible to see the filenames of the original messages via @command{ls
--l}.}
+@file{cur}) subdirectories, or a MH directory, so you can open it as a normal
+folder in your mail program.  You configure the path for this virtual folder in
+your @file{~/.mairixrc} file.  mairix will popululate the virtual folder with
+symbolic links pointing to the paths of the real messages that were matched by
+the search expression.@footnote{Although symlinks use up more inodes than hard
+links, I decided they were more useful because it makes it possible to see the
+filenames of the original messages via @command{ls -l}.}
 
 @node capabilities
 @section Indexing strategy and search capabilities
@@ -210,12 +211,17 @@ mairix searches for this file at @file{~/.mairixrc} unless you specify the
 If a # character appears in the file, the rest of that line is ignored.  This
 allows you to specify comments.
 
-There are 4 entries that must appear in the file.  An example illustrates:
+There are 3 entries (@samp{base}, @samp{vfolder} and @samp{database}) that must
+appear in the file.  Also, either @samp{folders} or @samp{mh_folders} (or both)
+must appear.  Optionally, the @samp{vfolder_format} entry may appear.  An
+example illustrates:
 
 @example
 base=/home/richard/mail
 folders=new-mail:new-chrony:new-lojban:new-jbofihe:recent...:ancient...
+mh_folders=an_mh_folder
 vfolder=vfolder
+vfolder_format=maildir
 database=/home/richard/.mairix_database
 @end example
 
@@ -225,12 +231,21 @@ The keys are as follows:
 @item base
 This is the path to the common parent directory of all your maildir folders.
 @item folders
-This is a colon-separated list of the folders (relative to @samp{base}) that
+This is a colon-separated list of the Maildir folders (relative to @samp{base})
+that you want indexed.  Any entry that ends @samp{...} is recursively scanned
+to find any Maildir folders underneath it.
+@item mh_folders
+This is a colon-separated list of the MH folders (relative to @samp{base}) that
 you want indexed.  Any entry that ends @samp{...} is recursively scanned to
-find any maildir directories underneath it.
+find any MH folders underneath it.
 @item vfolder
 This defines the name of the @emph{virtual} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
+@item vfolder_format
+This defines the type of folder used for the @emph{virtual folder} where the
+search results go.  There are two valid settings for this @samp{mh} or
+@samp{maildir}.  @samp{maildir} is the default if this option is not defined.
+The setting is case-insensitive.
 @item database
 This defines the path where mairix's index database is kept.  You can keep this
 file anywhere you like.
@@ -241,6 +256,34 @@ all the messages currently in your folders, it will search for duplicates
 before proceeding.  If any duplicates are found (arising from the same folder
 being specified twice), it will give an error message and exit.  This is to
 prevent corrupting the index database file.
+
+@node vfolder_setup
+@section Setting up the virtual folder
+The virtual folder needs to exist before you can run the search mode.
+
+If you've got @samp{vfolder_format=maildir} (the default), you can just create
+the necessary directory structure:
+
+@example
+mkdir -p /home/richard/Mail/vfolder
+mkdir /home/richard/Mail/vfolder/new
+mkdir /home/richard/Mail/vfolder/cur
+mkdir /home/richard/Mail/vfolder/tmp
+@end example
+
+If you've got @samp{vfolder_format=mh}, the best strategy probably depends on
+your mail client.  For mutt, you could either do
+@example
+mkdir -p /home/richard/Mail/vfolder
+touch /home/richard/Mail/vfolder/.mh_sequences
+@end example
+
+which seems to work.  Or, within mutt, you could set @var{mbox_type} to
+@samp{mh} and save a message to @samp{+vfolder} to have mutt set up the
+structure for you.
+
+If you use Sylpheed, the best way seems to be to create the new folder from
+within Sylpheed.  This seems to be all you need to do.
 
 @node command_line
 @section Command line options
