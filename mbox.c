@@ -560,11 +560,16 @@ static void append_deep(char *path, int base_len, struct stat *sb, struct string
         strcpy(xpath, path);
         strcat(xpath, "/");
         strcat(xpath, de->d_name);
-        if (stat(xpath, &sb2) >= 0) {
-          if (S_ISREG(sb2.st_mode)) {
-            append_shallow(xpath, base_len, &sb2, list, filter, omit_globs);
-          } else if (S_ISDIR(sb2.st_mode)) {
-            append_deep(xpath, base_len, &sb2, list, filter, omit_globs);
+        if (!is_globber_array_match(omit_globs, xpath+base_len)) {
+          /* Filter out omissions at this point, e.g. to avoid wasting time on
+           * a recursive expansion of a tree that's going to get pruned in at
+           * the deepest level anyway. */
+          if (stat(xpath, &sb2) >= 0) {
+            if (S_ISREG(sb2.st_mode)) {
+              append_shallow(xpath, base_len, &sb2, list, filter, omit_globs);
+            } else if (S_ISDIR(sb2.st_mode)) {
+              append_deep(xpath, base_len, &sb2, list, filter, omit_globs);
+            }
           }
         }
       }
@@ -585,6 +590,7 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
   char *temp_path, *xpath;
   DIR *d;
   struct dirent *de;
+  int had_matches;
 
   gg = make_globber(last_comp);
 
@@ -601,6 +607,7 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
   }
 
   d = opendir(temp_path);
+  had_matches = 0;
   if (d) {
     while ((de = readdir(d))) {
       if (!strcmp(de->d_name, ".")) continue;
@@ -610,13 +617,25 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
         strcpy(xpath, temp_path);
         strcat(xpath, "/");
         strcat(xpath, de->d_name);
-        if (stat(xpath, &xsb) >= 0) {
-          (*append)(xpath, base_len, &xsb, list, filter, omit_globs);
+        if (!is_globber_array_match(omit_globs, xpath+base_len)) {
+          /* Filter out omissions at this point, e.g. to avoid wasting time on
+           * a recursive expansion of a tree that's going to get pruned in full
+           * later anyway. */
+          had_matches = 1;
+          if (stat(xpath, &xsb) >= 0) {
+            (*append)(xpath, base_len, &xsb, list, filter, omit_globs);
+          }
         }
       }
     }
     closedir(d);
+    if (!had_matches) {
+      fprintf(stderr, "WARNING: Wildcard \"%s\" matched nothing in %s\n", last_comp, temp_path);
+    }
+  } else {
+    fprintf(stderr, "WARNING: Folder path %s does not exist\n", temp_path);
   }
+
   
   free(temp_path);
   free(xpath);
@@ -632,6 +651,8 @@ static void handle_single(char *path, int base_len, struct string_list *list,/*{
   struct stat sb;
   if (stat(path, &sb) >= 0) {
     (*append)(path, base_len, &sb, list, filter, omit_globs);
+  } else {
+    fprintf(stderr, "WARNING: Folder path %s does not exist\n", path);
   }
 }
 /*}}}*/
