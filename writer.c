@@ -365,7 +365,7 @@ static char *write_messages(struct database *db, struct write_map *map, unsigned
   }
   if (verbose) {
     printf("Wrote %d messages (%d bytes tables, %d bytes text)\n",
-           db->n_msgs, 4*5*db->n_msgs, cdata - start_cdata);
+           db->n_msgs, 4*5*db->n_msgs, (int)(cdata - start_cdata));
   }
   return cdata; /* new value */
 }
@@ -401,7 +401,7 @@ static  char *write_mbox_headers(struct database *db, struct write_map *map, uns
   }
   if (verbose) {
     printf("Wrote %d mbox headers (%d bytes tables, %d bytes paths)\n",
-        db->n_mboxen, 4*4*db->n_mboxen, cdata - start_cdata);
+        db->n_mboxen, 4*4*db->n_mboxen, (int)(cdata - start_cdata));
   }
   return cdata;
 }
@@ -421,7 +421,7 @@ static char * write_mbox_checksums(struct database *db, struct write_map *map, u
   }
   if (verbose) {
     printf("Wrote %d bytes of mbox message checksums\n",
-           cdata - start_cdata);
+           (int)(cdata - start_cdata));
   }
   return cdata;
 }
@@ -476,7 +476,7 @@ static char *write_toktable(struct toktable *tab, struct write_map_toktable *map
 
   if (verbose) {
     printf("%s: Wrote %d tokens (%d bytes tables, %d bytes of text, %d bytes of hit encoding)\n",
-            header_name, n, 2*4*n, mid_cdata - start_cdata, cdata - mid_cdata);
+            header_name, n, 2*4*n, (int)(mid_cdata - start_cdata), (int)(cdata - mid_cdata));
   }
 
   free(stok);
@@ -541,7 +541,7 @@ static char *write_toktable2(struct toktable2 *tab, struct write_map_toktable2 *
 
   if (verbose) {
     printf("%s: Wrote %d tokens (%d bytes tables, %d bytes of text, %d bytes of hit encoding)\n",
-            header_name, n, 2*4*n, mid_cdata - start_cdata, cdata - mid_cdata);
+            header_name, n, 2*4*n, (int)(mid_cdata - start_cdata), (int)(cdata - mid_cdata));
   }
 
   free(stok);

@@ -711,7 +711,7 @@ static void do_attachment(char *start, char *after_end, struct attachment *atts)
   if (body_start > after_end) {
     /* This is a (maliciously?) b0rken attachment, e.g. maybe empty */
     if (verbose) {
-      fprintf(stderr, "This message contains an invalid attachment, length=%d bytes\n", after_end - start);
+      fprintf(stderr, "This message contains an invalid attachment, length=%d bytes\n", (int)(after_end - start));
     }
   } else {
     body_len = after_end - body_start;

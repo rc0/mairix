@@ -836,13 +836,13 @@ int add_mbox_messages(struct database *db)/*{{{*/
       r8 = data_to_rfc822(va + start, len);
       if (r8) {
         if (verbose) {
-          printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)start + len);
+          printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
         }
         db->msgs[n].date = r8->hdrs.date;
         tokenise_message(n, db, r8);
         free_rfc822(r8);
       } else {
-        printf("Message in %s at [%d,%d) is misformatted\n", mb->path, (int)start, (int)start + len);
+        printf("Message in %s at [%d,%d) is misformatted\n", mb->path, (int)start, (int)(start + len));
       }
 
       ++db->n_msgs;
