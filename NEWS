@@ -1,3 +1,15 @@
+NEW IN VERSION 0.15.2
+=====================
+
+* Fix segfault if messages are deleted from a maildir whilst indexing is in
+  progress.
+
+NEW IN VERSION 0.15.1
+=====================
+
+* Fixes for pine mbox format
+* Fix typo in dumper output
+
 NEW IN VERSION 0.15
 ===================
 
