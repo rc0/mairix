@@ -979,12 +979,12 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   {
   /* Now process the data */
     result = data_to_rfc822(data, len);
+
+    if (munmap(data, (size_t) len) < 0) {
+      perror("Could not munmap");
+    }
   }
   
-  if (munmap(data, (size_t) len) < 0) {
-    perror("Could not munmap");
-  }
-
   return result;
 }
 /*}}}*/
