@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.10 2003/02/24 23:56:40 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.12 2003/03/12 23:51:57 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -522,8 +522,13 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   time_t start, end;
   int has_start, has_end, start_cond, end_cond;
   int i;
+  int status;
   
-  scan_date_string(date_expr, &start, &has_start, &end, &has_end);
+  status = scan_date_string(date_expr, &start, &has_start, &end, &has_end);
+  if (status) {
+    exit (1);
+  }
+
 #if 0
   parse_date_range(date_expr, &has_start, &start, &has_end, &end);
 #endif
@@ -991,11 +996,15 @@ void search_top(int do_threads, int do_augment, char *database_path, char *folde
 
   db = open_db(database_path);
 
-  len = strlen(folder_base) + strlen(vfolder) + 2;
-  complete_vfolder = new_array(char, len);
-  strcpy(complete_vfolder, folder_base);
-  strcat(complete_vfolder, "/");
-  strcat(complete_vfolder, vfolder);
+  if ((vfolder[0] == '/') || (vfolder[0] == '.')) {
+    complete_vfolder = new_string(vfolder);
+  } else {
+    len = strlen(folder_base) + strlen(vfolder) + 2;
+    complete_vfolder = new_array(char, len);
+    strcpy(complete_vfolder, folder_base);
+    strcat(complete_vfolder, "/");
+    strcat(complete_vfolder, vfolder);
+  }
 
   if (!directory_exists(complete_vfolder)) {
     switch (ft) {

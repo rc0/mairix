@@ -1,6 +1,6 @@
 #########################################################################
 #
-# $Header: /cvs/src/mairix/Attic/Makefile,v 1.6 2003/03/03 00:08:56 richard Exp $
+# $Header: /cvs/src/mairix/Attic/Makefile,v 1.7 2003/03/12 23:57:40 richard Exp $
 #
 # =======================================================================
 #
@@ -98,4 +98,9 @@ mairix.ps : mairix.dvi
 mairix.pdf : mairix.texi
 	pdftex mairix.texi
 	pdftex mairix.texi
+
+.PHONY : ChangeLog
+
+ChangeLog:
+	cvs2cl.pl -r -b
 

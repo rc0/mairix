@@ -16,7 +16,6 @@ Abbrev D = D09
 
 BLOCK day
     State in
-        D0 ; D19  -> out
         D12 ; D09 -> out
         D3 ; D01  -> out
 ENDBLOCK
@@ -24,6 +23,7 @@ ENDBLOCK
 # Match 2 digit year
 BLOCK year
     State in
+        D0 ; D09  -> out
         D3 ; D29 -> out
         D49 ; D09 -> out
 ENDBLOCK

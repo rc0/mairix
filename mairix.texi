@@ -143,6 +143,7 @@ Create a @file{~/.mairixrc} file.  An example is included in the file
 * mairixrc::        The @file{~/.mairixrc} file 
 * vfolder_setup::   Setting up the virtual folder
 * command_line::    Command line options
+* date_syntax::     Syntax used for date searches
 @end menu
 
 @node use_intro
@@ -270,11 +271,19 @@ find any MH folders underneath it.
 More than one line starting with @samp{mh_folders} can be included.  In this case,
 mairix joins the lines together with colons as though a single list of folders had
 been given on a single very long line.
+
 @item vfolder
 This defines the name of the @emph{virtual} folder (within the directory
 specified by @samp{base}) into which the search mode writes its output.
-If the vfolder_format used is @samp{raw}, then this setting is not
-used and may be excluded.
+(If the vfolder_format used is @samp{raw}, then this setting is not
+used and may be excluded.)
+
+If the first character of the @b{vfolder} value is @samp{/} or @samp{.}, it is
+taken as a pathname in its own right.  This allows you to specify absolute
+paths and paths relative to the current directory where the vfolder should be
+written.  Otherwise, the value of @b{vfolder} is appended to the value of
+@b{base}, in the same way as for the source folders.
+
 @item vfolder_format
 This defines the type of folder used for the @emph{virtual folder} where the
 search results go.  There are three valid settings for this @samp{mh},
@@ -295,31 +304,24 @@ prevent corrupting the index database file.
 
 @node vfolder_setup
 @section Setting up the virtual folder
-The virtual folder needs to exist before you can run the search mode.
+If the virtual folder does not exist when running in search mode, it is
+automatically created.  For @samp{vfolder_format=maildir} (the default), this
+should be all you need to do.  If you use @samp{vfolder_format=mh}, you may
+have to run some commands before your mailer will recognize the folder.  e.g.
+for mutt, you could do
 
-If you've got @samp{vfolder_format=maildir} (the default), you can just create
-the necessary directory structure:
-
-@example
-mkdir -p /home/richard/Mail/vfolder
-mkdir /home/richard/Mail/vfolder/new
-mkdir /home/richard/Mail/vfolder/cur
-mkdir /home/richard/Mail/vfolder/tmp
-@end example
-
-If you've got @samp{vfolder_format=mh}, the best strategy probably depends on
-your mail client.  For mutt, you could either do
 @example
 mkdir -p /home/richard/Mail/vfolder
 touch /home/richard/Mail/vfolder/.mh_sequences
 @end example
 
-which seems to work.  Or, within mutt, you could set @var{mbox_type} to
-@samp{mh} and save a message to @samp{+vfolder} to have mutt set up the
-structure for you.
+which seems to work.  Alternatively, within mutt, you could set @var{mbox_type}
+to @samp{mh} and save a message to @samp{+vfolder} to have mutt set up the
+structure for you in advance.
 
 If you use Sylpheed, the best way seems to be to create the new folder from
-within Sylpheed.  This seems to be all you need to do.
+within Sylpheed before letting mairix write into it.  This seems to be all you
+need to do.
 
 @node command_line
 @section Command line options
@@ -384,31 +386,15 @@ mairix -o vfolder2 make+money+fast
 mairix will find some of your saved junk emails and put the results into
 @file{/home/foobar/Mail/vfolder2}.
 
+The @samp{-o} argument obeys the same conventions regarding initial @samp{/}
+and @samp{.} characters as the @b{vfolder} line in the @file{.mairixrc} file
+does.
+
 The search mode runs when there is at least one search expression.  Search
 expressions can take forms such as (in increasing order of complexity):
 
 @itemize @bullet
-@item A date expression.  This matches all messages whose @samp{Date:} header
-lies within the given range.  Note, the time of day and timezone of the
-@samp{Date:} header are ignored for simplicity.  For example, to match all
-messages sent between 3 months ago and 1 month ago the following command can be
-used:
-
-@example
-mairix d:3m-1m
-@end example
-
-To match all messages older than 2 years, the following command can be used:
-
-@example
-mairix d:-2y
-@end example
-
-To match all messages newer than 2 weeks, the following command can be used:
-
-@example
-mairix d:2w-
-@end example
+@item A date expression.  The format for specifying the date is described in section @xref{date_syntax}.
 
 @item A size expression.  This matches all messages whose size in bytes is in a
 particular range.  For example, to match all messages bigger than 1 Megabyte
@@ -540,6 +526,87 @@ keyword spelt wrongly (let's allow up to 2 errors):
 @example
 mairix d:6m- f:richard s:chrony=2
 @end example
+
+@node date_syntax
+@section Syntax used for specifying dates
+This section describes the syntax used for specifying dates when searching
+using the @samp{d:} option.
+
+Dates are specified as a range.  The start and end of the range can both be
+specified.  Alternatively, if the start is omitted, it is treated as being the
+beginning of time.  If the end is omitted, it is treated as the current time.
+
+There are 4 basic formats:
+@table @samp
+@item d:start-end
+Specify both start and end explicitly
+@item d:start-
+Specify start, end is the current time
+@item d:-end
+Specify end, start is 'a long time ago' (i.e. early enough to include any message).
+@item d:period
+Specify start and end implicitly, as the start and end of the period given.
+@end table
+
+The start and end can be specified either absolute or relative.  A relative
+endpoint is given as a number followed by a single letter defining the scaling:
+
+@multitable @columnfractions 0.15 0.2 0.2 0.45
+@item @b{letter} @tab @b{meaning} @tab @b{example} @tab @b{meaning}
+@item d @tab days  @tab 3d @tab 3 days
+@item w @tab weeks @tab 2w @tab 2 weeks (14 days)
+@item m @tab months @tab 5m @tab 5 months (150 days)
+@item y @tab years @tab 4y @tab 4 years (4*365 days)
+@end multitable
+
+Months are always treated as 30 days, and years as 365 days, for this purpose.
+
+Absolute times can be specified in a lot of forms.  Some forms have different
+meanings when they define a start date from that when they define an end date.
+Where a single expression specifies both the start and end (i.e. where the
+argument to d: doesn't contain a @samp{-}), it will usually have different
+interpretations in the two cases.
+
+In the examples below, suppose the current date is Sunday May 18th, 2003 (when
+I started to write this material.)
+
+@multitable @columnfractions 0.24 0.24 0.24 0.28
+@item @b{Example} @tab @b{Start date} @tab @b{End date} @tab @b{Notes}
+@item d:20030301@minus{}20030425 @tab March 1st, 2003 @tab 25th April, 2003
+@item d:030301@minus{}030425 @tab March 1st, 2003 @tab April 25th, 2003 @tab century assumed
+@item d:mar1@minus{}apr25    @tab March 1st, 2003 @tab April 25th, 2003
+@item d:Mar1@minus{}Apr25    @tab March 1st, 2003 @tab April 25th, 2003 @tab case insensitive
+@item d:MAR1@minus{}APR25    @tab March 1st, 2003 @tab April 25th, 2003 @tab case insensitive
+@item d:1mar@minus{}25apr    @tab March 1st, 2003 @tab April 25th, 2003 @tab date and month in either order
+@item d:2002          @tab January 1st, 2002 @tab December 31st, 2002 @tab whole year
+@item d:mar           @tab March 1st, 2003 @tab March 31st, 2003 @tab most recent March
+@item d:oct           @tab October 1st, 2002 @tab October 31st, 2002 @tab most recent October
+@item d:21oct@minus{}mar     @tab October 21st, 2002 @tab March 31st, 2003 @tab start before end
+@item d:21apr@minus{}mar     @tab April 21st, 2002 @tab March 31st, 2003 @tab start before end
+@item d:21apr@minus{}        @tab April 21st, 2003 @tab May 18th, 2003 @tab end omitted
+@item d:@minus{}21apr        @tab January 1st, 1900 @tab April 21st, 2003 @tab start omitted
+@item d:6w@minus{}2w         @tab April 6th, 2003 @tab May 4th, 2003 @tab both dates relative
+@item d:21apr@minus{}1w      @tab April 21st, 2003 @tab May 11th, 2003 @tab one date relative
+@item d:21apr@minus{}2y      @tab April 21st, 2001 @tab May 11th, 2001 @tab start before end
+@item d:99@minus{}11         @tab January 1st, 1999 @tab May 11th, 2003 @tab 2 digits are a day of the month if possible, otherwise a year
+@item d:99oct@minus{}1oct    @tab October 1st, 1999 @tab October 1st, 2002 @tab end before now, single digit is a day of the month
+@item d:99oct@minus{}01oct   @tab October 1st, 1999 @tab October 31st, 2001 @tab 2 digits starting with zero treated as a year
+@item d:oct99@minus{}oct1    @tab October 1st, 1999 @tab October 1st, 2002 @tab day and month in either order
+@item d:oct99@minus{}oct01   @tab October 1st, 1999 @tab October 31st, 2001 @tab year and month in either order
+@end multitable
+
+The principles in the table work as follows.
+@itemize @bullet
+@item 
+When the expression defines a period of more than a day (i.e. if a month or
+year is specified), the earliest day in the period is taken when the start date
+is defined, and the last day in the period if the end of the range is being
+defined.
+@item
+The end date is always taken to be on or before the current date.
+@item 
+The start date is always taken to be on or before the end date.
+@end itemize
 
 @bye
 @c vim:cms=@c\ %s:fdm=marker:fdc=5:syntax=off

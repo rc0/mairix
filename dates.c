@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/dates.c,v 1.2 2003/03/03 00:20:58 richard Exp $
+  $Header: /cvs/src/mairix/dates.c,v 1.3 2003/03/04 00:07:45 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -30,7 +30,7 @@
 #include "mairix.h"
 #include "dates.h"
 
-static enum DATESCAN_TYPE discover_type(char *first, char *last)
+static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
 {
   int current_state = 0;
   int token;
@@ -61,7 +61,7 @@ static enum DATESCAN_TYPE discover_type(char *first, char *last)
     return datescan_exitval[current_state];
   }
 }
-
+/*}}}*/
 static int match_month(char *p)/*{{{*/
 {
   if (!strncasecmp(p, "jan", 3)) return 1;
@@ -164,6 +164,11 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
     if (end) {
       *end = *localtime(&then);
     }/*}}}*/
+  } else if (type == DS_FAILURE) {
+    fputs("Cannot parse date expression [", stderr);
+    fwrite(first, sizeof(char), last-first, stderr);
+    fputs("]\n", stderr);
+    return -1;
   } else {
     /* something else */
     int v1, v3;
