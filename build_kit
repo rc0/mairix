@@ -3,7 +3,7 @@
 # Work out the name of the directory and hence the version
 
 # Have to run it in the current directory
-if ($0 ne "build_kit") {
+if (($0 ne "build_kit") && ($0 ne "./build_kit")) {
   die "Have to be in the checked-out directory to run build_kit";
 }
 
