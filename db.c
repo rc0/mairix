@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/db.c,v 1.4 2002/09/11 22:07:20 richard Exp $
+  $Header: /cvs/src/mairix/db.c,v 1.5 2002/12/23 00:04:57 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -401,7 +401,9 @@ static void tokenise_message(int file_index, struct database *db, struct rfc822 
         /* Just recurse for now - maybe we should have separate token tables
          * for tokens occurring in embedded messages? */
 
-        tokenise_message(file_index, db, a->data.rfc822);
+        if (a->data.rfc822) {
+          tokenise_message(file_index, db, a->data.rfc822);
+        }
         break;
       default:
         /* Don't do anything - unknown text format or some nasty binary stuff.

@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.7 2002/09/11 22:13:23 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.9 2002/12/23 00:04:57 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -93,6 +93,10 @@ static void splice_header_lines(struct line *header)/*{{{*/
   /* Deal with newline then tab in header */
   struct line *x, *next;
   for (x=header->next; x!=header; x=next) {
+#if 0
+    printf("next header, x->text=%08lx\n", x->text);
+    printf("header=<%s>\n", x->text);
+#endif
     next = x->next;
     if (isspace(x->text[0])) {
       /* Glue to previous line */
@@ -103,6 +107,9 @@ static void splice_header_lines(struct line *header)/*{{{*/
       }
       p--; /* point to final space */
       y = x->prev;
+#if 0
+      printf("y=%08lx p=%08lx\n", y->text, p);
+#endif
       newbuf = new_array(char, strlen(y->text) + strlen(p) + 1);
       strcpy(newbuf, y->text);
       strcat(newbuf, p);
@@ -118,6 +125,61 @@ static void splice_header_lines(struct line *header)/*{{{*/
   return;
 }
 /*}}}*/
+static int audit_header(struct line *header)/*{{{*/
+{
+  /* Check for obvious broken-ness
+   * 1st line has no leading spaces, single word then colon 
+   * following lines have leading spaces or single word followed by colon
+   * */
+  struct line *x;
+  int first=1;
+  int count=1;
+  for (x=header->next; x!=header; x=x->next) {
+    int has_leading_space;
+    int is_blank;
+    int has_word_colon;
+
+    is_blank = !(x->text[0]);
+    if (!is_blank) {
+      char *p;
+      int saw_char = 0;
+      has_leading_space = isspace(x->text[0]);
+      has_word_colon = 0; /* default */
+      p = x->text;
+      while(*p) {
+        if(*p == ':') {
+          has_word_colon = saw_char;
+          break;
+        } else if (isspace(*p)) {
+          has_word_colon = 0;
+          break;
+        } else {
+          saw_char = 1;
+        }
+        p++;
+      }
+    }
+
+    if (( first && (is_blank || has_leading_space || !has_word_colon)) ||
+        (!first && (is_blank || !(has_leading_space || has_word_colon)))) {
+#if 0
+      fprintf(stderr, "Header line %d <%s> fails because:", count, x->text);
+      if (first && is_blank) { fprintf(stderr, " [first && is_blank]"); }
+      if (first && has_leading_space) { fprintf(stderr, " [first && has_leading_space]"); }
+      if (first && !has_word_colon) { fprintf(stderr, " [first && !has_word_colon]"); }
+      if (!first && is_blank) { fprintf(stderr, " [!first && is_blank]"); }
+      if (!first && !(has_leading_space||has_word_colon)) { fprintf(stderr, " [!first && !has_leading_space||has_word_colon]"); }
+      fprintf(stderr, "\n");
+#endif
+      /* Header fails the audit */
+      return 0;
+    }
+    first = 0;
+    count++;
+  }
+  /* If we get here the header must have been OK */
+  return 1;
+}/*}}}*/
 static int match_string(char *ref, char *candidate)/*{{{*/
 {
   int len = strlen(ref);
@@ -488,13 +550,12 @@ static char *unencode_data(char *input, int input_len, char *enc, int *output_le
       break;
         /*}}}*/
     case ENC_UNKNOWN:/*{{{*/
-      fprintf(stderr, "Unknown encoding, bailing out\n");
-      assert(0);
-      break;
-    default:
+      /* fall through - ignore this data */
+    /*}}}*/
+    default:/*{{{*/
       end_result = result;
       break;
-  /*}}}*/
+      /*}}}*/
   }
   *output_len = end_result - result;
   result[*output_len] = '\0'; /* for convenience with text/plain etc to make it printable */
@@ -536,8 +597,16 @@ static int split_and_splice_header(char *data, struct line *header, char **body_
 
   *body_start = sol;
 
-  splice_header_lines(header);
-  return 0;
+  if (audit_header(header)) {
+    splice_header_lines(header);
+    return 0;
+  } else {
+#if 0
+    /* Caller generates message */
+    fprintf(stderr, "Message had bad rfc822 headers, ignoring\n");
+#endif
+    return -1;
+  }
 }
 /*}}}*/
 
@@ -793,7 +862,9 @@ static struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
   result->atts.next = result->atts.prev = &result->atts;
 
   if (split_and_splice_header(data, &header, &body_start) < 0) {
-    fprintf(stderr, "Giving up on message with bad header\n");
+    if (verbose) {
+      fprintf(stderr, "Giving up on message with bad header\n");
+    }
     return NULL;
   }
 
@@ -885,6 +956,8 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
 void free_rfc822(struct rfc822 *msg)/*{{{*/
 {
   struct attachment *a, *na;
+
+  if (!msg) return;
   
   if (msg->hdrs.to) free(msg->hdrs.to);
   if (msg->hdrs.cc) free(msg->hdrs.cc);
