@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.7 2002/09/11 22:06:53 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.8 2002/10/03 22:16:56 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -187,7 +187,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_5_pre3 $";
+  static char cvs_version[] = "$Name: V0_5 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -284,6 +284,7 @@ int main (int argc, char **argv)/*{{{*/
   struct database *db;
 
   char *arg_rc_file_path = NULL;
+  char *arg_vfolder = NULL;
   int do_augment = 0;
   int do_threads = 0;
   int do_search = 0;
@@ -297,18 +298,21 @@ int main (int argc, char **argv)/*{{{*/
   while (++argv, --argc) {
     if (!*argv) {
       break;
-    } else if (!strcmp(*argv, "-f")) {
+    } else if (!strcmp(*argv, "-f") || !strcmp(*argv, "--rcfile")) {
       ++argv, --argc;
       arg_rc_file_path = *argv;
-    } else if (!strcmp(*argv, "-t")) {
+    } else if (!strcmp(*argv, "-t") || !strcmp(*argv, "--threads")) {
       do_search = 1;
       do_threads = 1;
-    } else if (!strcmp(*argv, "-a")) {
+    } else if (!strcmp(*argv, "-a") || !strcmp(*argv, "--augment")) {
       do_search = 1;
       do_augment = 1;
-    } else if (!strcmp(*argv, "-p")) {
+    } else if (!strcmp(*argv, "-o") || !strcmp(*argv, "--vfolder")) {
+      ++argv, --argc;
+      arg_vfolder = *argv;
+    } else if (!strcmp(*argv, "-p") || !strcmp(*argv, "--purge")) {
       do_purge = 1;
-    } else if (!strcmp(*argv, "-v")) {
+    } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-h") ||
                !strcmp(*argv, "--help")) {
@@ -360,6 +364,10 @@ int main (int argc, char **argv)/*{{{*/
     database_path = getenv("MAIRIX_DATABASE");
   }
 
+  if (arg_vfolder) {
+    vfolder = arg_vfolder;
+  }
+  
   if (!folder_base) {
     fprintf(stderr, "No folder_base/MAIRIX_FOLDER_BASE set\n");
     exit(1);

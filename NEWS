@@ -10,6 +10,7 @@ NEW IN VERSION 0.5
 * Create vfolder if it doesn't already exist.
 * Allow searching on complete email addresses as well as individual words in
   to, cc and from fields.
+* New -o option to allow vfolder name to be given on the command line.
 
 NEW IN VERSION 0.4
 ==================

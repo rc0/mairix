@@ -303,42 +303,62 @@ within Sylpheed.  This seems to be all you need to do.
 The command line syntax is
 
 @example
-mairix [-f path] [-p] [-v] [-t] [-a] [expr1] ... [exprn]
+mairix [-f path] [-p] [-v] [-t] [-a] [-o vfolder] [expr1] ... [exprn]
 @end example
 
-The @samp{-f} flag allows a different path to the @file{mairixrc} file to be
-given, replacing the default of @file{~/.mairixrc}.
+The @samp{-f} or @samp{--rcfile} flag allows a different path to the
+@file{mairixrc} file to be given, replacing the default of @file{~/.mairixrc}.
 
-The @samp{-p} flag is used in indexing mode.  Indexing works incrementally.
-When new messages are found, they are scanned and information about the words
-they contain is appended onto the existing information.  When messages are
-deleted, holes are normally left in the message sequence.  These holes take up
-space in the database file.  The @samp{-p} flag (meaning @emph{purge}) will
-compress the deleted paths out of the database to save space.
+The @samp{-p} or @samp{--purge} flag is used in indexing mode.  Indexing works
+incrementally.  When new messages are found, they are scanned and information
+about the words they contain is appended onto the existing information.  When
+messages are deleted, holes are normally left in the message sequence.  These
+holes take up space in the database file.  This flag will compress the deleted
+paths out of the database to save space.
 
-The @samp{-v} flag is used in indexing mode.  It stands for @emph{verbose}, and
-causes more information to be shown during the indexing process.  In search
-mode, it causes debug information to be shown if there are problems creating
-the symlinks.  (Normally this would be an annoyance.  If a message matches
-multiple queries when using @samp{-a}, mairix will try to create the same
-symlink multiple times.  This prevents the same message being shown multiple
-times in the virtual folder.)
+The @samp{-v} or @samp{--verbose} flag is used in indexing mode.  It causes
+more information to be shown during the indexing process.  In search mode, it
+causes debug information to be shown if there are problems creating the
+symlinks.  (Normally this would be an annoyance.  If a message matches multiple
+queries when using @samp{-a}, mairix will try to create the same symlink
+multiple times.  This prevents the same message being shown multiple times in
+the virtual folder.)
 
-The @samp{-t} flag stands for @emph{threads}.  It applies to search mode.
-Normally, only the messages matching all the specified expressions are included
-in the @emph{virtual folder} that is built.  With the @samp{-t} flag, any
-message in the same thread as one of the matched messages will be included too.
-Note, the threading is based on processing the @t{Message-ID}, @t{In-Reply-To}
-and @t{References} headers in the messages.  Some mailers don't generate these
+The @samp{-t} or @samp{--threads} option applies to search mode.  Normally,
+only the messages matching all the specified expressions are included in the
+@emph{virtual folder} that is built.  With the @samp{-t} flag, any message in
+the same thread as one of the matched messages will be included too.  Note, the
+threading is based on processing the @t{Message-ID}, @t{In-Reply-To} and
+@t{References} headers in the messages.  Some mailers don't generate these
 headers in a co-operative way and will cause problems with this threading
 support.  (Outlook seems to be one culprit.)
 
-The @samp{-a} flag stands for @emph{augment}.  It also applies to search mode.
+The @samp{-a} or @samp{--augment} option also applies to search mode.
 Normally, the first action of the search mode is to clear any existing message
 links from the virtual folder.  With the @samp{-a} flag, this step is
 suppressed.  It allows the folder contents to be built up by matching with 2 or
 more diverse sets of match expressions.  If this mode is used, and a message
 matches multiple queries, only a single symlink will be created for it.
+
+The @samp{-o} or @samp{--vfolder} option is used in search mode to specify a
+virtual folder different to the one specified in the @file{mairixrc} to be
+used.  The path given by the @samp{vfolder} argument after this flag is
+relative to the folder base directory given in the @file{mairixrc} file, in the
+same way as the directory in the vfolder specification in that file is.  So if
+your @file{mairixrc} file contains
+
+@example
+base=/home/foobar/Mail
+@end example
+
+and you run mairix like this
+
+@example
+mairix -o vfolder2 make+money+fast
+@end example
+
+mairix will find some of your saved junk emails and put the results into
+@file{/home/foobar/Mail/vfolder2}.
 
 The search mode runs when there is at least one search expression.  Search
 expressions can take forms such as (in increasing order of complexity):
