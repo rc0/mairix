@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/dirscan.c,v 1.3 2002/11/13 23:46:26 richard Exp $
+  $Header: /cvs/src/mairix/dirscan.c,v 1.5 2002/12/27 22:46:16 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -262,11 +262,11 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
         }
       }
     }
+    closedir(d);
   }
 
   free(fname);
   free(sname);
-  closedir(d);
   free(name);
   return;
 }
@@ -283,6 +283,37 @@ static void sort_message_list(struct msgpath_array *arr)/*{{{*/
   qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
 }
 /*}}}*/
+static char *copy_folder_name(const char *start, const char *end)/*{{{*/
+{
+  /* 'start' points to start of string to copy.
+     Any '\:' sequence is replaced by ':' .
+     Otherwise \ is treated normally.
+     'end' can be 1 beyond the end of the string to copy.  Otherwise it can be
+     null, meaning treat 'start' as the start of a normal null-terminated
+     string. */
+  char *p;
+  const char *q;
+  int len;
+  char *result;
+  if (end) {
+    len = end - start;
+  } else {
+    len = strlen(start);
+  }
+  result = new_array(char, len + 1);
+  for (p=result, q=start;
+       end ? (q < end) : *q;
+       q++) {
+    if ((q[0] == '\\') && (q[1] == ':')) {
+      /* Escaped colon : drop the backslash */
+    } else {
+      *p++ = *q;
+    }
+  }
+  *p = '\0';
+  return result;
+}
+/*}}}*/
 void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs)/*{{{*/
 {
   char *left_to_do;
@@ -294,14 +325,21 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft, s
     int len;
     
     colon = strchr(left_to_do, ':');
+    /* Allow backslash-escaped colons in filenames */
+    if (colon && (colon > left_to_do) && (colon[-1]=='\\')) {
+      int is_escaped;
+      do {
+        colon = strchr(colon + 1, ':');
+        is_escaped = (colon && (colon[-1] == '\\'));
+      } while (colon && is_escaped);
+    }
+    /* 'colon' now points to the first non-escaped colon or is null if there
+       were no more such colons in the rest of the line. */
+    
+    this_folder = copy_folder_name(left_to_do, colon);
     if (colon) {
-      len = colon - left_to_do;
-      this_folder = new_array(char, len + 1);
-      memcpy(this_folder, left_to_do, len);
-      this_folder[len] = '\0';
       left_to_do = colon + 1;
     } else {
-      this_folder = new_string(left_to_do);
       while (*left_to_do) ++left_to_do;
     }
 

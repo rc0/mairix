@@ -1,6 +1,6 @@
 Summary: A maildir indexer and searcher
 Name: mairix
-Version: 0.5
+Version: 0.9
 Release: 1
 Source: mairix-%{version}.tar.gz
 Copyright: GPL

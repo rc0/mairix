@@ -1,3 +1,10 @@
+NEW IN VERSION 0.9
+==================
+
+* Fix problem with auditing headers if a uucp/mbox-style "from " header is
+  present at the start.
+* Allow \: sequence in folder names to specify a :
+
 NEW IN VERSION 0.8
 ==================
 

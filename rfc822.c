@@ -1,5 +1,5 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.9 2002/12/23 00:04:57 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.10 2002/12/27 22:17:42 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
@@ -138,6 +138,13 @@ static int audit_header(struct line *header)/*{{{*/
     int has_leading_space;
     int is_blank;
     int has_word_colon;
+
+    if (first) {
+      /* Ignore any UUCP or mbox style From line at the start */
+      if (!strncmp("From ", x->text, 5)) {
+        continue;
+      }
+    }
 
     is_blank = !(x->text[0]);
     if (!is_blank) {

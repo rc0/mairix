@@ -251,6 +251,12 @@ to find any Maildir folders underneath it.
 More than one line starting with @samp{folders} can be included.  In this case,
 mairix joins the lines together with colons as though a single list of folders had
 been given on a single very long line.
+
+If a folder name contains a colon, you can write this by using the sequence
+@samp{\:} to escape the colon.  Otherwise, the backslash character is treated
+normally.  (If the folder name actually contains the sequence @samp{\:}, you're
+out of luck.)
+
 @item mh_folders
 This is a colon-separated list of the MH folders (relative to @samp{base}) that
 you want indexed.  Any entry that ends @samp{...} is recursively scanned to
