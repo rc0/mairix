@@ -647,7 +647,7 @@ static char *mk_maildir_path(int token, char *output_dir)/*{{{*/
   result = new_array(char, len);
   strcpy(result, output_dir);
   strcat(result, "/cur/");
-  sprintf(uniq_buf, "mairix_%d:2,S", token);
+  sprintf(uniq_buf, "123456789.%d.mairix:2,S", token);
   strcat(result, uniq_buf);
   return result;
 }
