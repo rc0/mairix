@@ -1,3 +1,9 @@
+NEW IN VERSION 0.6
+==================
+
+* When an unrecognized encoding is found, ignore the body part instead of
+  aborting the run.
+
 NEW IN VERSION 0.5
 ==================
 
