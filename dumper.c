@@ -114,7 +114,7 @@ void dump_database(char *filename)
   printf("--------------------------------\n");
   dump_toktable(db, &db->to, "To");
   printf("--------------------------------\n");
-  dump_toktable(db, &db->cc, "To");
+  dump_toktable(db, &db->cc, "Cc");
   printf("--------------------------------\n");
   dump_toktable(db, &db->from, "From");
   printf("--------------------------------\n");

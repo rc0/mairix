@@ -57,10 +57,12 @@ static int file_exists(char *name)/*{{{*/
 static char *copy_value(char *text)/*{{{*/
 {
   char *p;
+  char *result;
   for (p = text; *p && (*p != '='); p++) ;
   if (!*p) return NULL;
   p++;
-  return new_string(p);
+  result = expand_string(p);
+  return result;
 }
 /*}}}*/
 static void add_folders(char **folders, char *extra_folders)/*{{{*/

@@ -314,4 +314,7 @@ int scan_date_string(char *in, time_t *start, int *has_start, time_t *end, int *
 /* In dumper.c */
 void dump_database(char *filename);
 
+/* In strexpand.c */
+char *expand_string(const char *p);
+
 #endif /* MAIRIX_H */

@@ -240,6 +240,8 @@ hierarchy, for example.
 @node mairixrc
 @section The @file{~/.mairixrc} file
 
+@subsection Overview
+
 This file contains information about where you keep your mail folders, where
 you want the index file to be stored and where you want the match folder to
 be, into which the search mode places the symlinks.
@@ -266,6 +268,7 @@ mformat=maildir
 database=/home/richard/.mairix_database
 @end example
 
+@subsection mairixrc file keys
 The keys are as follows:
 
 @table @asis
@@ -425,6 +428,49 @@ all the messages currently in your folders, it will search for duplicates
 before proceeding.  If any duplicates are found (arising from the same folder
 being specified twice), it will give an error message and exit.  This is to
 prevent corrupting the index database file.
+
+@subsection mairixrc expansions
+
+The part of each line in @file{.mairixrc} following the equals sign can contain
+the following types of expansion:
+
+@table @asis
+@item Home directory expansion
+If the sequence @samp{~/} appears at the start of the text after the equals
+sign, it is expanded to the user's home directory.  Example:
+
+@example
+database=~/Mail/mairix_database
+@end example
+
+@item Environment expansion
+If a @samp{$} is followed by a sequence of alpha-numeric characters (or
+@samp{_}), the whole string is replaced by looking up the corresponding
+environment variable.  Similarly, if @samp{$} is followed by an open brace
+(@samp{@{}), everything up to the next close brace is looked up as an
+environment variable and the result replaces the entire sequence.
+
+Suppose in the shell we do
+@example
+export FOO=bar
+@end example
+
+and the @file{.mairixrc} file contains
+@example
+maildir=xxx/$FOO
+mbox=yyy/a$@{FOO@}b
+@end example
+
+this is equivalent to
+@example
+maildir=xxx/bar
+mbox=yyy/abarb
+@end example
+
+If the specified environment variable is not set, the replacement is the empty
+string.
+
+@end table
 
 @node mfolder_setup
 @section Setting up the match folder

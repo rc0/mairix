@@ -568,7 +568,7 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
   int len;
   create_ro_mapping(path, &data, &len);
   if (data) {
-    fprintf(out, "From mairix@mairix Mon Jan 1 12:34:56 1970\n");
+    fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
     fwrite (data, sizeof(unsigned char), len, out);
     munmap(data, len);
   }
@@ -617,7 +617,7 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 
   get_validated_mbox_msg(db, msg_index, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
   if (msg_start) {
-    fprintf(out, "From mairix@mairix Mon Jan 1 12:34:56 1970\n");
+    fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
     fwrite(msg_start, sizeof(unsigned char), msg_len, out);
   }
   if (mbox_start) {
