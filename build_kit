@@ -16,11 +16,8 @@ print "Building kit for version $version\n";
 system("make -f Makefile.in mairix.txt");
 
 # Overwrite normal version.h file with version-specific one
-open (OUT, ">version.h");
-print OUT "#ifndef VERSION_H\n";
-print OUT "#define VERSION_H 1\n";
-print OUT "#define PROGRAM_VERSION \"".$version."\"\n";
-print OUT "#endif /* VERSION_H */\n";
+open (OUT, ">version.txt");
+print OUT $version."\n";
 close OUT;
 
 open (IN, "<mairix.spec.sample");

@@ -63,6 +63,9 @@ fromcheck.c : fromcheck.nfa dfasyn/dfasyn fromcheck.h
 
 mbox.o : fromcheck.h
 
+version.h:
+	./mkversion
+
 dfasyn/dfasyn:
 	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi
 
@@ -116,4 +119,7 @@ mairix.pdf : mairix.texi
 
 ChangeLog:
 	cvs2cl.pl -r -b
+
+mairix.o : version.h
+
 

@@ -217,12 +217,12 @@ else
 fi
 
 #{{{ Determine version number of the program.
-# (CVS tags are of the form V1_0 for version 1.0)
-Name="ZZZ"
-revision="$Name: V0_14 $";
-if [ "$revision" = "ZZZ\$" ]; then revision="dev"; fi
+if [ -f version.txt ]; then
+	revision=`cat version.txt`
+else
+	revision="DEVELOPMENT"
+fi
 
-revision=`echo $revision | sed 's/_/./g;' | sed 's/ZZZ: V//;' | sed 's/ \$$//;'`
 #}}}
 if [ "x" = "x${BINDIR}" ]; then BINDIR=${PREFIX}/bin ; fi
 if [ "x" = "x${MANDIR}" ]; then MANDIR=${PREFIX}/man ; fi
