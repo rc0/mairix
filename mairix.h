@@ -311,4 +311,7 @@ void get_db_stats(struct database *db);
 /* In dates.c */
 int scan_date_string(char *in, time_t *start, int *has_start, time_t *end, int *has_end);
 
+/* In dumper.c */
+void dump_database(char *filename);
+
 #endif /* MAIRIX_H */

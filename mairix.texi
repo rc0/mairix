@@ -453,7 +453,7 @@ need to do.
 The command line syntax is
 
 @example
-mairix [-f path] [-p] [-v] [-t] [-a] [-r] [-o mfolder] [expr1] ... [exprn]
+mairix [-f path] [-p] [-v] [-t] [-d] [-a] [-r] [-o mfolder] [expr1] ... [exprn]
 @end example
 
 The @samp{-f} or @samp{--rcfile} flag allows a different path to the
@@ -485,6 +485,10 @@ threading is based on processing the @t{Message-ID}, @t{In-Reply-To} and
 headers in a co-operative way and will cause problems with this threading
 support.  (Outlook seems to be one culprit.)  If you are plagued by this
 problem, the 'edit threads' patch to mutt may be useful to you.
+
+The @samp{-d} or @samp{--dump} option causes mairix to dump the database
+contents in human-readable form to stdout.  It is mainly for use in debugging.
+If this option is specified, neither indexing nor searching are performed.
 
 The @samp{-a} or @samp{--augment} option also applies to search mode.
 Normally, the first action of the search mode is to clear any existing message

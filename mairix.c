@@ -399,6 +399,7 @@ int main (int argc, char **argv)/*{{{*/
   int any_purges = 0;
   int do_help = 0;
   int do_raw_output = 0;
+  int do_dump = 0;
 
   setlocale(LC_CTYPE, "");
 
@@ -419,6 +420,8 @@ int main (int argc, char **argv)/*{{{*/
       arg_mfolder = *argv;
     } else if (!strcmp(*argv, "-p") || !strcmp(*argv, "--purge")) {
       do_purge = 1;
+    } else if (!strcmp(*argv, "-d") || !strcmp(*argv, "--dump")) {
+      do_dump = 1;
     } else if (!strcmp(*argv, "-r") || !strcmp(*argv, "--raw-output")) {
       do_raw_output = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
@@ -495,7 +498,10 @@ int main (int argc, char **argv)/*{{{*/
     output_folder_type = FT_RAW;
   }
 
-  if (do_search) {
+  if (do_dump) {
+    dump_database(database_path);
+
+  } else if (do_search) {
     if (!mfolder) {
       if (output_folder_type != FT_RAW) {
         fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
