@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/mbox.c,v 1.18 2003/12/12 23:11:59 richard Exp $
+  $Header: /cvs/src/mairix/mbox.c,v 1.19 2004/01/11 23:46:54 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2003
+ * Copyright (C) Richard P. Curnow  2003-2004
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as

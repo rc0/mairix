@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/reader.h,v 1.5 2003/11/27 23:18:37 richard Exp $
+  $Header: /cvs/src/mairix/reader.h,v 1.7 2004/01/11 23:46:54 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002, 2003
+ * Copyright (C) Richard P. Curnow  2002-2004
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -137,7 +137,7 @@ struct read_db {/*{{{*/
   /* Pathname information */
   int n_msgs;
   unsigned char *msg_type;
-  unsigned int *path_offsets; /* or mbox index */
+  unsigned int *path_offsets; /* or (mbox index, msg index) */
   unsigned int *mtime_table; /* or offset into mbox */
   unsigned int *size_table;  /* either file size or span inside mbox */
   unsigned int *date_table;

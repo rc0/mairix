@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/memmac.h,v 1.3 2003/11/27 22:07:12 richard Exp $
+  $Header: /cvs/src/mairix/memmac.h,v 1.4 2004/01/11 23:46:54 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002, 2003
+ * Copyright (C) Richard P. Curnow  2002-2004
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as

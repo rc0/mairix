@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/rfc822.c,v 1.17 2003/11/27 23:18:37 richard Exp $
+  $Header: /cvs/src/mairix/rfc822.c,v 1.18 2004/01/11 23:46:54 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002, 2003
+ * Copyright (C) Richard P. Curnow  2002-2004
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * 
  * This program is free software; you can redistribute it and/or modify

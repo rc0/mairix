@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/mairix.c,v 1.19 2004/01/06 22:00:49 richard Exp $
+  $Header: /cvs/src/mairix/mairix.c,v 1.21 2004/01/11 23:50:41 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002, 2003
+ * Copyright (C) Richard P. Curnow  2002-2004
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -289,7 +289,7 @@ volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
 static char *get_version(void)/*{{{*/
 {
   static char buffer[256];
-  static char cvs_version[] = "$Name: V0_13 $";
+  static char cvs_version[] = "$Name: V0_14 $";
   char *p, *q;
   for (p=cvs_version; *p; p++) {
     if (*p == ':') {
@@ -316,7 +316,7 @@ static char *get_version(void)/*{{{*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
-          "mairix %s, Copyright (C) 2002, 2003 Richard P. Curnow\n"
+          "mairix %s, Copyright (C) 2002-2004 Richard P. Curnow\n"
           "mairix comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see the GNU General Public License for details.\n\n",
@@ -345,6 +345,10 @@ static void usage(void)/*{{{*/
          "    a:word        : match word in To:, Cc: or From: headers (address)\n"
          "    s:word        : match word in Subject: header\n"
          "    b:word        : match word in message body\n"
+         "    m:word        : match word in Message-ID: header\n"
+         "    p:substring   : match substring of path\n"
+         "    d:start-end   : match date range\n"
+         "    z:low-high    : match messages in size range\n"
          "    bs:word       : match word in Subject: header or body (or any other group of prefixes)\n"
          "    s:word1+word2 : match both words in Subject:\n"
          "    s:word1,word2 : match either word or both words in Subject:\n"

@@ -1,3 +1,9 @@
+NEW IN VERSION 0.14
+===================
+
+* Fix error in path (p:) searching for messages in mboxes.
+* Improve usage() function
+
 NEW IN VERSION 0.13
 ===================
 

@@ -22,7 +22,7 @@
 @author Richard P. Curnow
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2002, 2003 Richard P. Curnow
+Copyright @copyright{} 2002-2004 Richard P. Curnow
 @end titlepage
 
 @contents

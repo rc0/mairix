@@ -1,13 +1,13 @@
 #!/bin/sh
 #########################################################################
 #
-# $Id: configure,v 1.5 2003/12/04 23:06:35 richard Exp $
+# $Id: configure,v 1.6 2004/01/11 23:46:54 richard Exp $
 #
 # =======================================================================
 #
 # mairix - message index builder and finder for maildir folders.
 #
-# Copyright (C) Richard P. Curnow  2003
+# Copyright (C) Richard P. Curnow  2003-2004
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
@@ -223,7 +223,7 @@ fi
 #{{{ Determine version number of the program.
 # (CVS tags are of the form V1_0 for version 1.0)
 Name="ZZZ"
-revision="$Name: V0_12 $";
+revision="$Name: V0_14 $";
 if [ "$revision" = "ZZZ\$" ]; then revision="dev"; fi
 
 revision=`echo $revision | sed 's/_/./g;' | sed 's/ZZZ: V//;' | sed 's/ \$$//;'`

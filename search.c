@@ -1,10 +1,10 @@
 /*
-  $Header: /cvs/src/mairix/search.c,v 1.27 2004/01/06 22:15:51 richard Exp $
+  $Header: /cvs/src/mairix/search.c,v 1.29 2004/01/11 23:46:54 richard Exp $
 
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002, 2003
+ * Copyright (C) Richard P. Curnow  2002-2004
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -334,32 +334,46 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
     nr = new_array(unsigned long, 1 + max_errors);
   }
   for (i=0; i<db->n_msgs; i++) {
-    if (db->path_offsets[i]) {
-      token = db->data + db->path_offsets[i];
-      switch (max_errors) {
-        /* Optimise common cases for few errors to allow optimizer to keep bitmaps
-         * in registers */
-        case 0:
-          hits[i] = substring_match_0(a, hit, token);
-          break;
-        case 1:
-          hits[i] = substring_match_1(a, hit, token);
-          break;
-        case 2:
-          hits[i] = substring_match_2(a, hit, token);
-          break;
-        case 3:
-          hits[i] = substring_match_3(a, hit, token);
-          break;
-        default:
-          hits[i] = substring_match_general(a, hit, token, max_errors, r, nr);
-          break;
-      }
-    } else {
-      /* Never match deleted paths */
-      hits[i] = 0;
+    char *token;
+    int mbix, msgix;
+    switch (db->msg_type[i]) {
+      case DB_MSG_FILE:
+        token = db->data + db->path_offsets[i];
+        break;
+      case DB_MSG_MBOX:
+        decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+        token = db->data + db->mbox_paths_table[mbix];
+        break;
+      case DB_MSG_DEAD:
+        hits[i] = 0; /* never match on dead paths */
+        goto next_message;
     }
+
+    assert(token);
+
+    switch (max_errors) {
+      /* Optimise common cases for few errors to allow optimizer to keep bitmaps
+       * in registers */
+      case 0:
+        hits[i] = substring_match_0(a, hit, token);
+        break;
+      case 1:
+        hits[i] = substring_match_1(a, hit, token);
+        break;
+      case 2:
+        hits[i] = substring_match_2(a, hit, token);
+        break;
+      case 3:
+        hits[i] = substring_match_3(a, hit, token);
+        break;
+      default:
+        hits[i] = substring_match_general(a, hit, token, max_errors, r, nr);
+        break;
+    }
+next_message:
+    (void) 0;
   }
+
   if (r)  free(r);
   if (nr) free(nr);
 }
@@ -694,7 +708,6 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
   *msg_data = NULL;
   *msg_len = 0;
 
-  *mbox_index = db->path_offsets[msg_index];
   decode_mbox_indices(db->path_offsets[msg_index], &mbi, &msgi);
   *mbox_index = mbi;
 
