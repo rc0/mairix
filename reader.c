@@ -1,6 +1,4 @@
 /*
-  $Header: /cvs/src/mairix/reader.c,v 1.9 2004/01/11 23:46:54 richard Exp $
-
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
