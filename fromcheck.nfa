@@ -97,6 +97,22 @@ BLOCK date
         <zone:in->out> ; WHITE -> after_timezone
         <zone:in->out> ; WHITE -> after_timezone_1
 
+        # It appears that Pine puts the timezone after the year
+        DIGIT ; DIGIT ; DIGIT ; DIGIT -> after_year_before_zone
+
+    STATE after_year_before_zone
+        WHITE -> after_year_before_zone
+        <zone:in->out> -> after_timezone_after_year
+        <zone:in->out> ; WHITE -> after_timezone_after_year_1
+
+    STATE after_timezone_after_year_1
+        WHITE -> after_timezone_after_year_1
+        <zone:in->out> -> after_timezone_after_year
+
+    STATE after_timezone_after_year
+        WHITE -> after_timezone_after_year
+        -> out
+    
     STATE after_timezone_1
         WHITE -> after_timezone_1
         <zone:in->out> ; WHITE -> after_timezone
