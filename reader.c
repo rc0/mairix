@@ -104,7 +104,7 @@ struct read_db *open_db(char *filename)/*{{{*/
 
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    perror("mmap");
+    perror("reader:mmap");
     exit(2);
   }
 

@@ -124,7 +124,7 @@ static char *create_rw_mapping(char *filename, size_t len)/*{{{*/
 
   data = mmap(0, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    perror("mmap");
+    perror("writer:mmap");
     exit(2);
   }
 

@@ -958,7 +958,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   if (close(fd) < 0)
     perror("close");
   if (*data == MAP_FAILED) {
-    perror("mmap");
+    perror("rfc822:mmap");
     *data = NULL;
     return;
   }
@@ -979,12 +979,12 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   {
   /* Now process the data */
     result = data_to_rfc822(data, len);
-
-    if (munmap(data, (size_t) len) < 0) {
-      perror("Could not munmap");
-    }
   }
   
+  if (munmap(data, (size_t) len) < 0) {
+    perror("Could not munmap");
+  }
+
   return result;
 }
 /*}}}*/
