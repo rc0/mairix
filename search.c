@@ -1117,7 +1117,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           }
         }
       }
-      printf("\n");
       break;
 /*}}}*/
     default:
@@ -1129,7 +1128,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   free(hit1);
   free(hit2);
   free(hit3);
-  printf("Matched %d messages\n", n_hits);
+  if (ft != FT_RAW) {
+    printf("Matched %d messages\n", n_hits);
+  }
   fflush(stdout);
 
   if (had_failed_checksum) {
