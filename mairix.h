@@ -243,6 +243,17 @@ extern int verbose; /* cmd line -v switch */
 #define NAME_MAX 4096
 #endif
 
+/* In glob.c */
+struct globber;
+struct globber_array;
+
+struct globber *make_globber(const char *wildstring);
+void free_globber(struct globber *old);
+int is_glob_match(struct globber *g, const char *s);
+struct globber_array *colon_sep_string_to_globber_array(const char *in);
+int is_globber_array_match(struct globber_array *ga, const char *s);
+void free_globber_array(struct globber_array *in);
+
 /* In hash.c */
 unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval);
 
@@ -252,7 +263,8 @@ int is_integer_string(char *x);
 void free_msgpath_array(struct msgpath_array *x);
 void string_list_to_array(struct string_list *list, int *n, char ***arr);
 void split_on_colons(const char *str, int *n, char ***arr);
-void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs);
+void build_message_list(char *folder_base, char *folders, enum folder_type ft,
+    struct msgpath_array *msgs, struct globber_array *omit_globs);
   
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
@@ -283,21 +295,15 @@ void check_database_integrity(struct database *db);
 int cull_dead_messages(struct database *db, int do_integrity_checks);
 
 /* In mbox.c */
-void build_mbox_lists(struct database *db, const char *folder_base, const char *mboxen_paths);
+void build_mbox_lists(struct database *db, const char *folder_base,
+    const char *mboxen_paths, struct globber_array *omit_globs);
 int add_mbox_messages(struct database *db);
 void compute_checksum(const unsigned char *data, size_t len, checksum_t *csum);
 void cull_dead_mboxen(struct database *db);
 unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
 void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
 int verify_mbox_size_constraints(struct database *db);
-void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *));
-
-/* In glob.c */
-struct globber;
-
-struct globber *make_globber(const char *wildstring);
-void free_globber(struct globber *old);
-int is_glob_match(struct globber *g, const char *s);
+void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *), struct globber_array *omit_globs);
 
 /* In writer.c */
 void write_database(struct database *db, char *filename, int do_integrity_checks);

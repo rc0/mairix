@@ -33,6 +33,11 @@ struct globber {
   unsigned int hit;
 };
 
+struct globber_array {
+  int n;
+  struct globber **globs;
+};
+
 static const char *parse_charclass(const char *in, struct globber *result, unsigned int mask)/*{{{*/
 {
   int first = 1;
@@ -174,6 +179,47 @@ int is_glob_match(struct globber *g, const char *s)/*{{{*/
   }
 }
 /*}}}*/
+
+struct globber_array *colon_sep_string_to_globber_array(const char *in)/*{{{*/
+{
+  char **strings;
+  int n_strings;
+  int i;
+  struct globber_array *result;
+
+  split_on_colons(in, &n_strings, &strings);
+  result = new(struct globber_array);
+  result->n = n_strings;
+  result->globs = new_array(struct globber *, n_strings);
+  for (i=0; i<n_strings; i++) {
+    int len;
+    result->globs[i] = make_globber(strings[i]);
+    free(strings[i]);
+  }
+  free(strings);
+  return result;
+}
+/*}}}*/
+int is_globber_array_match(struct globber_array *ga, const char *s)/*{{{*/
+{
+  int i;
+  if (!ga) return 0;
+  for (i=0; i<ga->n; i++) {
+    if (is_glob_match(ga->globs[i], s)) return 1;
+  }
+  return 0;
+}
+/*}}}*/
+void free_globber_array(struct globber_array *in)/*{{{*/
+{
+  int i;
+  for (i=0; i<in->n; i++) {
+    free_globber(in->globs[i]);
+  }
+  free(in);
+}
+/*}}}*/
+
 #if defined (TEST)
 void run1(char *ref, char *s, int expected)/*{{{*/
 {

@@ -41,6 +41,7 @@ static char *maildir_folders = NULL;
 static char *mh_folders = NULL;
 static char *mboxen = NULL;
 static char *mfolder = NULL;
+static char *omit = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 static int skip_integrity_checks = 0;
@@ -178,6 +179,7 @@ static void parse_rc_file(char *name)/*{{{*/
     }
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
+    else if (!strncasecmp(p, "omit=", 5)) add_folders(&omit, copy_value(p));
       
     else if (!strncasecmp(p, "mformat=", 8)) {
       parse_output_folder(p);
@@ -502,18 +504,26 @@ int main (int argc, char **argv)/*{{{*/
     return search_top(do_threads, do_augment, database_path, folder_base, mfolder, argv, output_folder_type, verbose);
     
   } else {
+    struct globber_array *omit_globs;
+    
     if (!maildir_folders && !mh_folders && !mboxen) {
       fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
       exit(2);
+    }
+
+    if (omit) {
+      omit_globs = colon_sep_string_to_globber_array(omit);
+    } else {
+      omit_globs = NULL;
     }
     
     if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
     if (maildir_folders) {
-      build_message_list(folder_base, maildir_folders, FT_MAILDIR, msgs);
+      build_message_list(folder_base, maildir_folders, FT_MAILDIR, msgs, omit_globs);
     }
     if (mh_folders) {
-      build_message_list(folder_base, mh_folders, FT_MH, msgs);
+      build_message_list(folder_base, mh_folders, FT_MH, msgs, omit_globs);
     }
 
     /* The next call sorts the msgs array as part of looking for duplicates. */
@@ -532,7 +542,7 @@ int main (int argc, char **argv)/*{{{*/
       db = new_database();
     }
 
-    build_mbox_lists(db, folder_base, mboxen);
+    build_mbox_lists(db, folder_base, mboxen, omit_globs);
     
     any_updates = update_database(db, msgs->paths, msgs->n);
     if (do_purge) {

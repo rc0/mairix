@@ -374,7 +374,10 @@ void split_on_colons(const char *str, int *n, char ***arr)/*{{{*/
 
 }
 /*}}}*/
-void build_message_list(char *folder_base, char *folders, enum folder_type ft, struct msgpath_array *msgs)/*{{{*/
+/*{{{ void build_message_list */
+void build_message_list(char *folder_base, char *folders, enum folder_type ft,
+    struct msgpath_array *msgs,
+    struct globber_array *omit_globs)
 {
   char **raw_paths, **paths;
   int n_raw_paths, n_paths, i;
@@ -382,13 +385,13 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft, s
   split_on_colons(folders, &n_raw_paths, &raw_paths);
   switch (ft) {
     case FT_MAILDIR:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_maildir_message_paths(paths[i], msgs);
       }
       break;
     case FT_MH:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_mh_message_paths(paths[i], msgs);
       }
