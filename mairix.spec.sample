@@ -1,13 +1,13 @@
-Summary: A maildir indexer and searcher
-Name: mairix
-Version: @@VERSION@@
-Release: 1
-Source: mairix-%{version}.tar.gz
-Copyright: GPL
-Group: Application/Internet
-Packager: Richard P. Curnow
-BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(id -u -n)
-Requires: info
+Name:		mairix
+Summary:	A maildir indexer and searcher
+Version:	@@VERSION@@
+Release:	1
+Source:		%{name}-%{version}.tar.gz
+License:	GPL
+Group:		Application/Internet
+Packager:	Richard P. Curnow
+BuildRoot:	%{_tmppath}/%{name}-%{version}-root-%(id -u -n)
+Requires:	info
 
 %description
 mairix is a tool for indexing email messages stored in maildir format folders
@@ -15,18 +15,19 @@ and performing fast searches on the resulting index.  The output is a new
 maildir folder containing symbolic links to the matched messages.
 
 %prep
-%setup
+%setup -q
 
 %build
-make CC=gcc CFLAGS=-O2 prefix=%{_prefix}
-make mairix.txt prefix=%{_prefix}
-make mairix.info prefix=%{_prefix}
-make mairix.html prefix=%{_prefix}
+CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix}
+make
+make mairix.txt
+make mairix.info
+make mairix.html
 
 %install
 rm -rf $RPM_BUILD_ROOT
 cd $RPM_BUILD_DIR/mairix-%{version}
-make install prefix=$RPM_BUILD_ROOT%{_prefix}
+make install DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_infodir}
 cp mairix.info* $RPM_BUILD_ROOT%{_infodir}
 cp README mairix.txt mairix.html dotmairixrc.eg ..
