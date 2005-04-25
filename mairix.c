@@ -437,8 +437,11 @@ int main (int argc, char **argv)/*{{{*/
   int do_raw_output = 0;
   int do_dump = 0;
   int do_integrity_checks = 1;
+  int do_forced_unlock = 0;
 
   struct globber_array *omit_globs;
+
+  int result;
 
   setlocale(LC_CTYPE, "");
 
@@ -465,6 +468,8 @@ int main (int argc, char **argv)/*{{{*/
       do_raw_output = 1;
     } else if (!strcmp(*argv, "-Q") || !strcmp(*argv, "--no-integrity-checks")) {
       do_integrity_checks = 0;
+    } else if (!strcmp(*argv, "--unlock")) {
+      do_forced_unlock = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-h") ||
@@ -548,10 +553,17 @@ int main (int argc, char **argv)/*{{{*/
   } else {
     omit_globs = NULL;
   }
+
+  /* Lock database.
+   * Prevent concurrent updates due to parallel indexing (e.g. due to stuck
+   * cron jobs).
+   * Prevent concurrent searching and indexing. */
+
+  lock_database(database_path, do_forced_unlock);
     
   if (do_dump) {
     dump_database(database_path);
-    return 0;
+    result = 0;
 
   } else if (do_search) {
     int len;
@@ -589,7 +601,7 @@ int main (int argc, char **argv)/*{{{*/
       exit(3);
     }
 
-    return search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
+    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
     
   } else {
 
@@ -641,8 +653,11 @@ int main (int argc, char **argv)/*{{{*/
     free_database(db);
     free_msgpath_array(msgs);
 
-    return 0;
+    result = 0;
   }
-  
+
+  unlock_database(); 
+
+  return result;
 }
 /*}}}*/

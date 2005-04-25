@@ -20,6 +20,8 @@ NEW IN VERSION 0.16
   (affects both mfolder option and argument of -o command line switch.)  This
   prevents disasterous loss of messages in the event of trying to overwrite an
   wanted folder with the matches.
+* Implement dot-locking on the database file to prevent corruption due to
+  concurrent updates.  Add --unlock file to forcibly remove a stray lockfile.
 
 NEW IN VERSION 0.15
 ===================

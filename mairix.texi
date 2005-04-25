@@ -577,6 +577,12 @@ to detect mairix bugs much earlier, but it has a performance penalty.  This
 flag skips the checks, at the cost of some loss in robustness.  See also the
 @samp{nochecks} directive in @ref{mairixrc}.
 
+The @samp{--unlock} flag is used in any mode.  mairix dot-locks the database
+file to prevent corruption due to concurrent accesses.  If the process holding
+the lock exits prematurely for any reason, the lockfile will be left behind.
+By using the @samp{--unlock} option, an unwanted lockfile can be conveniently
+removed.
+
 The @samp{-t} or @samp{--threads} option applies to search mode.  Normally,
 only the messages matching all the specified expressions are included in the
 @emph{match folder} that is built.  With the @samp{-t} flag, any message in

@@ -333,4 +333,8 @@ void dump_database(char *filename);
 /* In strexpand.c */
 char *expand_string(const char *p);
 
+/* In dotlock.c */
+void lock_database(char *path, int forced_unlock);
+void unlock_database(void);
+
 #endif /* MAIRIX_H */
