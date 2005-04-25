@@ -579,7 +579,8 @@ int main (int argc, char **argv)/*{{{*/
 
     /* complete_mfolder is needed by search_top() and member_of() so
        compute it once here rather than in search_top() as well */
-    if ((mfolder[0] == '/') || (mfolder[0] == '.')) {
+    if ((mfolder[0] == '/') || 
+        ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
       complete_mfolder = new_string(mfolder);
     } else {
       len = strlen(folder_base) + strlen(mfolder) + 2;
