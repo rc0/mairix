@@ -576,7 +576,36 @@ static char *unencode_data(char *input, int input_len, char *enc, int *output_le
   return result;
 }
 /*}}}*/
-static int split_and_splice_header(char *data, struct line *header, char **body_start)/*{{{*/
+static char *format_msg_src(struct msg_src *src)/*{{{*/
+{
+  static char *buffer = NULL;
+  static int buffer_len = 0;
+  char *result;
+  int len;
+  switch (src->type) {
+    case MS_FILE:
+      result = src->filename;
+      break;
+    case MS_MBOX:
+      len = strlen(src->filename);
+      len += 32;
+      if (!buffer || (len > buffer_len)) {
+        free(buffer);
+        buffer = new_array(char, len);
+        buffer_len = len;
+      }
+      sprintf(buffer, "%s[%d,%d)", src->filename, 
+          (int) src->start, (int) (src->start + src->len));
+      result = buffer;
+      break;
+    default:
+      result = NULL;
+      break;
+  }
+  return result;
+}
+/*}}}*/
+static int split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
 {
   char *sol, *eol;
   int blank_line;
@@ -604,7 +633,8 @@ static int split_and_splice_header(char *data, struct line *header, char **body_
       }
       sol = eol + 1; /* Start of next line */
     } else { /* must be null char */
-      fprintf(stderr, "Got null character whilst processing header\n");
+      fprintf(stderr, "Got null character whilst processing header of %s\n",
+          format_msg_src(src));
       return -1; /* & leak memory */
     }
   } while (!blank_line);
@@ -625,9 +655,9 @@ static int split_and_splice_header(char *data, struct line *header, char **body_
 /*}}}*/
 
 /* Forward prototypes */
-static void do_multipart(char *input, int input_len, char *boundary, struct attachment *atts);
+static void do_multipart(struct msg_src *src, char *input, int input_len, char *boundary, struct attachment *atts);
   
-static void do_body(char *body_start, int body_len, char *content_type, char *content_transfer_encoding, struct attachment *atts)/*{{{*/
+static void do_body(struct msg_src *src, char *body_start, int body_len, char *content_type, char *content_transfer_encoding, struct attachment *atts)/*{{{*/
 {
   char *decoded_body;
   int decoded_body_len;
@@ -638,7 +668,7 @@ static void do_body(char *body_start, int body_len, char *content_type, char *co
     struct content_type_header ct;
     parse_content_type(content_type, &ct);
     if (!strcasecmp(ct.major, "multipart")) {
-      do_multipart(decoded_body, decoded_body_len, ct.boundary, atts);
+      do_multipart(src, decoded_body, decoded_body_len, ct.boundary, atts);
 
       /* Don't need decoded body any longer - copies have been taken if
        * required when handling multipart attachments. */
@@ -663,7 +693,7 @@ static void do_body(char *body_start, int body_len, char *content_type, char *co
       }
 
       if (new_att->ct == CT_MESSAGE_RFC822) {
-        new_att->data.rfc822 = data_to_rfc822(decoded_body, decoded_body_len);
+        new_att->data.rfc822 = data_to_rfc822(src, decoded_body, decoded_body_len);
         free(decoded_body); /* data no longer needed */
       } else {
         new_att->data.normal.len = decoded_body_len;
@@ -688,15 +718,16 @@ static void do_body(char *body_start, int body_len, char *content_type, char *co
   }
 }
 /*}}}*/
-static void do_attachment(char *start, char *after_end, struct attachment *atts)/*{{{*/
+static void do_attachment(struct msg_src *src, char *start, char *after_end, struct attachment *atts)/*{{{*/
 {
   /* decode attachment and add to attachment list */
   struct line header, *x, *nx;
   char *body_start;
   int body_len;
   char *content_type, *content_transfer_encoding;
-  if (split_and_splice_header(start, &header, &body_start) < 0) {
-    fprintf(stderr, "Giving up on attachment with bad header\n");
+  if (split_and_splice_header(src, start, &header, &body_start) < 0) {
+    fprintf(stderr, "Giving up on attachment with bad header in %s\n", 
+        format_msg_src(src));
     return;
   }
 
@@ -711,11 +742,12 @@ static void do_attachment(char *start, char *after_end, struct attachment *atts)
   if (body_start > after_end) {
     /* This is a (maliciously?) b0rken attachment, e.g. maybe empty */
     if (verbose) {
-      fprintf(stderr, "This message contains an invalid attachment, length=%d bytes\n", (int)(after_end - start));
+      fprintf(stderr, "Message %s contains an invalid attachment, length=%d bytes\n",
+          format_msg_src(src), (int)(after_end - start));
     }
   } else {
     body_len = after_end - body_start;
-    do_body(body_start, body_len, content_type, content_transfer_encoding, atts);
+    do_body(src, body_start, body_len, content_type, content_transfer_encoding, atts);
   }
 
   /* Free header memory */
@@ -729,7 +761,7 @@ static void do_attachment(char *start, char *after_end, struct attachment *atts)
   if (content_transfer_encoding) free(content_transfer_encoding);
 }
 /*}}}*/
-static void do_multipart(char *input, int input_len, char *boundary, struct attachment *atts)/*{{{*/
+static void do_multipart(struct msg_src *src, char *input, int input_len, char *boundary, struct attachment *atts)/*{{{*/
 {
   char *normal_boundary, *end_boundary;
   char *b0, *b1, *be;
@@ -738,7 +770,8 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
   int looking_at_end_boundary;
 
   if (!boundary) {
-    fprintf(stderr, "Can't process multipart message with no boundary string!\n");
+    fprintf(stderr, "Can't process multipart message %s with no boundary string\n",
+        format_msg_src(src));
     return;
   }
 
@@ -757,7 +790,8 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
   /* Scan input to look for boundary markers */
   be = strstr(input, end_boundary);
   if (!be) {
-    fprintf(stderr, "Can't find end boundary in multipart message!\n");
+    fprintf(stderr, "Can't find end boundary in multipart message %s\n",
+        format_msg_src(src));
     be = strchr(input, 0); /* tolerate missing end boundary */
   }
 
@@ -772,7 +806,8 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
 
       if (!b1) {
         if (*be) {
-          fprintf(stderr, "Oops, didn't find another normal boundary?\n");
+          fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
+              format_msg_src(src));
           goto cleanup;
         } else {
           b1 = be; /* tolerate missing end boundary */
@@ -791,7 +826,7 @@ static void do_multipart(char *input, int input_len, char *boundary, struct atta
 
     if (b0) {
       /* don't treat preamble as an attachment */
-      do_attachment(line_after_b0, b1, atts);
+      do_attachment(src, line_after_b0, b1, atts);
     }
 
     b0 = b1;
@@ -866,7 +901,7 @@ tough_cheese:
   return (time_t) -1; /* default value */
 }
 /*}}}*/
-struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
+struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*/
 {
   struct rfc822 *result;
   char *body_start;
@@ -879,9 +914,10 @@ struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
   init_headers(&result->hdrs);
   result->atts.next = result->atts.prev = &result->atts;
 
-  if (split_and_splice_header(data, &header, &body_start) < 0) {
+  if (split_and_splice_header(src, data, &header, &body_start) < 0) {
     if (verbose) {
-      fprintf(stderr, "Giving up on message with bad header\n");
+      fprintf(stderr, "Giving up on message %s with bad header\n",
+          format_msg_src(src));
     }
     return NULL;
   }
@@ -908,7 +944,7 @@ struct rfc822 *data_to_rfc822(char *data, int length)/*{{{*/
 
   /* Process body */
   body_len = length - (body_start - data);
-  do_body(body_start, body_len, content_type, content_transfer_encoding, &result->atts);
+  do_body(src, body_start, body_len, content_type, content_transfer_encoding, &result->atts);
 
   /* Free header memory */
   for (x=header.next; x!=&header; x=nx) {
@@ -964,6 +1000,14 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   }
 }
 /*}}}*/
+static struct msg_src *setup_msg_src(char *filename)/*{{{*/
+{
+  static struct msg_src result;
+  result.type = MS_FILE;
+  result.filename = filename;
+  return &result;
+}
+/*}}}*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
   int len;
@@ -977,8 +1021,10 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
 
   if (data)
   {
-  /* Now process the data */
-    result = data_to_rfc822(data, len);
+    struct msg_src *src;
+    /* Now process the data */
+    src = setup_msg_src(filename);
+    result = data_to_rfc822(src, data, len);
 
     if (munmap(data, (size_t) len) < 0) {
       perror("Could not munmap");

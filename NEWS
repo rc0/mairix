@@ -22,6 +22,7 @@ NEW IN VERSION 0.16
   wanted folder with the matches.
 * Implement dot-locking on the database file to prevent corruption due to
   concurrent updates.  Add --unlock file to forcibly remove a stray lockfile.
+* Display message path in warning messages from rfc822 parsing.
 
 NEW IN VERSION 0.15
 ===================

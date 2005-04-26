@@ -837,6 +837,16 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
 }
 /*}}}*/
 
+static struct msg_src *setup_msg_src(char *filename, off_t start, size_t len)/*{{{*/
+{
+  static struct msg_src result;
+  result.type = MS_MBOX;
+  result.filename = filename;
+  result.start = start;
+  result.len = len;
+  return &result;
+}
+/*}}}*/
 int add_mbox_messages(struct database *db)/*{{{*/
 {
   int i, j;
@@ -852,6 +862,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
       off_t start;
       size_t len;
       struct rfc822 *r8;
+      struct msg_src *msg_src;
       maybe_grow_message_arrays(db);
       n = db->n_msgs;
       db->type[n] = MTY_MBOX;
@@ -868,7 +879,8 @@ int add_mbox_messages(struct database *db)/*{{{*/
 
       start = mb->start[j];
       len   = mb->len[j];
-      r8 = data_to_rfc822(va + start, len);
+      msg_src = setup_msg_src(mb->path, start, len);
+      r8 = data_to_rfc822(msg_src, va + start, len);
       if (r8) {
         if (verbose) {
           printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));

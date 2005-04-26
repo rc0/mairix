@@ -233,6 +233,13 @@ struct string_list {/*{{{*/
 };
 /*}}}*/
 
+struct msg_src {
+  enum {MS_FILE, MS_MBOX} type;
+  char *filename;
+  off_t start;
+  size_t len;
+};
+
 extern int verbose; /* cmd line -v switch */
 
 /* Lame fix for systems where NAME_MAX isn't defined after including the above
@@ -271,7 +278,7 @@ int filter_is_mh(const char *path, struct stat *sb);
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
-struct rfc822 *data_to_rfc822(char *data, int length);
+struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length);
 void create_ro_mapping(const char *filename, unsigned char **data, int *len);
 
 /* In tok.c */

@@ -685,7 +685,7 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
       free_rfc822(msg);
     }
     else
-      fprintf(stderr, "Skipping...\n");
+      fprintf(stderr, "Skipping %s (could not parse message)\n", db->msgs[i].src.mpf.path);
   }
 }
 /*}}}*/
