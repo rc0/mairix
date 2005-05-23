@@ -343,5 +343,6 @@ char *expand_string(const char *p);
 /* In dotlock.c */
 void lock_database(char *path, int forced_unlock);
 void unlock_database(void);
+void unlock_and_exit(int code);
 
 #endif /* MAIRIX_H */

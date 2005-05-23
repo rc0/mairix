@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002-2004
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -92,12 +92,12 @@ struct read_db *open_db(char *filename)/*{{{*/
   fd = open(filename, O_RDONLY);
   if (fd < 0) {
     perror("open");
-    exit (2);
+    unlock_and_exit (2);
   }
 
   if (fstat(fd, &sb) < 0) {
     perror("stat");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   len = sb.st_size;
@@ -105,21 +105,21 @@ struct read_db *open_db(char *filename)/*{{{*/
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
     perror("reader:mmap");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   if (!data) {
     /* Empty file opened => database corrupt for sure */
     if (close(fd) < 0) {
       perror("close");
-      exit(2);
+      unlock_and_exit(2);
     }
     return NULL;
   }
   
   if (close(fd) < 0) {
     perror("close");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   result = new(struct read_db);
@@ -134,20 +134,20 @@ struct read_db *open_db(char *filename)/*{{{*/
       ucdata[2] == HEADER_MAGIC2) {
     if (ucdata[3] != HEADER_MAGIC3) {
       fprintf(stderr, "Another version of this program produced the existing database!  Please rebuild.\n");
-      exit(2);
+      unlock_and_exit(2);
     }
   } else {
     fprintf(stderr, "The existing database wasn't produced by this program!  Please rebuild.\n");
-    exit(2);
+    unlock_and_exit(2);
   }
   /*}}}*/
   /* {{{ Endianness check */
   if (uidata[UI_ENDIAN] == 0x11223344) {
     fprintf(stderr, "The endianness of the database is reversed for this machine\n");
-    exit(2);
+    unlock_and_exit(2);
   } else if (uidata[UI_ENDIAN] != 0x44332211) {
     fprintf(stderr, "The endianness of this machine is strange (or database is corrupt)\n");
-    exit(2);
+    unlock_and_exit(2);
   }
   /* }}} */
 
@@ -200,7 +200,7 @@ void close_db(struct read_db *x)/*{{{*/
 
   if (munmap(x->data, x->len) < 0) {
     perror("munmap");
-    exit(2);
+    unlock_and_exit(2);
   }
   free(x);
   return;

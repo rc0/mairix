@@ -102,10 +102,15 @@ void lock_database(char *path, int forced_unlock)/*{{{*/
   return;
 }
 /*}}}*/
-
 void unlock_database(void)/*{{{*/
 {
   if (lock_file_name) unlink(lock_file_name);
   return;
 }
-
+/*}}}*/
+void unlock_and_exit(int code)/*{{{*/
+{
+  unlock_database();
+  exit(code);
+}
+/*}}}*/
