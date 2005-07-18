@@ -266,7 +266,7 @@ unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval
 
 /* In dirscan.c */
 struct msgpath_array *new_msgpath_array(void);
-int is_integer_string(char *x);
+int valid_mh_filename_p(char *x);
 void free_msgpath_array(struct msgpath_array *x);
 void string_list_to_array(struct string_list *list, int *n, char ***arr);
 void split_on_colons(const char *str, int *n, char ***arr);

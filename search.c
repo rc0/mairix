@@ -1169,7 +1169,7 @@ static void clear_mh_folder(char *path)/*{{{*/
   d = opendir(path);
   if (d) {
     while ((de = readdir(d))) {
-      if (is_integer_string(de->d_name)) {
+      if (valid_mh_filename_p(de->d_name)) {
         strcpy(fpath, path);
         strcat(fpath, "/");
         strcat(fpath, de->d_name);
