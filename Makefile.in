@@ -118,10 +118,7 @@ mairix.pdf : mairix.texi
 	pdftex mairix.texi
 	pdftex mairix.texi
 
-.PHONY : ChangeLog
-
-ChangeLog:
-	cvs2cl.pl -r -b
+.PHONY : all docs install install_docs clean clean_docs distclean
 
 mairix.o : version.h
 

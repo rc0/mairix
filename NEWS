@@ -1,6 +1,11 @@
 NEW IN VERSION 0.16.1
 =====================
 
+* Update .PHONY target so that 'make install' etc are more reliable.
+
+NEW IN VERSION 0.16.1
+=====================
+
 * Remove the lockfile if the program terminates for any reason.
 
 NEW IN VERSION 0.16
