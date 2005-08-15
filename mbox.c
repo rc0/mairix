@@ -824,6 +824,8 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
         if (va) {
           rescan_mbox(mb, va, len);
           munmap(va, (size_t) len);
+        } else if (!len) {
+          mb->n_old_msgs_valid = mb->n_msgs = 0;
         } else {
           /* Treat as dead mbox */
           deaden_mbox(mb);
