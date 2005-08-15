@@ -4,6 +4,7 @@ NEW IN VERSION 0.17
 * Update .PHONY target so that 'make install' etc are more reliable.
 * Allow '.' on the ends of numeric filenames in MH folders (to work
   with Evolution)
+* Don't create and immediately scrub database entries for empty mbox folders.
 
 NEW IN VERSION 0.16.1
 =====================
