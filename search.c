@@ -542,7 +542,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
 }
 /*}}}*/
 
-static char *mk_maildir_path(int token, char *output_dir)/*{{{*/
+static char *mk_maildir_path(int token, char *output_dir, int is_in_new)/*{{{*/
 {
   char *result; 
   char uniq_buf[48];
@@ -551,9 +551,12 @@ static char *mk_maildir_path(int token, char *output_dir)/*{{{*/
   len = strlen(output_dir) + 64; /* oversize */
   result = new_array(char, len);
   strcpy(result, output_dir);
-  strcat(result, "/cur/");
-  sprintf(uniq_buf, "123456789.%d.mairix:2,S", token);
+  strcat(result, is_in_new ? "/new/" : "/cur/");
+  sprintf(uniq_buf, "123456789.%d.mairix", token);
   strcat(result, uniq_buf);
+  if (!is_in_new) {
+    strcat(uniq_buf, ":2,S");
+  }
   return result;
 }
 /*}}}*/
@@ -570,6 +573,23 @@ static char *mk_mh_path(int token, char *output_dir)/*{{{*/
   sprintf(uniq_buf, "%d", token+1);
   strcat(result, uniq_buf);
   return result;
+}
+/*}}}*/
+static int looks_like_maildir_new_p(const char *p)/*{{{*/
+{
+  const char *s1, *s2;
+  s2 = p;
+  while (*s2) s2++;
+  while ((s2 > p) && (*s2 != '/')) s2--;
+  if (s2 <= p) return 0;
+  s1 = s2 - 1;
+  while ((s1 > p) && (*s1 != '/')) s1--;
+  if (s1 <= p) return 0;
+  if (!strncmp(s1, "/new/", 5)) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 /*}}}*/
 static void create_symlink(char *link_target, char *new_link)/*{{{*/
@@ -919,15 +939,20 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           switch (db->msg_type[i]) {
             case DB_MSG_FILE:
               {
-                char *target_path = mk_maildir_path(i, output_path);
-                create_symlink(db->data + db->path_offsets[i], target_path);
+                char *target_path;
+                char *message_path;
+                int is_in_new;
+                message_path = db->data + db->path_offsets[i];
+                is_in_new = looks_like_maildir_new_p(message_path);
+                target_path = mk_maildir_path(i, output_path, is_in_new);
+                create_symlink(message_path, target_path);
                 free(target_path);
                 ++n_hits;
               }
               break;
             case DB_MSG_MBOX:
               {
-                char *target_path = mk_maildir_path(i, output_path);
+                char *target_path = mk_maildir_path(i, output_path, 0);
                 try_copy_to_path(db, i, target_path);
                 free(target_path);
                 ++n_hits;
