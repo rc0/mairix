@@ -370,7 +370,7 @@ static void usage(void)/*{{{*/
          "-o <mfolder> : override setting of mfolder from mairixrc file\n"
          "-r           : force raw output regardless of mformat setting in mairixrc file\n"
          "expr_i       : search expression (all expr's AND'ed together):\n"
-         "    word          : match word in whole message\n"
+         "    word          : match word in message body and major headers\n"
          "    t:word        : match word in To: header\n"
          "    c:word        : match word in Cc: header\n"
          "    f:word        : match word in From: header\n"
