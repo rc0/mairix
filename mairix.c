@@ -48,14 +48,23 @@ static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 static int skip_integrity_checks = 0;
 
-static int file_exists(char *name)/*{{{*/
+enum filetype {
+  M_NONE, M_FILE, M_DIR, M_OTHER
+};
+
+static enum filetype classify_file(char *name)/*{{{*/
 {
   struct stat sb;
-
   if (stat(name, &sb) < 0) {
-    return 0;
+    return M_NONE;
   }
-  return 1;
+  if (S_ISREG(sb.st_mode)) {
+    return M_FILE;
+  } else if (S_ISDIR(sb.st_mode)) {
+    return M_DIR;
+  } else {
+    return M_OTHER;
+  }
 }
 /*}}}*/
 /*{{{ member of*/
@@ -568,6 +577,7 @@ int main (int argc, char **argv)/*{{{*/
   } else if (do_search) {
     int len;
     char *complete_mfolder;
+    enum filetype ftype;
 
     if (!mfolder) {
       if (output_folder_type != FT_RAW) {
@@ -602,9 +612,16 @@ int main (int argc, char **argv)/*{{{*/
       unlock_and_exit(3);
     }
 
+    ftype = classify_file(database_path);
+    if (ftype != M_FILE) {
+      fprintf(stderr, "No database file '%s' is present.\nYou need to do an indexing run first.\n",
+          database_path);
+      unlock_and_exit(3);
+    }
     result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
     
   } else {
+    enum filetype ftype;
 
     if (!maildir_folders && !mh_folders && !mboxen) {
       fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
@@ -627,13 +644,17 @@ int main (int argc, char **argv)/*{{{*/
     }
 
     /* Try to open existing database */
-    if (file_exists(database_path)) {
+    ftype = classify_file(database_path);
+    if (ftype == M_FILE) {
       if (verbose) printf("Reading existing database...\n");
       db = new_database_from_file(database_path, do_integrity_checks);
       if (verbose) printf("Loaded %d existing messages\n", db->n_msgs);
-    } else {
+    } else if (ftype == M_NONE) {
       if (verbose) printf("Starting new database\n");
       db = new_database();
+    } else {
+      fprintf(stderr, "database path %s is not a file; you can't put the database there\n", database_path);
+      unlock_and_exit(2);
     }
 
     build_mbox_lists(db, folder_base, mboxen, omit_globs);
