@@ -240,6 +240,24 @@ struct msg_src {
   size_t len;
 };
 
+/* Outcomes of checking a filename/dirname to see whether to keep on looking
+ * at filenames within this dir. */
+enum traverse_check {
+  TRAV_PROCESS_DEEP,
+  TRAV_PROCESS, /* Continue looking at this entry */
+  TRAV_IGNORE,  /* Ignore just this dir entry */
+  TRAV_FINISH   /* Ignore this dir entry and don't bother looking at the rest of the directory */
+};
+
+struct traverse_methods {
+  int (*filter)(const char *, const struct stat *);
+  enum traverse_check (*scrutinize)(int, const char *, const struct stat *);
+};
+
+extern struct traverse_methods maildir_traverse_methods;
+extern struct traverse_methods mh_traverse_methods;
+extern struct traverse_methods mbox_traverse_methods;
+
 extern int verbose; /* cmd line -v switch */
 
 /* Lame fix for systems where NAME_MAX isn't defined after including the above
@@ -266,14 +284,14 @@ unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval
 
 /* In dirscan.c */
 struct msgpath_array *new_msgpath_array(void);
-int is_integer_string(char *x);
+int is_integer_string(const char *x);
 void free_msgpath_array(struct msgpath_array *x);
 void string_list_to_array(struct string_list *list, int *n, char ***arr);
 void split_on_colons(const char *str, int *n, char ***arr);
 void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs, struct globber_array *omit_globs);
-int filter_is_maildir(const char *path, struct stat *sb);
-int filter_is_mh(const char *path, struct stat *sb);
+int filter_is_maildir(const char *path, const struct stat *sb);
+int filter_is_mh(const char *path, const struct stat *sb);
   
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
@@ -312,7 +330,7 @@ void cull_dead_mboxen(struct database *db);
 unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
 void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
 int verify_mbox_size_constraints(struct database *db);
-void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *), struct globber_array *omit_globs);
+void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, const struct traverse_methods *methods, struct globber_array *omit_globs);
 int filter_is_file(const char *x, struct stat *sb);
 
 /* In glob.c */

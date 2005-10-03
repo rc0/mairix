@@ -117,9 +117,9 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
   return;
 }
 /*}}}*/
-int is_integer_string(char *x)/*{{{*/
+int is_integer_string(const char *x)/*{{{*/
 {
-  char *p;
+  const char *p;
   
   if (!*x) return 0; /* Must not be empty */
   p = x;
@@ -183,7 +183,22 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   return result;
 }
 /*}}}*/
-int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
+enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name, const struct stat *sb)/*{{{*/
+{
+  if (S_ISDIR(sb->st_mode)) {
+		if (!strcmp(de_name, "new") ||
+				!strcmp(de_name, "cur") ||
+				!strcmp(de_name, "tmp")) {
+			return TRAV_IGNORE;
+		} else {
+			return TRAV_PROCESS_DEEP;
+		}
+  } else {
+    return TRAV_IGNORE;
+  }
+}
+/*}}}*/
+int filter_is_maildir(const char *path, const struct stat *sb)/*{{{*/
 {
   if (S_ISDIR(sb->st_mode)) {
     if (has_child_dir(path, "new") &&
@@ -195,7 +210,28 @@ int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
   return 0;
 }
 /*}}}*/
-int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
+struct traverse_methods maildir_traverse_methods = {/*{{{*/
+  .filter = filter_is_maildir,
+  .scrutinize = scrutinize_maildir_entry
+};
+/*}}}*/
+enum traverse_check scrutinize_mh_entry(int parent_is_maildir, const char *de_name, const struct stat *sb)/*{{{*/
+{
+	if (S_ISREG(sb->st_mode) &&
+			(is_integer_string(de_name) || 
+			 !strcmp(de_name, ".xmhcache") ||
+			 !strcmp(de_name, ".xmhsequences"))) {
+		/* If the directory contains evidence of being an MH folder itself, assume
+		 * that it has no subdirectory that is also an MH folder. */
+		return TRAV_FINISH;
+	} else if (S_ISDIR(sb->st_mode)) {
+		return TRAV_PROCESS_DEEP;
+	} else {
+		return TRAV_IGNORE; /* Can't possibly be a subfolder */
+	}
+}
+/*}}}*/
+int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
 {
   /* At this stage, just check it's a directory. */
   if (S_ISDIR(sb->st_mode)) {
@@ -204,6 +240,11 @@ int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
     return 0;
   }
 }
+/*}}}*/
+struct traverse_methods mh_traverse_methods = {/*{{{*/
+  .filter = filter_is_mh,
+  .scrutinize = scrutinize_mh_entry
+};
 /*}}}*/
 #if 0
 static void scan_directory(char *folder_base, char *this_folder, enum folder_type ft, struct msgpath_array *arr)/*{{{*/
@@ -294,13 +335,13 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
   split_on_colons(folders, &n_raw_paths, &raw_paths);
   switch (ft) {
     case FT_MAILDIR:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &maildir_traverse_methods, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_maildir_message_paths(paths[i], msgs);
       }
       break;
     case FT_MH:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mh_traverse_methods, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_mh_message_paths(paths[i], msgs);
       }
