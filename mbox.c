@@ -571,22 +571,33 @@ static int append_deep(char *path, int base_len, struct stat *sb, struct string_
           /* Filter out omissions at this point, e.g. to avoid wasting time on
            * a recursive expansion of a tree that's going to get pruned in at
            * the deepest level anyway. */
-          if (stat(xpath, &sb2) >= 0) {
-            status = (methods->scrutinize)(this_file_matched, de->d_name, &sb2);
-            switch (status) {
-              case TRAV_FINISH:
-                goto done_this_dir;
-              case TRAV_IGNORE:
-                break;
-              case TRAV_PROCESS:
-                appended_any |= append_shallow(xpath, base_len, &sb2, list, methods, omit_globs);
-                break;
-              case TRAV_PROCESS_DEEP:
-                append_deep(xpath, base_len, &sb2, list, methods, omit_globs);
-                break;
-            }
+          status = (methods->scrutinize)(this_file_matched, de->d_name);
+#if 0
+          /* debugging */
+          fprintf(stderr, "scrutinize for %s in %s returned %s\n",
+              de->d_name,
+              path,
+              (status == TRAV_FINISH) ? "FINISH" :
+              (status == TRAV_IGNORE) ? "IGNORE" : "PROCESS");
+#endif
+          switch (status) {
+            case TRAV_FINISH:
+              goto done_this_dir;
+            case TRAV_IGNORE:
+              goto next_path;
+            case TRAV_PROCESS:
+              if (stat(xpath, &sb2) >= 0) {
+                if (S_ISREG(sb2.st_mode)) {
+                  appended_any |= append_shallow(xpath, base_len, &sb2, list, methods, omit_globs);
+                } else if (S_ISDIR(sb2.st_mode)) {
+                  appended_any |= append_deep(xpath, base_len, &sb2, list, methods, omit_globs);
+                }
+              }
+              break;
           }
         }
+next_path:
+        (void) 0;
       }
 done_this_dir:
       closedir(d);
@@ -681,13 +692,10 @@ int filter_is_file(const char *x, struct stat *sb)/*{{{*/
     return 0;
 }
 /*}}}*/
-enum traverse_check scrutinize_mbox_entry(int parent_is_maildir, const char *de_name, const struct stat *sb)/*{{{*/
+enum traverse_check scrutinize_mbox_entry(int parent_is_mbox, const char *de_name, const struct stat *sb)/*{{{*/
 {
-  if (S_ISDIR(sb->st_mode)) {
-    return TRAV_PROCESS_DEEP;
-  } else {
-    return TRAV_PROCESS;
-  }
+  /* We have to keep looking at everything in this case. */
+  return TRAV_PROCESS;
 }
 /*}}}*/
 struct traverse_methods mbox_traverse_methods = {/*{{{*/

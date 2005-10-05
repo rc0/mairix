@@ -159,10 +159,9 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
   return;
 }
 /*}}}*/
-static int has_child_dir(const char *base, const char *child)/*{{{*/
+static int child_stat(const char *base, const char *child, struct stat *sb)/*{{{*/
 {
   int result = 0;
-  struct stat sb;
   char *scratch;
   int len;
 
@@ -173,28 +172,52 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   strcat(scratch, "/");
   strcat(scratch, child);
   
-  if (stat(scratch,&sb) >= 0) {
-    if (S_ISDIR(sb.st_mode)) {
-      result = 1;
-    }
-  }
-
+  result = stat(scratch, sb);
   free(scratch);
   return result;
 }
 /*}}}*/
-enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name, const struct stat *sb)/*{{{*/
+static int has_child_file(const char *base, const char *child)/*{{{*/
 {
-  if (S_ISDIR(sb->st_mode)) {
+  int result = 0;
+  int status;
+  struct stat sb;
+  
+  status = child_stat(base, child, &sb);
+  if ((status >= 0) && S_ISREG(sb.st_mode)) {
+    result = 1;
+  }
+
+  return result;
+}
+/*}}}*/
+static int has_child_dir(const char *base, const char *child)/*{{{*/
+{
+  int result = 0;
+  int status;
+  struct stat sb;
+  
+  status = child_stat(base, child, &sb);
+  if ((status >= 0) && S_ISDIR(sb.st_mode)) {
+    result = 1;
+  }
+
+  return result;
+}
+/*}}}*/
+enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name)/*{{{*/
+{
+  if (parent_is_maildir) {
+    /* Process any subdirectory that's not part of this maildir itself. */
 		if (!strcmp(de_name, "new") ||
 				!strcmp(de_name, "cur") ||
 				!strcmp(de_name, "tmp")) {
 			return TRAV_IGNORE;
 		} else {
-			return TRAV_PROCESS_DEEP;
+			return TRAV_PROCESS;
 		}
   } else {
-    return TRAV_IGNORE;
+    return TRAV_PROCESS;
   }
 }
 /*}}}*/
@@ -215,30 +238,26 @@ struct traverse_methods maildir_traverse_methods = {/*{{{*/
   .scrutinize = scrutinize_maildir_entry
 };
 /*}}}*/
-enum traverse_check scrutinize_mh_entry(int parent_is_maildir, const char *de_name, const struct stat *sb)/*{{{*/
+enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*{{{*/
 {
-	if (S_ISREG(sb->st_mode) &&
-			(is_integer_string(de_name) || 
-			 !strcmp(de_name, ".xmhcache") ||
-			 !strcmp(de_name, ".xmhsequences"))) {
-		/* If the directory contains evidence of being an MH folder itself, assume
-		 * that it has no subdirectory that is also an MH folder. */
-		return TRAV_FINISH;
-	} else if (S_ISDIR(sb->st_mode)) {
-		return TRAV_PROCESS_DEEP;
-	} else {
-		return TRAV_IGNORE; /* Can't possibly be a subfolder */
-	}
+  /* Don't allow sub-folders within a folder */
+  if (parent_is_mh) {
+    return TRAV_FINISH;
+  } else {
+    return TRAV_PROCESS;
+  }
 }
 /*}}}*/
 int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
 {
-  /* At this stage, just check it's a directory. */
+  int result = 0;
   if (S_ISDIR(sb->st_mode)) {
-    return 1;
-  } else {
-    return 0;
+    if (has_child_file(path, ".xmhcache") ||
+        has_child_file(path, ".mh_sequences")) {
+      result = 1;
+    }
   }
+  return result;
 }
 /*}}}*/
 struct traverse_methods mh_traverse_methods = {/*{{{*/

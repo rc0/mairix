@@ -251,7 +251,7 @@ enum traverse_check {
 
 struct traverse_methods {
   int (*filter)(const char *, const struct stat *);
-  enum traverse_check (*scrutinize)(int, const char *, const struct stat *);
+  enum traverse_check (*scrutinize)(int, const char *);
 };
 
 extern struct traverse_methods maildir_traverse_methods;
