@@ -243,7 +243,6 @@ struct msg_src {
 /* Outcomes of checking a filename/dirname to see whether to keep on looking
  * at filenames within this dir. */
 enum traverse_check {
-  TRAV_PROCESS_DEEP,
   TRAV_PROCESS, /* Continue looking at this entry */
   TRAV_IGNORE,  /* Ignore just this dir entry */
   TRAV_FINISH   /* Ignore this dir entry and don't bother looking at the rest of the directory */
