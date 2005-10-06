@@ -4,6 +4,7 @@
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
+ * gzip mbox support Copyright (C) Ico Doornekamp 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -1030,26 +1031,25 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   }
   data_alloc_type = ALLOC_MMAP;
 }
-
-void free_ro_mapping(unsigned char *data, int len)
+/*}}}*/
+void free_ro_mapping(unsigned char *data, int len)/*{{{*/
 {
   int r;
-  
+
   if(data_alloc_type == ALLOC_MALLOC) {
     free(data);
   }
-  
+
   if(data_alloc_type == ALLOC_MMAP) {
     r = munmap(data, len);
     if(r < 0) {
-    	fprintf(stderr, "munmap() errord\n");
-    	exit(1);
+      fprintf(stderr, "munmap() errord\n");
+      exit(1);
     }
   }
 }
-    
-
 /*}}}*/
+
 static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 {
   static struct msg_src result;
