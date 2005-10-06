@@ -50,7 +50,7 @@ OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
 all : mairix
 
 mairix : $(OBJ)
-	$(CC) -o mairix $(CFLAGS) $(OBJ)
+	$(CC) -o mairix $(CFLAGS) $(OBJ) -lz
 
 %.o : %.c memmac.h mairix.h reader.h Makefile
 	$(CC) -c $(CFLAGS) $<

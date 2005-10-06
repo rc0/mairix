@@ -30,7 +30,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
+#include <zlib.h>
 
 struct DLL {/*{{{*/
   struct DLL *next;
@@ -960,23 +960,53 @@ struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*
   
 }
 /*}}}*/
+
+#define ALLOC_NONE	1
+#define ALLOC_MMAP	2
+#define ALLOC_MALLOC	3
+
+int data_alloc_type;
+
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
+  gzFile gzf;
+
   if (stat(filename, &sb) < 0) 
   {
     perror("Could not stat");
     *data = NULL;
     return;
   }
-
+  
+  if(strstr(filename, ".gz")) {
+    if(verbose) {
+    	fprintf(stderr, "Decompressing %s...\n", filename);
+    }
+  
+    *data = malloc(1024*1024*1024);
+    gzf = gzopen(filename, "rb");
+    *len = gzread(gzf, *data, 1024*1024*1024);
+    gzclose(gzf);
+    
+    if(*len > 0) {
+    	realloc(*data, *len);
+    	data_alloc_type = ALLOC_MALLOC;
+    } else {
+        free(*data);
+        data_alloc_type = ALLOC_NONE;
+    }
+        
+    return;
+  }
+  
   *len = sb.st_size;
   if (*len == 0) {
     *data = NULL;
     return;
   }
-
+  
   if (!S_ISREG(sb.st_mode)) {
     *data = NULL;
     return;
@@ -998,7 +1028,27 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     *data = NULL;
     return;
   }
+  data_alloc_type = ALLOC_MMAP;
 }
+
+void free_ro_mapping(unsigned char *data, int len)
+{
+  int r;
+  
+  if(data_alloc_type == ALLOC_MALLOC) {
+    free(data);
+  }
+  
+  if(data_alloc_type == ALLOC_MMAP) {
+    r = munmap(data, len);
+    if(r < 0) {
+    	fprintf(stderr, "munmap() errord\n");
+    	exit(1);
+    }
+  }
+}
+    
+
 /*}}}*/
 static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 {
@@ -1026,9 +1076,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
     src = setup_msg_src(filename);
     result = data_to_rfc822(src, data, len);
 
-    if (munmap(data, (size_t) len) < 0) {
-      perror("Could not munmap");
-    }
+    free_ro_mapping(data, len);
   }
   
   return result;
