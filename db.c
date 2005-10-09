@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002-2004
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -311,7 +311,7 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
         /* No point going on - need to find out why the database got corrupted
          * in the 1st place.  Workaround for user - rebuild database from
          * scratch by deleting it then rerunning. */
-        exit(1);
+        unlock_and_exit(1);
       }
       ++index;
       index &= out->mask;

@@ -228,7 +228,7 @@ static int looks_like_from_separator(off_t n, unsigned char *va, size_t len, int
 
   /* If we hit the end of the file, it doesn't look like a real 'From' line. */
 #ifdef DEBUG_DFA
-  exit(0);
+  unlock_and_exit(0);
 #endif
   return result;
 }
@@ -506,7 +506,7 @@ static void check_duplicates(struct extant_mbox *extant_mboxen, int n_extant)/*{
   }
   if (any_dupl) {
     printf("Exiting, the mairixrc file needs fixing\n");
-    exit(1);
+    unlock_and_exit(1);
   }
 }
 /*}}}*/
@@ -875,7 +875,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
       }
       if (!va) {
         fprintf(stderr, "Couldn't create mapping of file %s\n", mb->path);
-        exit(1);
+        unlock_and_exit(1);
       }
 
       start = mb->start[j];

@@ -572,7 +572,7 @@ int main (int argc, char **argv)/*{{{*/
     if (!mfolder) {
       if (output_folder_type != FT_RAW) {
         fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
-        exit(2);
+        unlock_and_exit(2);
       }
       mfolder = new_string("");
     }
@@ -599,7 +599,7 @@ int main (int argc, char **argv)/*{{{*/
           "That folder appears to be one of the indexed mail folders!\n"
           "For your own good, I refuse to output search results to an indexed mail folder.\n",
           mfolder);
-      exit(3);
+      unlock_and_exit(3);
     }
 
     result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
@@ -608,7 +608,7 @@ int main (int argc, char **argv)/*{{{*/
 
     if (!maildir_folders && !mh_folders && !mboxen) {
       fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
-      exit(2);
+      unlock_and_exit(2);
     }
 
     if (verbose) printf("Finding all currently existing messages...\n");
@@ -623,7 +623,7 @@ int main (int argc, char **argv)/*{{{*/
     /* The next call sorts the msgs array as part of looking for duplicates. */
     if (check_message_list_for_duplicates(msgs)) {
       fprintf(stderr, "Message list contains duplicates - check your 'folders' setting\n");
-      exit(2);
+      unlock_and_exit(2);
     }
 
     /* Try to open existing database */

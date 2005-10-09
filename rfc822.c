@@ -1165,7 +1165,7 @@ int main (int argc, char **argv)/*{{{*/
   
   if (argc < 2) {
     fprintf(stderr, "Need a path\n");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   msg = make_rfc822(argv[1]);

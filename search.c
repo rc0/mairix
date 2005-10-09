@@ -89,7 +89,7 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   len = strlen(substring);
   if (len > 31 || len == 0) {
     fprintf(stderr, "Can't match patterns longer than 31 characters or empty\n");
-    exit(2);
+    unlock_and_exit(2);
   }
   memset(a, 0xff, 256 * sizeof(unsigned long));
   for (p=substring, i=0; *p; p++, i++) {
@@ -520,7 +520,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   
   status = scan_date_string(date_expr, &start, &has_start, &end, &has_end);
   if (status) {
-    exit (2);
+    unlock_and_exit (2);
   }
 
   if (has_start && has_end) {
@@ -973,7 +973,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         out = fopen(output_path, "ab");
         if (!out) {
           fprintf(stderr, "Cannot open output folder %s\n", output_path);
-          exit(1);
+          unlock_and_exit(1);
         }
 
         for (i=0; i<db->n_msgs; i++) {
@@ -1076,7 +1076,7 @@ static void create_dir(char *path)/*{{{*/
 {
   if (mkdir(path, 0700) < 0) {
     fprintf(stderr, "Could not create directory %s\n", path);
-    exit(2);
+    unlock_and_exit(2);
   }
   fprintf(stderr, "Created directory %s\n", path);
   return;

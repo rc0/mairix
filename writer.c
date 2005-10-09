@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002-2004
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -94,29 +94,29 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
   fd = open(filename, O_RDWR | O_CREAT, 0600);
   if (fd < 0) {
     perror("open");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   if (fstat(fd, &sb) < 0) {
     perror("stat");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   if (sb.st_size < len) {
     /* Extend */
     if (lseek(fd, len - 1, SEEK_SET) < 0) {
       perror("lseek");
-      exit(2);
+      unlock_and_exit(2);
     }
     if (write(fd, "\000", 1) < 0) {
       perror("write");
-      exit(2);
+      unlock_and_exit(2);
     }
   } else if (sb.st_size > len) {
     /* Truncate */
     if (ftruncate(fd, len) < 0) {
       perror("ftruncate");
-      exit(2);
+      unlock_and_exit(2);
     }
   } else {
     /* Exactly the right length already - nothing to do! */
@@ -125,7 +125,7 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
   data = mmap(0, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
     perror("writer:mmap");
-    exit(2);
+    unlock_and_exit(2);
   }
 
   *out_data = data;
@@ -557,7 +557,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   }
 
   if (!verify_mbox_size_constraints(db)) {
-    exit(1);
+    unlock_and_exit(1);
   }
   
   /* Work out mappings */
@@ -585,15 +585,15 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   /* Unmap / close file */
   if (munmap(data, file_len) < 0) {
     perror("munmap");
-    exit(2);
+    unlock_and_exit(2);
   }
   if (fsync(fd) < 0) {
     perror("fsync");
-    exit(2);
+    unlock_and_exit(2);
   }
   if (close(fd) < 0) {
     perror("close");
-    exit(2);
+    unlock_and_exit(2);
   }
 }
   /*}}}*/
