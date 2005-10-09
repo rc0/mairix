@@ -5,6 +5,7 @@
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * gzip mbox support Copyright (C) Ico Doornekamp 2005
+ * gzip mbox support Copyright (C) Felipe Gustavo de Almeida 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -968,6 +969,18 @@ struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*
 
 int data_alloc_type;
 
+#define SIZE_STEP (8 * 1024 * 1024)
+
+static int is_gzip(const char *filename) {/*{{{*/
+  size_t len = strlen(filename);
+  int ptr = len - 3;
+  if (len > 3 && strncasecmp(filename + ptr, ".gz", 3) == 0) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+/*}}}*/
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
@@ -981,22 +994,36 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     return;
   }
   
-  if(strstr(filename, ".gz")) {
+  if(is_gzip(filename)) {
     if(verbose) {
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
   
-    *data = malloc(1024*1024*1024);
     gzf = gzopen(filename, "rb");
-    *len = gzread(gzf, *data, 1024*1024*1024);
+    if (!gzf) {
+      fprintf(stderr, "Could not open %s\n", filename);
+      *data = NULL;
+      *len = 0;
+      return;
+    }
+    *data = new_array(unsigned char, SIZE_STEP);
+    *len = gzread(gzf, *data, SIZE_STEP);
+    if (*len >= SIZE_STEP) {
+      int extra_bytes_read;
+      do {
+        *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
+        extra_bytes_read = gzread(gzf, *data + *len, SIZE_STEP);
+        *len += extra_bytes_read;
+      } while (extra_bytes_read > 0);
+    }
     gzclose(gzf);
     
     if(*len > 0) {
-    	realloc(*data, *len);
+      *data = grow_array(unsigned char, *len, *data);
     	data_alloc_type = ALLOC_MALLOC;
     } else {
-        free(*data);
-        data_alloc_type = ALLOC_NONE;
+      free(*data);
+      data_alloc_type = ALLOC_NONE;
     }
         
     return;
