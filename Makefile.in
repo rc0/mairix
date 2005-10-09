@@ -23,6 +23,9 @@
 # Edit the following variables as required
 CC=@cc@
 CFLAGS=@cflags@ @defs@
+CPPFLAGS=@CPPFLAGS@
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@
 
 #######################################################################
 # If you're generating a package, you may want to use
@@ -50,10 +53,10 @@ OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
 all : mairix
 
 mairix : $(OBJ)
-	$(CC) -o mairix $(CFLAGS) $(OBJ) -lz
+	$(CC) -o mairix $(CFLAGS) $(LDFLAGS) $(OBJ) $(LIBS)
 
 %.o : %.c memmac.h mairix.h reader.h Makefile
-	$(CC) -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 datescan.c : datescan.nfa dfasyn/dfasyn
 	dfasyn/dfasyn -o datescan.c -v -u datescan.nfa

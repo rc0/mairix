@@ -32,7 +32,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <zlib.h>
+#ifdef USE_GZIP_MBOX
+#  include <zlib.h>
+#endif
 
 struct DLL {/*{{{*/
   struct DLL *next;
@@ -969,8 +971,8 @@ struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*
 
 int data_alloc_type;
 
+#ifdef USE_GZIP_MBOX
 #define SIZE_STEP (8 * 1024 * 1024)
-
 static int is_gzip(const char *filename) {/*{{{*/
   size_t len = strlen(filename);
   int ptr = len - 3;
@@ -981,11 +983,15 @@ static int is_gzip(const char *filename) {/*{{{*/
   }
 }
 /*}}}*/
+#endif
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
+
+#ifdef USE_GZIP_MBOX
   gzFile gzf;
+#endif
 
   if (stat(filename, &sb) < 0) 
   {
@@ -994,6 +1000,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     return;
   }
   
+#ifdef USE_GZIP_MBOX
   if(is_gzip(filename)) {
     if(verbose) {
     	fprintf(stderr, "Decompressing %s...\n", filename);
@@ -1028,6 +1035,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
         
     return;
   }
+#endif /* USE_GZIP_MBOX */
   
   *len = sb.st_size;
   if (*len == 0) {
