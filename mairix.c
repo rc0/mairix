@@ -77,13 +77,13 @@ int member_of (const char *complete_mfolder,
   split_on_colons(folders, &n_raw_paths, &raw_paths);
   switch (ft) {
     case FT_MAILDIR:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &maildir_traverse_methods, omit_globs);
       break;
     case FT_MH:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mh_traverse_methods, omit_globs);
       break;
     case FT_MBOX:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_file, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
       break;
     case FT_RAW:			/* cannot happen but to keep compiler happy */
       break;    
