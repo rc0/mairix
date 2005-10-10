@@ -610,7 +610,7 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
   if (data) {
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
     fwrite (data, sizeof(unsigned char), len, out);
-    munmap(data, len);
+    free_ro_mapping(data, len);
   }
   return;
 }
@@ -661,7 +661,7 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
     fwrite(msg_start, sizeof(unsigned char), msg_len, out);
   }
   if (mbox_start) {
-    munmap(mbox_start, mbox_len);
+    free_ro_mapping(mbox_start, mbox_len);
   }
 }
 /*}}}*/
@@ -686,7 +686,7 @@ static void try_copy_to_path(struct read_db *db, int msg_index, char *target_pat
   }
 
   if (data) {
-    munmap(data, mbox_len);
+    free_ro_mapping(data, mbox_len);
   }
   return;
 }

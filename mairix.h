@@ -280,6 +280,7 @@ struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
 struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length);
 void create_ro_mapping(const char *filename, unsigned char **data, int *len);
+void free_ro_mapping(unsigned char *data, int len);
 
 /* In tok.c */
 struct toktable *new_toktable(void);

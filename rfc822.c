@@ -4,6 +4,8 @@
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
+ * gzip mbox support Copyright (C) Ico Doornekamp 2005
+ * gzip mbox support Copyright (C) Felipe Gustavo de Almeida 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -30,7 +32,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
+#ifdef USE_GZIP_MBOX
+#  include <zlib.h>
+#endif
 
 struct DLL {/*{{{*/
   struct DLL *next;
@@ -960,23 +964,85 @@ struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*
   
 }
 /*}}}*/
+
+#define ALLOC_NONE	1
+#define ALLOC_MMAP	2
+#define ALLOC_MALLOC	3
+
+int data_alloc_type;
+
+#ifdef USE_GZIP_MBOX
+#define SIZE_STEP (8 * 1024 * 1024)
+static int is_gzip(const char *filename) {/*{{{*/
+  size_t len = strlen(filename);
+  int ptr = len - 3;
+  if (len > 3 && strncasecmp(filename + ptr, ".gz", 3) == 0) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+/*}}}*/
+#endif
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
+
+#ifdef USE_GZIP_MBOX
+  gzFile gzf;
+#endif
+
   if (stat(filename, &sb) < 0) 
   {
     perror("Could not stat");
     *data = NULL;
     return;
   }
-
+  
+#ifdef USE_GZIP_MBOX
+  if(is_gzip(filename)) {
+    if(verbose) {
+    	fprintf(stderr, "Decompressing %s...\n", filename);
+    }
+  
+    gzf = gzopen(filename, "rb");
+    if (!gzf) {
+      fprintf(stderr, "Could not open %s\n", filename);
+      *data = NULL;
+      *len = 0;
+      return;
+    }
+    *data = new_array(unsigned char, SIZE_STEP);
+    *len = gzread(gzf, *data, SIZE_STEP);
+    if (*len >= SIZE_STEP) {
+      int extra_bytes_read;
+      do {
+        *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
+        extra_bytes_read = gzread(gzf, *data + *len, SIZE_STEP);
+        *len += extra_bytes_read;
+      } while (extra_bytes_read > 0);
+    }
+    gzclose(gzf);
+    
+    if(*len > 0) {
+      *data = grow_array(unsigned char, *len, *data);
+    	data_alloc_type = ALLOC_MALLOC;
+    } else {
+      free(*data);
+      data_alloc_type = ALLOC_NONE;
+    }
+        
+    return;
+  }
+#endif /* USE_GZIP_MBOX */
+  
   *len = sb.st_size;
   if (*len == 0) {
     *data = NULL;
     return;
   }
-
+  
   if (!S_ISREG(sb.st_mode)) {
     *data = NULL;
     return;
@@ -998,8 +1064,27 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     *data = NULL;
     return;
   }
+  data_alloc_type = ALLOC_MMAP;
 }
 /*}}}*/
+void free_ro_mapping(unsigned char *data, int len)/*{{{*/
+{
+  int r;
+
+  if(data_alloc_type == ALLOC_MALLOC) {
+    free(data);
+  }
+
+  if(data_alloc_type == ALLOC_MMAP) {
+    r = munmap(data, len);
+    if(r < 0) {
+      fprintf(stderr, "munmap() errord\n");
+      exit(1);
+    }
+  }
+}
+/*}}}*/
+
 static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 {
   static struct msg_src result;
@@ -1026,9 +1111,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
     src = setup_msg_src(filename);
     result = data_to_rfc822(src, data, len);
 
-    if (munmap(data, (size_t) len) < 0) {
-      perror("Could not munmap");
-    }
+    free_ro_mapping(data, len);
   }
   
   return result;

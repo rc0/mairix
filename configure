@@ -23,17 +23,10 @@
 if [ -f config.log ]; then rm -f config.log ; fi
 exec 5>config.log
 
-if [ "x${CC}" = "x" ]; then
-  MYCC="gcc"
-else
-  MYCC="${CC}"
-fi
-
-if [ "x${CFLAGS}" = "x" ]; then
-  MYCFLAGS="-O2 -Wall"
-else
-  MYCFLAGS="${CFLAGS}"
-fi
+MYCC=${CC:-gcc}
+MYCFLAGS=${CFLAGS:--O2 -Wall}
+MYCPPFLAGS=${CPPFLAGS:-}
+MYLDFLAGS=${LDFLAGS:-}
 
 # =======================================================================
 # Functions
@@ -114,6 +107,29 @@ EOF
   echo $result
 }
 #}}}
+#{{{ test_for_zlib
+test_for_zlib () {
+  cat > docheck.c <<EOF;
+#include <zlib.h>
+int main () {
+  const char *foo;
+  foo = zlibVersion();
+  return 0;
+}
+EOF
+  echo "Test program is" 1>&5
+  cat docheck.c 1>&5
+  ${MYCC} ${MYCPPFLAGS} ${MYCFLAGS} ${MYLDFLAGS} -o docheck docheck.c -lz 1>&5 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  rm -f docheck.c docheck
+  echo $result
+}
+#}}}
 #{{{ usage
 usage () {
   cat <<EOF;
@@ -161,6 +177,7 @@ PREFIX=/usr/local
 
 use_readline=yes
 bad_options=no
+use_gzip_mbox=yes
 
 # Parse options to configure
 for option
@@ -181,6 +198,12 @@ do
     ;;
   --docdir=* )
     DOCDIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
+  --enable-gzip-mbox )
+    use_gzip_mbox=yes
+    ;;
+  --disable-gzip-mbox )
+    use_gzip_mbox=no
     ;;
   -h | --help )
     usage
@@ -216,6 +239,17 @@ else
   printf "No\n"
 fi
 
+if [ $use_gzip_mbox == "yes" ]; then
+  printf "Checking for zlib : "
+  if [ `test_for_zlib` -eq 0 ]; then
+    printf "Yes\n";
+    DEFS="${DEFS} -DUSE_GZIP_MBOX"
+    LIBS="-lz"
+  else
+    printf "No (disabled gzipped mbox support)\n";
+  fi
+fi
+
 #{{{ Determine version number of the program.
 if [ -f version.txt ]; then
 	revision=`cat version.txt`
@@ -240,6 +274,9 @@ sed -e "s%@cc@%${MYCC}%; \
         s%@mandir@%${MANDIR}%; \
         s%@infodir@%${INFODIR}%; \
         s%@docdir@%${DOCDIR}%; \
+        s%@LIBS@%${LIBS}%; \
+        s%@CPPFLAGS@%${MYCPPFLAGS}%; \
+        s%@LDFLAGS@%${MYLDFLAGS}%; \
        " < Makefile.in > Makefile
 
 # Avoid editing Makefile instead of Makefile.in
