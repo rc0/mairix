@@ -119,7 +119,7 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
 /*}}}*/
 int valid_mh_filename_p(char *x)/*{{{*/
 {
-  char *p;
+  const char *p;
   
   if (!*x) return 0; /* Must not be empty */
   p = x;
@@ -164,10 +164,9 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
   return;
 }
 /*}}}*/
-static int has_child_dir(const char *base, const char *child)/*{{{*/
+static int child_stat(const char *base, const char *child, struct stat *sb)/*{{{*/
 {
   int result = 0;
-  struct stat sb;
   char *scratch;
   int len;
 
@@ -178,17 +177,56 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   strcat(scratch, "/");
   strcat(scratch, child);
   
-  if (stat(scratch,&sb) >= 0) {
-    if (S_ISDIR(sb.st_mode)) {
-      result = 1;
-    }
-  }
-
+  result = stat(scratch, sb);
   free(scratch);
   return result;
 }
 /*}}}*/
-int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
+static int has_child_file(const char *base, const char *child)/*{{{*/
+{
+  int result = 0;
+  int status;
+  struct stat sb;
+  
+  status = child_stat(base, child, &sb);
+  if ((status >= 0) && S_ISREG(sb.st_mode)) {
+    result = 1;
+  }
+
+  return result;
+}
+/*}}}*/
+static int has_child_dir(const char *base, const char *child)/*{{{*/
+{
+  int result = 0;
+  int status;
+  struct stat sb;
+  
+  status = child_stat(base, child, &sb);
+  if ((status >= 0) && S_ISDIR(sb.st_mode)) {
+    result = 1;
+  }
+
+  return result;
+}
+/*}}}*/
+enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name)/*{{{*/
+{
+  if (parent_is_maildir) {
+    /* Process any subdirectory that's not part of this maildir itself. */
+		if (!strcmp(de_name, "new") ||
+				!strcmp(de_name, "cur") ||
+				!strcmp(de_name, "tmp")) {
+			return TRAV_IGNORE;
+		} else {
+			return TRAV_PROCESS;
+		}
+  } else {
+    return TRAV_PROCESS;
+  }
+}
+/*}}}*/
+int filter_is_maildir(const char *path, const struct stat *sb)/*{{{*/
 {
   if (S_ISDIR(sb->st_mode)) {
     if (has_child_dir(path, "new") &&
@@ -200,15 +238,37 @@ int filter_is_maildir(const char *path, struct stat *sb)/*{{{*/
   return 0;
 }
 /*}}}*/
-int filter_is_mh(const char *path, struct stat *sb)/*{{{*/
+struct traverse_methods maildir_traverse_methods = {/*{{{*/
+  .filter = filter_is_maildir,
+  .scrutinize = scrutinize_maildir_entry
+};
+/*}}}*/
+enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*{{{*/
 {
-  /* At this stage, just check it's a directory. */
-  if (S_ISDIR(sb->st_mode)) {
-    return 1;
+  /* Don't allow sub-folders within a folder */
+  if (parent_is_mh) {
+    return TRAV_FINISH;
   } else {
-    return 0;
+    return TRAV_PROCESS;
   }
 }
+/*}}}*/
+int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
+{
+  int result = 0;
+  if (S_ISDIR(sb->st_mode)) {
+    if (has_child_file(path, ".xmhcache") ||
+        has_child_file(path, ".mh_sequences")) {
+      result = 1;
+    }
+  }
+  return result;
+}
+/*}}}*/
+struct traverse_methods mh_traverse_methods = {/*{{{*/
+  .filter = filter_is_mh,
+  .scrutinize = scrutinize_mh_entry
+};
 /*}}}*/
 #if 0
 static void scan_directory(char *folder_base, char *this_folder, enum folder_type ft, struct msgpath_array *arr)/*{{{*/
@@ -299,13 +359,13 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
   split_on_colons(folders, &n_raw_paths, &raw_paths);
   switch (ft) {
     case FT_MAILDIR:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_maildir, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &maildir_traverse_methods, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_maildir_message_paths(paths[i], msgs);
       }
       break;
     case FT_MH:
-      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_mh, omit_globs);
+      glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mh_traverse_methods, omit_globs);
       for (i=0; i<n_paths; i++) {
         get_mh_message_paths(paths[i], msgs);
       }

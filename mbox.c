@@ -521,11 +521,12 @@ static char *find_last_slash(char *in)/*{{{*/
   return result;
 }
 /*}}}*/
-static void append_shallow(char *path, int base_len, struct stat *sb, struct string_list *list, /*{{{*/
-                  int (*filter)(const char *, struct stat *),
+static int append_shallow(char *path, int base_len, struct stat *sb, struct string_list *list, /*{{{*/
+                  const struct traverse_methods *methods,
                   struct globber_array *omit_globs)
 {
-  if ((*filter)(path, sb)) {
+  int result = 0;
+  if ((methods->filter)(path, sb)) {
     if (!is_globber_array_match(omit_globs, path + base_len)) {
       struct string_list *nn = new(struct string_list);
       nn->data = new_string(path);
@@ -533,12 +534,14 @@ static void append_shallow(char *path, int base_len, struct stat *sb, struct str
       nn->prev = list->prev;
       list->prev->next = nn;
       list->prev = nn;
+      result = 1;
     }
   }
+  return result;
 }
 /*}}}*/
-static void append_deep(char *path, int base_len, struct stat *sb, struct string_list *list, /*{{{*/
-                        int (*filter)(const char *, struct stat *), 
+static int append_deep(char *path, int base_len, struct stat *sb, struct string_list *list, /*{{{*/
+                        const struct traverse_methods *methods,
                         struct globber_array *omit_globs)
 {
   /* path is dir : read its contents, call append_shallow or self accordingly. */
@@ -547,14 +550,18 @@ static void append_deep(char *path, int base_len, struct stat *sb, struct string
   char *xpath;
   DIR *d;
   struct dirent *de;
+  int appended_any = 0;
+  int this_file_matched;
 
-  append_shallow(path, base_len, sb, list, filter, omit_globs);
+  this_file_matched = append_shallow(path, base_len, sb, list, methods, omit_globs);
+  appended_any |= this_file_matched;
   
   if (S_ISDIR(sb->st_mode)) {
     xpath = new_array(char, strlen(path) + 2 + NAME_MAX);
     d = opendir(path);
     if (d) {
       while ((de = readdir(d))) {
+        enum traverse_check status;
         if (!strcmp(de->d_name, ".")) continue;
         if (!strcmp(de->d_name, "..")) continue;
         strcpy(xpath, path);
@@ -564,25 +571,46 @@ static void append_deep(char *path, int base_len, struct stat *sb, struct string
           /* Filter out omissions at this point, e.g. to avoid wasting time on
            * a recursive expansion of a tree that's going to get pruned in at
            * the deepest level anyway. */
-          if (stat(xpath, &sb2) >= 0) {
-            if (S_ISREG(sb2.st_mode)) {
-              append_shallow(xpath, base_len, &sb2, list, filter, omit_globs);
-            } else if (S_ISDIR(sb2.st_mode)) {
-              append_deep(xpath, base_len, &sb2, list, filter, omit_globs);
-            }
+          status = (methods->scrutinize)(this_file_matched, de->d_name);
+#if 0
+          /* debugging */
+          fprintf(stderr, "scrutinize for %s in %s returned %s\n",
+              de->d_name,
+              path,
+              (status == TRAV_FINISH) ? "FINISH" :
+              (status == TRAV_IGNORE) ? "IGNORE" : "PROCESS");
+#endif
+          switch (status) {
+            case TRAV_FINISH:
+              goto done_this_dir;
+            case TRAV_IGNORE:
+              goto next_path;
+            case TRAV_PROCESS:
+              if (stat(xpath, &sb2) >= 0) {
+                if (S_ISREG(sb2.st_mode)) {
+                  appended_any |= append_shallow(xpath, base_len, &sb2, list, methods, omit_globs);
+                } else if (S_ISDIR(sb2.st_mode)) {
+                  appended_any |= append_deep(xpath, base_len, &sb2, list, methods, omit_globs);
+                }
+              }
+              break;
           }
         }
+next_path:
+        (void) 0;
       }
+done_this_dir:
       closedir(d);
     }
     free(xpath);
   }
+  return appended_any;
 }
 /*}}}*/
 static void handle_wild(char *path, int base_len, char *last_comp, struct string_list *list,/*{{{*/
-                        void (*append)(char *, int, struct stat *, struct string_list *,
-                              int(*)(const char*, struct stat *), struct globber_array *),
-                        int (*filter)(const char *, struct stat *),
+                        int (*append)(char *, int, struct stat *, struct string_list *,
+                              const struct traverse_methods *, struct globber_array *),
+                        const struct traverse_methods *methods,
                         struct globber_array *omit_globs)
 {
   /* last_comp is the character within 'path' where the wildcard stuff starts. */
@@ -623,7 +651,7 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
            * later anyway. */
           had_matches = 1;
           if (stat(xpath, &xsb) >= 0) {
-            (*append)(xpath, base_len, &xsb, list, filter, omit_globs);
+            (*append)(xpath, base_len, &xsb, list, methods, omit_globs);
           }
         }
       }
@@ -643,14 +671,14 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
 }
 /*}}}*/
 static void handle_single(char *path, int base_len, struct string_list *list,/*{{{*/
-                          void (*append)(char *, int, struct stat *, struct string_list *,
-                                int(*)(const char*, struct stat *), struct globber_array *),
-                          int (*filter)(const char *, struct stat *),
+                          int (*append)(char *, int, struct stat *, struct string_list *,
+                                const struct traverse_methods *, struct globber_array *),
+                          const struct traverse_methods *methods,
                           struct globber_array *omit_globs)
 {
   struct stat sb;
   if (stat(path, &sb) >= 0) {
-    (*append)(path, base_len, &sb, list, filter, omit_globs);
+    (*append)(path, base_len, &sb, list, methods, omit_globs);
   } else {
     fprintf(stderr, "WARNING: Folder path %s does not exist\n", path);
   }
@@ -663,6 +691,17 @@ int filter_is_file(const char *x, struct stat *sb)/*{{{*/
   else
     return 0;
 }
+/*}}}*/
+enum traverse_check scrutinize_mbox_entry(int parent_is_mbox, const char *de_name, const struct stat *sb)/*{{{*/
+{
+  /* We have to keep looking at everything in this case. */
+  return TRAV_PROCESS;
+}
+/*}}}*/
+struct traverse_methods mbox_traverse_methods = {/*{{{*/
+  .filter = filter_is_file,
+  .scrutinize = scrutinize_mbox_entry
+};
 /*}}}*/
 static int is_wild(const char *x)/*{{{*/
 {
@@ -680,7 +719,12 @@ static int is_wild(const char *x)/*{{{*/
   return 0;
 }
 /*}}}*/
-static void handle_one_path(const char *folder_base, const char *path, struct string_list *list, int (*filter)(const char *, struct stat *), struct globber_array *omit_globs)/*{{{*/
+/*{{{ handle_one_path() */
+static void handle_one_path(const char *folder_base,
+    const char *path,
+    struct string_list *list,
+    const struct traverse_methods *methods,
+    struct globber_array *omit_globs)
 {
   /* Valid syntaxen ([.]=optional):
    * [xxx/]foo : single path
@@ -720,21 +764,26 @@ static void handle_one_path(const char *folder_base, const char *path, struct st
   if ((len >= 4) && !strcmp(full_path + (len - 3), "...")) {
     full_path[len - 3] = '\0';
     if (is_wild(last_comp)) {
-      handle_wild(full_path, base_len, last_comp, list, append_deep, filter, omit_globs);
+      handle_wild(full_path, base_len, last_comp, list, append_deep, methods, omit_globs);
     } else {
-      handle_single(full_path, base_len, list, append_deep, filter, omit_globs);
+      handle_single(full_path, base_len, list, append_deep, methods, omit_globs);
     }
   } else {
     if (is_wild(last_comp)) {
-      handle_wild(full_path, base_len, last_comp, list, append_shallow, filter, omit_globs);
+      handle_wild(full_path, base_len, last_comp, list, append_shallow, methods, omit_globs);
     } else {
-      handle_single(full_path, base_len, list, append_shallow, filter, omit_globs);
+      handle_single(full_path, base_len, list, append_shallow, methods, omit_globs);
     }
   }
   free(full_path);
 }
 /*}}}*/
-void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, int (*filter)(const char *, struct stat *), struct globber_array *omit_globs)/*{{{*/
+/*{{{ glob_and_expand_paths() */
+void glob_and_expand_paths(const char *folder_base,
+    char **paths_in, int n_in,
+    char ***paths_out, int *n_out,
+    const struct traverse_methods *methods,
+    struct globber_array *omit_globs)
 {
   struct string_list list;
   int i;
@@ -744,7 +793,7 @@ void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, c
 
   for (i=0; i<n_in; i++) {
     char *path = paths_in[i];
-    handle_one_path(folder_base, path, &list, filter, omit_globs); 
+    handle_one_path(folder_base, path, &list, methods, omit_globs); 
   }
 
   string_list_to_array(&list, n_out, paths_out);
@@ -766,7 +815,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
 
   if (mboxen_paths) {
     split_on_colons(mboxen_paths, &n_raw_paths, &raw_paths);
-    glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, filter_is_file, omit_globs);
+    glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
     extant_mboxen = new_array(struct extant_mbox, n_paths);
   } else {
     n_paths = 0;
