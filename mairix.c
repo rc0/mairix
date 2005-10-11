@@ -328,7 +328,7 @@ static void emit_int(int x)/*{{{*/
   return;
 }
 /*}}}*/
-volatile void out_of_mem(char *file, int line, size_t size)/*{{{*/
+void out_of_mem(char *file, int line, size_t size)/*{{{*/
 {
   /* Hairy coding ahead - can't use any [s]printf, itoa etc because
    * those might try to use the heap! */

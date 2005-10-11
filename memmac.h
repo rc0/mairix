@@ -25,7 +25,7 @@
 #define MEMMAC_H
 
 /*{{{ Safe alloc helpers (GCC extensions) */
-extern volatile void out_of_mem(char *file, int line, size_t size);
+extern void out_of_mem(char *file, int line, size_t size);
 
 #undef TEST_OOM
 
