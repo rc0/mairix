@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002-2004
+ * Copyright (C) Richard P. Curnow  2002-2004, 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -242,20 +242,20 @@ void insert_index_on_encoding(struct matches *m, int idx)/*{{{*/
   m->highest = idx;
 }
 /*}}}*/
-void add_token_in_file(int file_index, unsigned int hash_key, unsigned char *tok_text, struct toktable *table)/*{{{*/
+void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table)/*{{{*/
 {
   unsigned long hash;
   int index;
   struct token *tok;
-  unsigned char *lc_tok_text;
-  unsigned char *p;
+  char *lc_tok_text;
+  char *p;
 
-  lc_tok_text = (unsigned char *) new_string((char*)tok_text);
+  lc_tok_text = new_string((char*)tok_text);
   for (p = lc_tok_text; *p; p++) {
-    *p = tolower(*p);
+    *p = tolower(*(unsigned char *) p);
   }
   /* 2nd arg is string length */
-  hash = hashfn(lc_tok_text, p - lc_tok_text, hash_key);
+  hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
 
   if (table->n >= table->hwm) {
     enlarge_toktable(table);
@@ -274,7 +274,7 @@ void add_token_in_file(int file_index, unsigned int hash_key, unsigned char *tok
     /* Allocate new */
     struct token *new_tok = new_token();
     /* New token takes ownership of lc_tok_text, no need to free that later. */
-    new_tok->text = lc_tok_text;
+    new_tok->text = (char *) lc_tok_text;
     new_tok->hashval = hash; /* save full width for later */
     table->tokens[index] = new_tok;
     ++table->n;
@@ -301,7 +301,7 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
     *p = tolower(*(unsigned char *) p);
   }
   /* 2nd arg is string length */
-  hash = hashfn(lc_tok_text, p - lc_tok_text, hash_key);
+  hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
 
   if (table->n >= table->hwm) {
     enlarge_toktable2(table);

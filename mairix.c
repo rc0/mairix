@@ -431,7 +431,7 @@ static void usage(void)/*{{{*/
 int main (int argc, char **argv)/*{{{*/
 {
   struct msgpath_array *msgs;
-  struct database *db;
+  struct database *db = NULL;
 
   char *arg_rc_file_path = NULL;
   char *arg_mfolder = NULL;

@@ -207,7 +207,6 @@ struct globber_array *colon_sep_string_to_globber_array(const char *in)/*{{{*/
   result->n = n_strings;
   result->globs = new_array(struct globber *, n_strings);
   for (i=0; i<n_strings; i++) {
-    int len;
     result->globs[i] = make_globber(strings[i]);
     free(strings[i]);
   }

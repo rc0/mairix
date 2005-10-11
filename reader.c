@@ -35,9 +35,10 @@
 
 #include "reader.h"
 #include "memmac.h"
+#include "mairix.h"
 
 int read_increment(unsigned char **encpos) {/*{{{*/
-  char *j = *encpos;
+  unsigned char *j = *encpos;
   int result;
   unsigned char x0, x1, x2, x3;
   

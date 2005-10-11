@@ -298,7 +298,7 @@ static void write_header(char *data, unsigned int *uidata, struct database *db, 
   return;
 }
 /*}}}*/
-static char *write_type_table(struct database *db, unsigned int *uidata, unsigned char *data, unsigned char *cdata)/*{{{*/
+static char *write_type_table(struct database *db, unsigned int *uidata, char *data, char *cdata)/*{{{*/
 {
   int i;
   for (i=0; i<db->n_msgs; i++) {
@@ -376,10 +376,10 @@ static int compare_tokens(const void *a, const void *b)/*{{{*/
 /*}}}*/
 #endif
 
-static  char *write_mbox_headers(struct database *db, struct write_map *map, unsigned int *uidata, unsigned char *data, unsigned char *cdata)/*{{{*/
+static  char *write_mbox_headers(struct database *db, struct write_map *map, unsigned int *uidata, char *data, char *cdata)/*{{{*/
 {
   int i, len;
-  unsigned char *start_cdata = cdata;
+  char *start_cdata = cdata;
   
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
@@ -402,10 +402,10 @@ static  char *write_mbox_headers(struct database *db, struct write_map *map, uns
   return cdata;
 }
 /*}}}*/
-static char * write_mbox_checksums(struct database *db, struct write_map *map, unsigned int *uidata, unsigned char *data, unsigned char *cdata)/*{{{*/
+static char * write_mbox_checksums(struct database *db, struct write_map *map, unsigned int *uidata, char *data, char *cdata)/*{{{*/
 {
   int i, j;
-  unsigned char *start_cdata = cdata;
+  char *start_cdata = cdata;
 
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];

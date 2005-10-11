@@ -101,11 +101,11 @@ static void append_new_mboxen_to_db(struct database *db, struct extant_mbox *ext
   db->n_mboxen = n_reqd;
 }
 /*}}}*/
-void compute_checksum(const unsigned char *data, size_t len, checksum_t *csum)/*{{{*/
+void compute_checksum(const char *data, size_t len, checksum_t *csum)/*{{{*/
 {
   MD5_CTX md5;
   MD5Init(&md5);
-  MD5Update(&md5, data, len);
+  MD5Update(&md5, (unsigned char *) data, len);
   MD5Final(&md5);
   memcpy(csum, md5.digest, sizeof(md5.digest));
   return;
@@ -132,7 +132,7 @@ static int message_is_intact(struct mbox *mb, int idx, char *va, size_t len)/*{{
   return 0;
 }
 /*}}}*/
-static int find_number_intact(struct mbox *mb, unsigned char *va, size_t len)/*{{{*/
+static int find_number_intact(struct mbox *mb, char *va, size_t len)/*{{{*/
 {
   /* Pick up the common obvious case first - where new messages have been appended to the
      end of the mbox */
@@ -199,9 +199,9 @@ static signed char fromcheck_table[256];
 
 #undef DEBUG_DFA
 
-static int looks_like_from_separator(off_t n, unsigned char *va, size_t len, int verbose)/*{{{*/
+static int looks_like_from_separator(off_t n, char *va, size_t len, int verbose)/*{{{*/
 {
-  unsigned char p;
+  char p;
   int current_state = 0;
   int result = 0;
 
@@ -210,9 +210,9 @@ static int looks_like_from_separator(off_t n, unsigned char *va, size_t len, int
   while (n < len) {
     p = va[n++];
     if (verbose) {
-      printf("current_state=%d, p=%02x (%1c) ", current_state, (int)p, ((p>=32)&&(p<=126))?p:'.');
+      printf("current_state=%d, p=%02x (%1c) ", current_state, (int)(unsigned char)p, ((p>=32)&&(p<=126))?p:'.');
     }
-    current_state = fromcheck_next_state(current_state, (int)fromcheck_table[(int)p]);
+    current_state = fromcheck_next_state(current_state, (int)fromcheck_table[(int)(unsigned char)p]);
     if (verbose) {
       printf("next_state=%d\n", current_state);
     }
@@ -255,7 +255,7 @@ static void init_fromcheck_table()/*{{{*/
   fromcheck_table['='] = FS_OTHEREMAIL;
 }
 /*}}}*/
-static off_t find_next_from(off_t n, unsigned char *va, size_t len)/*{{{*/
+static off_t find_next_from(off_t n, char *va, size_t len)/*{{{*/
 {
   unsigned char c;
   unsigned long hit;
@@ -300,7 +300,7 @@ scan_again:
   return -1;
 }
 /*}}}*/
-static off_t start_of_next_line(off_t n, unsigned char *va, size_t len)/*{{{*/
+static off_t start_of_next_line(off_t n, char *va, size_t len)/*{{{*/
 {
   unsigned char c;
   /* We are always starting from 'From ' so we can advance before testing */
@@ -318,7 +318,7 @@ static off_t start_of_next_line(off_t n, unsigned char *va, size_t len)/*{{{*/
 /*}}}*/
 
 
-static struct message_list *build_new_message_list(struct mbox *mb, unsigned char *va, size_t len, int *n_messages)/*{{{*/
+static struct message_list *build_new_message_list(struct mbox *mb, char *va, size_t len, int *n_messages)/*{{{*/
 {
   struct message_list *result, *here, *next;
   off_t start_from, start_pos, end_from;
@@ -393,7 +393,7 @@ done:
 
 }
 /*}}}*/
-static void append_new_messages(struct mbox *mb, struct message_list *list, int n, unsigned char *va)/*{{{*/
+static void append_new_messages(struct mbox *mb, struct message_list *list, int n)/*{{{*/
 {
   int j;
   struct message_list *here, *next;
@@ -417,7 +417,7 @@ static void append_new_messages(struct mbox *mb, struct message_list *list, int 
   mb->n_msgs = N;
 }
 /*}}}*/
-static void rescan_mbox(struct mbox *mb, unsigned char *va, size_t len)/*{{{*/
+static void rescan_mbox(struct mbox *mb, char *va, size_t len)/*{{{*/
 {
   /* We get here if it's determined that
    * 1. the mbox file still exists
@@ -431,7 +431,7 @@ static void rescan_mbox(struct mbox *mb, unsigned char *va, size_t len)/*{{{*/
   /* Find the last message in the box that appears to be intact. */
   mb->n_old_msgs_valid = find_number_intact(mb, va, len);
   new_messages = build_new_message_list(mb, va, len, &n_new_messages);
-  append_new_messages(mb, new_messages, n_new_messages, va);
+  append_new_messages(mb, new_messages, n_new_messages);
 }
 /*}}}*/
 static void deaden_mbox(struct mbox *mb)/*{{{*/
@@ -684,7 +684,7 @@ static void handle_single(char *path, int base_len, struct string_list *list,/*{
   }
 }
 /*}}}*/
-int filter_is_file(const char *x, struct stat *sb)/*{{{*/
+static int filter_is_file(const char *x, const struct stat *sb)/*{{{*/
 {
   if (S_ISREG(sb->st_mode))
     return 1;
@@ -692,7 +692,7 @@ int filter_is_file(const char *x, struct stat *sb)/*{{{*/
     return 0;
 }
 /*}}}*/
-enum traverse_check scrutinize_mbox_entry(int parent_is_mbox, const char *de_name, const struct stat *sb)/*{{{*/
+enum traverse_check scrutinize_mbox_entry(int parent_is_mbox, const char *de_name)/*{{{*/
 {
   /* We have to keep looking at everything in this case. */
   return TRAV_PROCESS;
@@ -871,7 +871,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
         int len;
         create_ro_mapping(mb->path, &va, &len);
         if (va) {
-          rescan_mbox(mb, va, len);
+          rescan_mbox(mb, (char *) va, len);
           free_ro_mapping(va, len);
         } else if (!len) {
           mb->n_old_msgs_valid = mb->n_msgs = 0;
@@ -931,7 +931,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
       start = mb->start[j];
       len   = mb->len[j];
       msg_src = setup_msg_src(mb->path, start, len);
-      r8 = data_to_rfc822(msg_src, va + start, len);
+      r8 = data_to_rfc822(msg_src, (char *) va + start, len);
       if (r8) {
         if (verbose) {
           printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));

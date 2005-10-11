@@ -287,7 +287,7 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
     enc_hi = idx;
 
     text = data + in->tok_offsets[i];
-    hash = hashfn(text, strlen(text), hash_key);
+    hash = hashfn((unsigned char *) text, strlen(text), hash_key);
 
     nt = new(struct token);
     nt->hashval = hash;
@@ -297,7 +297,7 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
     nt->match0.n = enc_len;
     nt->match0.highest = enc_hi;
     assert(nt->match0.highest < n_msgs);
-    nt->match0.msginfo = new_array(char, nt->match0.max);
+    nt->match0.msginfo = new_array(unsigned char, nt->match0.max);
     memcpy(nt->match0.msginfo, enc, nt->match0.n);
 
     index = hash & out->mask;
@@ -369,7 +369,7 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
 /*}}}*/
 
     text = data + in->tok_offsets[i];
-    hash = hashfn(text, strlen(text), hash_key);
+    hash = hashfn((unsigned char *) text, strlen(text), hash_key);
 
     nt = new(struct token2);
     nt->hashval = hash;
@@ -380,7 +380,7 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
     nt->match0.n = enc0_len;
     nt->match0.highest = enc0_hi;
     assert(nt->match0.highest < n_msgs);
-    nt->match0.msginfo = new_array(char, nt->match0.max);
+    nt->match0.msginfo = new_array(unsigned char, nt->match0.max);
     memcpy(nt->match0.msginfo, enc0, nt->match0.n);
     /*}}}*/
     /*{{{ set up match1 chain */
@@ -388,7 +388,7 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
     nt->match1.n = enc1_len;
     nt->match1.highest = enc1_hi;
     assert(nt->match1.highest < n_msgs);
-    nt->match1.msginfo = new_array(char, nt->match1.max);
+    nt->match1.msginfo = new_array(unsigned char, nt->match1.max);
     memcpy(nt->match1.msginfo, enc1, nt->match1.n);
     /*}}}*/
 
@@ -463,7 +463,8 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
         break;
       case DB_MSG_MBOX:
         {
-          int mbi, msgi, n;
+          unsigned int mbi, msgi;
+          int n;
           struct mbox *mb;
           result->type[i] = MTY_MBOX;
           decode_mbox_indices(input->path_offsets[i], &mbi, &msgi);
@@ -554,17 +555,26 @@ static unsigned char special_table[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  /* f0-ff */
 };
 
-#define CHAR_VALID(x,mask) (isalnum(x) || (special_table[(unsigned int)(unsigned char) x] & mask))
-
+#if 0
+#define CHAR_VALID(x,mask) (isalnum((unsigned char) x) || (special_table[(unsigned int)(unsigned char) x] & mask))
+#endif
+static inline int char_valid_p(char x, unsigned int mask)/*{{{*/
+{
+  unsigned char xx = (unsigned char) x;
+  if (isalnum(xx)) return 1;
+  else if (special_table[(unsigned int) xx] & mask) return 1;
+  else return 0;
+}
+/*}}}*/
 static void tokenise_string(int file_index, unsigned int hash_key, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
-  unsigned char *ss, *es, old_es;
-  ss = (unsigned char *) data;
+  char *ss, *es, old_es;
+  ss = data;
   for (;;) {
-    while (*ss && !CHAR_VALID(*ss,match_mask)) ss++;
+    while (*ss && !char_valid_p(*ss,match_mask)) ss++;
     if (!*ss) break;
     es = ss + 1;
-    while (*es && CHAR_VALID(*es,match_mask)) es++;
+    while (*es && char_valid_p(*es,match_mask)) es++;
     
     /* deal with token [ss,es) */
     old_es = *es;
@@ -580,14 +590,14 @@ static void tokenise_string(int file_index, unsigned int hash_key, struct toktab
 /*}}}*/
 static void tokenise_html_string(int file_index, unsigned int hash_key, struct toktable *table, char *data)/*{{{*/
 {
-  unsigned char *ss, *es, old_es;
+  char *ss, *es, old_es;
 
   /* FIXME : Probably want to rewrite this as an explicit FSM */
   
-  ss = (unsigned char *) data;
+  ss = data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
-    while (*ss && !CHAR_VALID(*ss, 1)) {
+    while (*ss && !char_valid_p(*ss, 1)) {
       if (*ss++ == '<') {
         /* Skip over HTML tag */
         while (*ss && (*ss != '>')) ss++;
@@ -596,7 +606,7 @@ static void tokenise_html_string(int file_index, unsigned int hash_key, struct t
     if (!*ss) break;
     
     es = ss + 1;
-    while (*es && CHAR_VALID(*es, 1)) es++;
+    while (*es && char_valid_p(*es, 1)) es++;
     
     /* deal with token [ss,es) */
     old_es = *es;

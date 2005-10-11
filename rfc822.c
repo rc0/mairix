@@ -1056,7 +1056,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     return;
   }
 
-  *data = (char *) mmap(0, *len, PROT_READ, MAP_SHARED, fd, 0);
+  *data = (unsigned char *) mmap(0, *len, PROT_READ, MAP_SHARED, fd, 0);
   if (close(fd) < 0)
     perror("close");
   if (*data == MAP_FAILED) {
@@ -1096,10 +1096,10 @@ static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
   int len;
-  char *data;
+  unsigned char *data;
   struct rfc822 *result;
 
-  create_ro_mapping(filename, (unsigned char **)&data, &len);
+  create_ro_mapping(filename, &data, &len);
 
   /* Don't process empty files */
   result = NULL;
@@ -1109,7 +1109,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
     struct msg_src *src;
     /* Now process the data */
     src = setup_msg_src(filename);
-    result = data_to_rfc822(src, data, len);
+    result = data_to_rfc822(src, (char *) data, len);
 
     free_ro_mapping(data, len);
   }

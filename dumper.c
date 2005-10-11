@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2004
+ * Copyright (C) Richard P. Curnow  2004, 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -47,7 +47,7 @@ static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const cha
   printf("%d entries\n", n);
   for (i=0; i<n; i++) {
     printf("Word %d : <%s>\n", i, db->data + tbl->tok_offsets[i]);
-    foo = db->data + tbl->enc_offsets[i];
+    foo = (unsigned char *) db->data + tbl->enc_offsets[i];
     j = 0;
     on_line = 0;
     printf("  ");
@@ -86,7 +86,7 @@ void dump_database(char *filename)
         break;
       case DB_MSG_MBOX:
         {
-          int mbix, msgix;
+          unsigned int mbix, msgix;
           decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
 
           printf("MBOX %d, msg %d, offset=%d, size=%d, tid=%d",

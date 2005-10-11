@@ -352,7 +352,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
   }
   for (i=0; i<db->n_msgs; i++) {
     char *token = NULL;
-    int mbix, msgix;
+    unsigned int mbix, msgix;
     switch (db->msg_type[i]) {
       case DB_MSG_FILE:
         token = db->data + db->path_offsets[i];
@@ -492,6 +492,7 @@ static void find_size_matches_in_table(struct read_db *db, char *size_expr, char
   int has_start, has_end, start_cond, end_cond;
   int i;
   
+  start = end = -1; /* avoid compiler warning about uninitialised variables. */
   parse_size_range(size_expr, &has_start, &start, &has_end, &end);
   if (has_start && has_end) {
     /* Allow user to put the endpoints in backwards */
@@ -639,7 +640,7 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
 
   start = *mbox_data + db->mtime_table[msg_index];
   *msg_len = db->size_table[msg_index];
-  compute_checksum(start, *msg_len, &csum);
+  compute_checksum((char *)start, *msg_len, &csum);
   if (!memcmp((db->data + db->mbox_checksum_table[mbi] + (msgi * sizeof(checksum_t))), &csum, sizeof(checksum_t))) {
     *msg_data = start;
   } else {
@@ -1038,7 +1039,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               break;
             case DB_MSG_MBOX:
               {
-                int mbix, msgix;
+                unsigned int mbix, msgix;
                 int start, len, after_end;
                 start = db->mtime_table[i];
                 len   = db->size_table[i];

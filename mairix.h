@@ -306,7 +306,7 @@ void free_token(struct token *x);
 void free_token2(struct token2 *x);
 void free_toktable(struct toktable *x);
 void free_toktable2(struct toktable2 *x);
-void add_token_in_file(int file_index, unsigned int hash_key, unsigned char *tok_text, struct toktable *table);
+void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table);
 void check_and_enlarge_encoding(struct matches *m);
 void insert_index_on_encoding(struct matches *m, int idx);
 void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1);
@@ -325,13 +325,12 @@ int cull_dead_messages(struct database *db, int do_integrity_checks);
 void build_mbox_lists(struct database *db, const char *folder_base,
     const char *mboxen_paths, struct globber_array *omit_globs);
 int add_mbox_messages(struct database *db);
-void compute_checksum(const unsigned char *data, size_t len, checksum_t *csum);
+void compute_checksum(const char *data, size_t len, checksum_t *csum);
 void cull_dead_mboxen(struct database *db);
 unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
 void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
 int verify_mbox_size_constraints(struct database *db);
 void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, const struct traverse_methods *methods, struct globber_array *omit_globs);
-int filter_is_file(const char *x, struct stat *sb);
 
 /* In glob.c */
 struct globber;
