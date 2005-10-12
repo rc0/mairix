@@ -157,9 +157,15 @@ Fine tuning of the installation directories:
   --mandir=DIR           man documentation [PREFIX/man]
   --docdir=DIR           other documentation [PREFIX/doc/mairix-\$version]
 
+Other options:
+  --enable-gzip-mbox     attempt to support gzipped mboxes (requires zlib)
+  --disable-gzip-mbox    don't attempt to support gzipped mboxes
+
 Some influential environment variables:
   CC          C compiler command
   CFLAGS      C compiler flags
+  CPPFLAGS    Extra C preprocessor flags, e.g. -I<include dir> if you
+              have header files in a nonstandard directory <include dir>
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
               nonstandard directory <lib dir>
 
