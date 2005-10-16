@@ -38,7 +38,7 @@ close (OUT);
 
 
 unlink "make_release";
-unlink "mairix.spec.sample"
+unlink "mairix.spec.sample";
 
 chdir $here;
 system ("tar cvf - $subdir | gzip -9 > ${subdir}.tar.gz");
