@@ -1,0 +1,47 @@
+#!/usr/bin/env perl
+
+$version = shift || die "Usage : $0 <version>\n";
+$subdir = "mairix-${version}";
+
+unless (-d "RELEASES") {
+  mkdir "RELEASES", 0755;
+}
+
+system ("git-tag -s $version");
+die "git-tag failed" if ($? != 0);
+if (-d $subdir) {
+  system ("rm -rf $subdir");
+}
+
+system ("git-tar-tree $version RELEASES/${subdir} | tar xf -");
+die "git-tar-tree failed" if ($? != 0);
+
+chdir "RELEASES";
+$here = qx/pwd/;
+chomp $here;
+chdir $subdir;
+
+system("make -f Makefile.in mairix.txt");
+
+open (OUT, ">version.txt");
+print OUT $version."\n";
+close OUT;
+
+open (IN, "<mairix.spec.sample");
+open (OUT, ">mairix.spec");
+while (<IN>) {
+  s/\@\@VERSION\@\@/$version/;
+  print OUT;
+}
+close (IN);
+close (OUT);
+
+
+unlink "make_release";
+unlink "mairix.spec.sample"
+
+chdir $here;
+system ("tar cvf - $subdir | gzip -9 > ${subdir}.tar.gz");
+system ("gpg -b -a -o ${subdir}-tar-gz-asc.txt ${subdir}.tar.gz");
+
+
