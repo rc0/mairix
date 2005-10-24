@@ -245,12 +245,9 @@ struct traverse_methods maildir_traverse_methods = {/*{{{*/
 /*}}}*/
 enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*{{{*/
 {
-  /* Don't allow sub-folders within a folder */
-  if (parent_is_mh) {
-    return TRAV_FINISH;
-  } else {
-    return TRAV_PROCESS;
-  }
+  /* Have to allow sub-folders within a folder until we think of a better
+   * solution.  */
+  return TRAV_PROCESS;
 }
 /*}}}*/
 int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
