@@ -362,6 +362,13 @@ static void print_copyright(void)/*{{{*/
           PROGRAM_VERSION);
 }
 /*}}}*/
+static void print_version(void)/*{{{*/
+{
+  fprintf(stdout,
+          "mairix %s\n",
+          PROGRAM_VERSION);
+}
+/*}}}*/
 static void usage(void)/*{{{*/
 {
   print_copyright();
@@ -372,6 +379,7 @@ static void usage(void)/*{{{*/
          "mairix [-f <rcfile>] -d                        : Dump database to stdout\n"
          "-h           : show this help\n"
          "-f <rcfile>  : use alternative rc file (default ~/.mairixrc)\n"
+         "-V           : show version\n"
          "-v           : be verbose\n"
          "-p           : purge messages that no longer exist\n"
          "-a           : add new matches to match folder (default : clear it first)\n"
@@ -481,6 +489,9 @@ int main (int argc, char **argv)/*{{{*/
       do_forced_unlock = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
+    } else if (!strcmp(*argv, "-V") || !strcmp(*argv, "--version")) {
+      print_version();
+      exit(0);
     } else if (!strcmp(*argv, "-h") ||
                !strcmp(*argv, "--help")) {
       do_help = 1;
