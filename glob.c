@@ -97,9 +97,9 @@ struct globber *make_globber(const char *wildstring)/*{{{*/
   unsigned int mask;
 
   result = new(struct globber);
-  memset(&result->pat, 0x00, 256*sizeof(unsigned long));
-  memset(&result->starpat, 0x00, sizeof(unsigned long));
-  memset(&result->twostarpat, 0x00, sizeof(unsigned long));
+  memset(&result->pat, 0x00, 256*sizeof(unsigned int));
+  memset(&result->starpat, 0x00, sizeof(unsigned int));
+  memset(&result->twostarpat, 0x00, sizeof(unsigned int));
   mask = 0x1;
 
   n = 0;
