@@ -1,0 +1,17 @@
+*.o
+*.swp
+.RELEASES
+Makefile
+RELEASES
+config.log
+datescan.c
+fromcheck.c
+mairix
+mairix.dvi
+mairix.html
+mairix.info
+mairix.pdf
+mairix.txt
+make.log
+test
+version.h

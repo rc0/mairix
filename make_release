@@ -39,6 +39,8 @@ close (OUT);
 
 unlink "make_release";
 unlink "mairix.spec.sample";
+unlink ".gitignore";
+unlink "dfasyn/.gitignore";
 
 chdir $here;
 system ("tar cvf - $subdir | gzip -9 > ${subdir}.tar.gz");

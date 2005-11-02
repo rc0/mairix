@@ -1,0 +1,5 @@
+*.o
+dfasyn
+parse.[ch]
+parse.output
+scan.c
