@@ -117,7 +117,7 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
   return;
 }
 /*}}}*/
-int valid_mh_filename_p(char *x)/*{{{*/
+int valid_mh_filename_p(const char *x)/*{{{*/
 {
   const char *p;
   
@@ -247,7 +247,11 @@ enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*
 {
   /* Have to allow sub-folders within a folder until we think of a better
    * solution.  */
-  return TRAV_PROCESS;
+  if (valid_mh_filename_p(de_name)) {
+    return TRAV_IGNORE;
+  } else {
+    return TRAV_PROCESS;
+  }
 }
 /*}}}*/
 int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
@@ -256,8 +260,12 @@ int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
   if (S_ISDIR(sb->st_mode)) {
     if (has_child_file(path, ".xmhcache") ||
         has_child_file(path, ".mh_sequences") ||
+        /* Sylpheed */
         has_child_file(path, ".sylpheed_cache") ||
-        has_child_file(path, ".sylpheed_mark")) {
+        has_child_file(path, ".sylpheed_mark") || 
+        /* Evolution */
+        has_child_file(path, "cmeta") ||
+        has_child_file(path, "summary")) {
       result = 1;
     }
   }
