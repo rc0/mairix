@@ -610,6 +610,7 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
   create_ro_mapping(path, &data, &len);
   if (data) {
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
+    fprintf(out, "X-source-folder: %s\n", path);
     fwrite (data, sizeof(unsigned char), len, out);
     free_ro_mapping(data, len);
   }
@@ -658,7 +659,11 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 
   get_validated_mbox_msg(db, msg_index, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
   if (msg_start) {
+    /* Artificial from line, we don't have the envelope sender so this is
+       going to be artificial anyway. */
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
+    fprintf(out, "X-source-folder: %s\n",
+            db->data + db->mbox_paths_table[mbox_index]);
     fwrite(msg_start, sizeof(unsigned char), msg_len, out);
   }
   if (mbox_start) {
@@ -679,8 +684,8 @@ static void try_copy_to_path(struct read_db *db, int msg_index, char *target_pat
   if (start) {
     out = fopen(target_path, "wb");
     if (out) {
-      /* Artificial from line, we don't have the envelope sender so this is
-         going to be artificial anyway. */
+      fprintf(out, "X-source-folder: %s\n",
+              db->data + db->mbox_paths_table[mbi]);
       fwrite(start, sizeof(char), msg_len, out);
       fclose(out);
     }
