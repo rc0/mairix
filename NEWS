@@ -13,6 +13,9 @@ NEW IN VERSION 0.17
 * Allow '.' on the ends of numeric filenames in MH folders (to work
   with Evolution)
 * Update .PHONY target so that 'make install' etc are more reliable.
+* Add X-source-folder header to indicate the original folder of a match found
+  in an mbox.
+* Migration to git for revision control.
 
 NEW IN VERSION 0.16.1
 =====================
