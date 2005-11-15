@@ -245,7 +245,7 @@ else
   printf "No\n"
 fi
 
-if [ $use_gzip_mbox == "yes" ]; then
+if [ $use_gzip_mbox = "yes" ]; then
   printf "Checking for zlib : "
   if [ `test_for_zlib` -eq 0 ]; then
     printf "Yes\n";
