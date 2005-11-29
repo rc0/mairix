@@ -6,6 +6,7 @@
  * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
  * gzip mbox support Copyright (C) Ico Doornekamp 2005
  * gzip mbox support Copyright (C) Felipe Gustavo de Almeida 2005
+ * bzip2 mbox support Copyright (C) Paramjit Oberoi 2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as

@@ -1,3 +1,9 @@
+NEW IN VERSION 0.18
+===================
+
+* Support bzip2'd mbox folders
+* Fix bug in configure script that made it failed on plain Bourne shells.
+
 NEW IN VERSION 0.17
 ===================
 
