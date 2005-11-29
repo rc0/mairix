@@ -35,6 +35,9 @@
 #ifdef USE_GZIP_MBOX
 #  include <zlib.h>
 #endif
+#ifdef USE_BZIP_MBOX
+#  include <bzlib.h>
+#endif
 
 struct DLL {/*{{{*/
   struct DLL *next;
@@ -971,26 +974,98 @@ struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length)/*{{{*
 
 int data_alloc_type;
 
-#ifdef USE_GZIP_MBOX
+#if USE_GZIP_MBOX || USE_BZIP_MBOX
+
 #define SIZE_STEP (8 * 1024 * 1024)
-static int is_gzip(const char *filename) {/*{{{*/
+
+#define COMPRESSION_NONE 0
+#define COMPRESSION_GZIP 1
+#define COMPRESSION_BZIP 2
+
+static int get_compression_type(const char *filename) {/*{{{*/
   size_t len = strlen(filename);
-  int ptr = len - 3;
+  int ptr;
+  
+#ifdef USE_GZIP_MBOX
+  ptr = len - 3;
   if (len > 3 && strncasecmp(filename + ptr, ".gz", 3) == 0) {
-    return 1;
+    return COMPRESSION_GZIP;
+  }
+#endif
+
+#ifdef USE_BZIP_MBOX
+  ptr = len - 4;
+  if (len > 3 && strncasecmp(filename + ptr, ".bz2", 4) == 0) {
+    return COMPRESSION_BZIP;
+  }
+#endif
+
+  return COMPRESSION_NONE;
+}
+/*}}}*/
+
+static int is_compressed(const char *filename) {/*{{{*/
+  return (get_compression_type(filename) != COMPRESSION_NONE);
+}
+/*}}}*/
+
+struct zFile {/*{{{*/
+  union {
+    /* Both gzFile and BZFILE* are defined as void pointers
+     * in their respective header files.
+     */
+    gzFile gzf;
+    BZFILE *bzf;
+    void *zptr;
+  };
+  int type;
+};
+/*}}}*/
+ 
+static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
+  struct zFile *zf = new(struct zFile);
+  
+  zf->type = get_compression_type(filename);
+  if (zf->type == COMPRESSION_GZIP) {
+    zf->gzf = gzopen(filename, "rb");
   } else {
+    zf->bzf = BZ2_bzopen(filename, "rb");
+  }
+  
+  if (!zf->zptr) {
+    free(zf);
     return 0;
+  }
+  
+  return zf;
+}
+/*}}}*/
+static void zclose(struct zFile *zf) {/*{{{*/
+  if (zf->type == COMPRESSION_GZIP) {
+    gzclose(zf->gzf);
+  } else {
+    BZ2_bzclose(zf->bzf);
+  }
+  free(zf);
+}
+/*}}}*/
+static int zread(struct zFile *zf, void *buf, int len) {/*{{{*/
+  if (zf->type == COMPRESSION_GZIP) {
+    return gzread(zf->gzf, buf, len);
+  } else {
+    return BZ2_bzread(zf->bzf, buf, len);
   }
 }
 /*}}}*/
 #endif
+
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
 
-#ifdef USE_GZIP_MBOX
-  gzFile gzf;
+#if USE_GZIP_MBOX || USE_BZIP_MBOX
+  struct zFile *zf;
 #endif
 
   if (stat(filename, &sb) < 0) 
@@ -1000,30 +1075,30 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     return;
   }
   
-#ifdef USE_GZIP_MBOX
-  if(is_gzip(filename)) {
+#if USE_GZIP_MBOX || USE_BZIP_MBOX
+  if(is_compressed(filename)) {
     if(verbose) {
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
   
-    gzf = gzopen(filename, "rb");
-    if (!gzf) {
+    zf = zopen(filename, "rb");
+    if (!zf) {
       fprintf(stderr, "Could not open %s\n", filename);
       *data = NULL;
       *len = 0;
       return;
     }
     *data = new_array(unsigned char, SIZE_STEP);
-    *len = gzread(gzf, *data, SIZE_STEP);
+    *len = zread(zf, *data, SIZE_STEP);
     if (*len >= SIZE_STEP) {
       int extra_bytes_read;
       do {
         *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
-        extra_bytes_read = gzread(gzf, *data + *len, SIZE_STEP);
+        extra_bytes_read = zread(zf, *data + *len, SIZE_STEP);
         *len += extra_bytes_read;
       } while (extra_bytes_read > 0);
     }
-    gzclose(gzf);
+    zclose(zf);
     
     if(*len > 0) {
       *data = grow_array(unsigned char, *len, *data);

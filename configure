@@ -130,6 +130,29 @@ EOF
   echo $result
 }
 #}}}
+#{{{ test_for_bzlib
+test_for_bzlib () {
+  cat > docheck.c <<EOF;
+#include <bzlib.h>
+int main () {
+  const char *foo;
+  foo = BZ2_bzlibVersion();
+  return 0;
+}
+EOF
+  echo "Test program is" 1>&5
+  cat docheck.c 1>&5
+  ${MYCC} ${MYCPPFLAGS} ${MYCFLAGS} ${MYLDFLAGS} -o docheck docheck.c -lbz2 1>&5 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  rm -f docheck.c docheck
+  echo $result
+}
+#}}}
 #{{{ usage
 usage () {
   cat <<EOF;
@@ -160,6 +183,8 @@ Fine tuning of the installation directories:
 Other options:
   --enable-gzip-mbox     attempt to support gzipped mboxes (requires zlib)
   --disable-gzip-mbox    don't attempt to support gzipped mboxes
+  --enable-bzip-mbox     attempt to support bzip2ed mboxes (requires bzlib)
+  --disable-bzip-mbox    don't attempt to support bzip2ed mboxes
 
 Some influential environment variables:
   CC          C compiler command
@@ -184,6 +209,7 @@ PREFIX=/usr/local
 use_readline=yes
 bad_options=no
 use_gzip_mbox=yes
+use_bzip_mbox=yes
 
 # Parse options to configure
 for option
@@ -210,6 +236,12 @@ do
     ;;
   --disable-gzip-mbox )
     use_gzip_mbox=no
+    ;;
+  --enable-bzip-mbox )
+    use_bzip_mbox=yes
+    ;;
+  --disable-bzip-mbox )
+    use_bzip_mbox=no
     ;;
   -h | --help )
     usage
@@ -253,6 +285,17 @@ if [ $use_gzip_mbox = "yes" ]; then
     LIBS="-lz"
   else
     printf "No (disabled gzipped mbox support)\n";
+  fi
+fi
+
+if [ $use_bzip_mbox == "yes" ]; then
+  printf "Checking for bzlib : "
+  if [ `test_for_bzlib` -eq 0 ]; then
+    printf "Yes\n";
+    DEFS="${DEFS} -DUSE_BZIP_MBOX"
+    LIBS="${LIBS} -lbz2"
+  else
+    printf "No (disabled bzip2ed mbox support)\n";
   fi
 fi
 
