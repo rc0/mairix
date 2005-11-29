@@ -384,6 +384,12 @@ Regular files that are mbox folder candidates are examined internally.  Only
 files containing standard mbox @samp{From } separator lines will be scanned for
 messages.
 
+If a regular file has a name ending in @file{.gz}, and gzip support is compiled
+into the mairix binary, the file will be treated as a gzipped mbox.  
+
+If a regular file has a name ending in @file{.bz2}, and bzip support is compiled
+into the mairix binary, the file will be treated as a bzip2'd mbox.  
+
 More than one line starting with @samp{mbox} can be included.  In this case,
 mairix joins the lines together with colons as though a single list of folders had
 been given on a single very long line.
