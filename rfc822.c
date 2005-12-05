@@ -387,11 +387,21 @@ static enum encoding_type decode_encoding_type(char *e)/*{{{*/
 static char *copy_string_start_end_unquote(char *start, char *end)/*{{{*/
 {
   char *result, *p, *q;
-  result = new_array(char, 1 + (end - start));
-  for (p=result, q=start; q < end; q++) {
-    if (*q != '"') *p++ = *q;
+  char *squote;
+  squote = (char *) memchr(start, '"', end - start);
+  if (squote) {
+    /* Quoted string; only do the portion between the quotes. */
+    result = new_array(char, 1 + (end - squote));
+    for (p=result, q=squote+1; q < end; q++) {
+      if (*q == '"') break;
+      *p++ = *q;
+    }
+    *p = 0;
+  } else {
+    result = new_array(char, 1 + (end - start));
+    memcpy(result, start, end - start);
+    result[end - start] = 0;
   }
-  *p = 0;
   return result;
 }
 /*}}}*/
