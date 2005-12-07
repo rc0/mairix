@@ -556,7 +556,7 @@ static char *mk_maildir_path(int token, char *output_dir, int is_in_new)/*{{{*/
   sprintf(uniq_buf, "123456789.%d.mairix", token);
   strcat(result, uniq_buf);
   if (!is_in_new) {
-    strcat(uniq_buf, ":2,S");
+    strcat(result, ":2,S");
   }
   return result;
 }
