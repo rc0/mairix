@@ -543,20 +543,22 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
 }
 /*}}}*/
 
-static char *mk_maildir_path(int token, char *output_dir, int is_in_new)/*{{{*/
+static char *mk_maildir_path(int token, char *output_dir, int is_in_new, const char *flags)/*{{{*/
 {
   char *result; 
   char uniq_buf[48];
   int len;
+  int flag_len;
 
   len = strlen(output_dir) + 64; /* oversize */
-  result = new_array(char, len);
+  flag_len = flags ? strlen(flags) : 0;
+  result = new_array(char, len + flag_len);
   strcpy(result, output_dir);
   strcat(result, is_in_new ? "/new/" : "/cur/");
   sprintf(uniq_buf, "123456789.%d.mairix", token);
   strcat(result, uniq_buf);
-  if (!is_in_new) {
-    strcat(result, ":2,S");
+  if (flags) {
+    strcat(result, flags);
   }
   return result;
 }
@@ -591,6 +593,23 @@ static int looks_like_maildir_new_p(const char *p)/*{{{*/
   } else {
     return 0;
   }
+}
+/*}}}*/
+static char *get_maildir_flags(char *p)/*{{{*/
+{
+  char *x;
+  x = p + strlen(p);
+  for (x--; x>p; x--) {
+    switch (*x) {
+      case ':':
+        return x;
+      case '/':
+        return NULL;
+      default:
+        break;
+    }
+  }
+  return NULL;
 }
 /*}}}*/
 static void create_symlink(char *link_target, char *new_link)/*{{{*/
@@ -947,10 +966,12 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               {
                 char *target_path;
                 char *message_path;
+                char *start_flags;
                 int is_in_new;
                 message_path = db->data + db->path_offsets[i];
                 is_in_new = looks_like_maildir_new_p(message_path);
-                target_path = mk_maildir_path(i, output_path, is_in_new);
+                start_flags = get_maildir_flags(message_path);
+                target_path = mk_maildir_path(i, output_path, is_in_new, start_flags);
                 create_symlink(message_path, target_path);
                 free(target_path);
                 ++n_hits;
@@ -958,7 +979,14 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               break;
             case DB_MSG_MBOX:
               {
-                char *target_path = mk_maildir_path(i, output_path, 0);
+                /* For messages stored in a MBOX, we have no idea what the
+                 * flags are, since we don't parse those headers.  However, if
+                 * we're creating a maildir mfolder, it's most likely that the
+                 * mboxen are being used for archiving old stuff, so we guess
+                 * :2,S as the required suffix.   In any case, messages in
+                 * /cur/ are required to have some kind of flags suffix, so we
+                 * have to put something there.  */
+                char *target_path = mk_maildir_path(i, output_path, 0, ":2,S");
                 try_copy_to_path(db, i, target_path);
                 free(target_path);
                 ++n_hits;
