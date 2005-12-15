@@ -295,7 +295,14 @@ int filter_is_mh(const char *path, const struct stat *sb);
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
-struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length);
+enum data_to_rfc822_error {
+  DTR8_OK,
+  DTR8_MISSING_END, /* missing endpoint marker. */
+  DTR8_MULTIPART_SANS_BOUNDARY, /* multipart with no boundary string defined */
+  DTR8_BAD_HEADERS, /* corrupt headers */
+  DTR8_BAD_ATTACHMENT /* corrupt attachment (e.g. no body part) */
+};
+struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length, enum data_to_rfc822_error *error);
 void create_ro_mapping(const char *filename, unsigned char **data, int *len);
 void free_ro_mapping(unsigned char *data, int len);
 

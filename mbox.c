@@ -904,6 +904,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
   int any_new = 0;
   unsigned char *va;
   int valen;
+  enum data_to_rfc822_error error;
 
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
@@ -931,7 +932,10 @@ int add_mbox_messages(struct database *db)/*{{{*/
       start = mb->start[j];
       len   = mb->len[j];
       msg_src = setup_msg_src(mb->path, start, len);
-      r8 = data_to_rfc822(msg_src, (char *) va + start, len);
+      r8 = data_to_rfc822(msg_src, (char *) va + start, len, &error);
+      if (error == DTR8_MISSING_END) {
+        fprintf(stderr, "<<>><<>> GOT MISSING END BOUNDARY\n");
+      }
       if (r8) {
         if (verbose) {
           printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
