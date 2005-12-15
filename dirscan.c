@@ -258,11 +258,17 @@ int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
 {
   int result = 0;
   if (S_ISDIR(sb->st_mode)) {
+    /* TODO : find a way of making this more scalable?  e.g. if a folder of a
+     * particular subtype is found once, try that subtype first later, since
+     * the user presumably uses a consistent MH-subtype (i.e. a single MUA). */
     if (has_child_file(path, ".xmhcache") ||
         has_child_file(path, ".mh_sequences") ||
         /* Sylpheed */
         has_child_file(path, ".sylpheed_cache") ||
         has_child_file(path, ".sylpheed_mark") || 
+        /* NNML (Gnus) */
+        has_child_file(path, ".marks") ||
+        has_child_file(path, ".overview") || 
         /* Evolution */
         has_child_file(path, "cmeta") ||
         has_child_file(path, "summary")) {
