@@ -1,3 +1,10 @@
+NEW IN VERSION 0.17.1
+=====================
+
+* Fix detection of MH folder subtype used by nnml (Gnus)
+* Fix filename format generated in the /cur/ directory for maildir mfolders.
+* Syntax fix in configure script
+
 NEW IN VERSION 0.17
 ===================
 
