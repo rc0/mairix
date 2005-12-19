@@ -1015,8 +1015,7 @@ void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg
   *msg = (index & 0xffff);
 }
 /*}}}*/
-
-int verify_mbox_size_constraints(struct database *db)
+int verify_mbox_size_constraints(struct database *db)/*{{{*/
 {
   int i;
   int fail;
@@ -1035,5 +1034,5 @@ int verify_mbox_size_constraints(struct database *db)
   if (fail) return 0;
   else      return 1;
 }
-
+/*}}}*/
 
