@@ -153,6 +153,13 @@ struct rfc822 {/*{{{*/
 
 typedef char checksum_t[16];
 
+struct message_list {/*{{{*/
+  struct message_list *next;
+  off_t start;
+  size_t len;
+  checksum_t csum;
+};
+/*}}}*/
 struct mbox {/*{{{*/
   /* If path==NULL, this indicates that the mbox is dead, i.e. no longer
    * exists. */
@@ -170,6 +177,11 @@ struct mbox {/*{{{*/
      (whch may actually be old ones that have moved, but they're treated as
      new.) */
   int n_old_msgs_valid;
+
+  /* Hold list of new messages and their number.  Number is temporary -
+   * eventually just list walking in case >=2 have to be reattached. */
+  struct message_list *new_msgs;
+  int n_new_msgs;
 
   int n_so_far; /* Used during database load. */
   

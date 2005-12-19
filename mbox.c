@@ -167,13 +167,6 @@ static int find_number_intact(struct mbox *mb, char *va, size_t len)/*{{{*/
 }
 /*}}}*/
 
-struct message_list {/*{{{*/
-  struct message_list *next;
-  off_t start;
-  size_t len;
-  checksum_t csum;
-};
-/*}}}*/
 
 static int fromtab_inited = 0;
 static signed char fromtab[256];
@@ -393,30 +386,6 @@ done:
 
 }
 /*}}}*/
-static void append_new_messages(struct mbox *mb, struct message_list *list, int n)/*{{{*/
-{
-  int j;
-  struct message_list *here, *next;
-  int N;
-
-  N = mb->n_old_msgs_valid + n;
-  if (N > mb->max_msgs) {
-    mb->max_msgs = N;
-    mb->start = grow_array(off_t, N, mb->start);
-    mb->len = grow_array(size_t, N, mb->len);
-    mb->check_all = grow_array(checksum_t, N, mb->check_all);
-  }
-  for (j=mb->n_old_msgs_valid, here=list; j<N; j++, here=next) {
-    next = here->next;
-    mb->start[j] = here->start;
-    mb->len[j] = here->len;
-    memcpy(&mb->check_all[j], &here->csum, sizeof(checksum_t));
-
-    free(here);
-  }
-  mb->n_msgs = N;
-}
-/*}}}*/
 static void rescan_mbox(struct mbox *mb, char *va, size_t len)/*{{{*/
 {
   /* We get here if it's determined that
@@ -425,13 +394,9 @@ static void rescan_mbox(struct mbox *mb, char *va, size_t len)/*{{{*/
         since the last mairix run.
   */
 
-  struct message_list *new_messages;
-  int n_new_messages;
-
   /* Find the last message in the box that appears to be intact. */
   mb->n_old_msgs_valid = find_number_intact(mb, va, len);
-  new_messages = build_new_message_list(mb, va, len, &n_new_messages);
-  append_new_messages(mb, new_messages, n_new_messages);
+  mb->new_msgs = build_new_message_list(mb, va, len, &mb->n_new_msgs);
 }
 /*}}}*/
 static void deaden_mbox(struct mbox *mb)/*{{{*/
@@ -862,6 +827,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
 
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
+    mb->new_msgs = NULL;
     if (mb->path) {
       if ((mb->current_mtime == mb->file_mtime) &&
           (mb->current_size  == mb->file_size)) {
@@ -902,56 +868,82 @@ int add_mbox_messages(struct database *db)/*{{{*/
 {
   int i, j;
   int any_new = 0;
+  int N;
   unsigned char *va;
   int valen;
   enum data_to_rfc822_error error;
 
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
-    va = NULL; /* lazy mmap */
-    for (j=mb->n_old_msgs_valid; j<mb->n_msgs; j++) {
-      int n;
-      off_t start;
-      size_t len;
-      struct rfc822 *r8;
-      struct msg_src *msg_src;
-      maybe_grow_message_arrays(db);
-      n = db->n_msgs;
-      db->type[n] = MTY_MBOX;
-      db->msgs[n].src.mbox.file_index = i;
-      db->msgs[n].src.mbox.msg_index = j;
+    struct message_list *here, *next;
 
-      if (!va) {
-        create_ro_mapping(mb->path, &va, &valen);
+    if (mb->new_msgs) {
+      N = mb->n_old_msgs_valid + mb->n_new_msgs;
+      if (N > mb->max_msgs) {
+        mb->max_msgs = N;
+        mb->start = grow_array(off_t, N, mb->start);
+        mb->len = grow_array(size_t, N, mb->len);
+        mb->check_all = grow_array(checksum_t, N, mb->check_all);
       }
-      if (!va) {
-        fprintf(stderr, "Couldn't create mapping of file %s\n", mb->path);
-        unlock_and_exit(1);
-      }
+#if 0
+      append_new_messages(mb, mb->new_msgs, mb->n_new_msgs);
+#endif
 
-      start = mb->start[j];
-      len   = mb->len[j];
-      msg_src = setup_msg_src(mb->path, start, len);
-      r8 = data_to_rfc822(msg_src, (char *) va + start, len, &error);
-      if (error == DTR8_MISSING_END) {
-        fprintf(stderr, "<<>><<>> GOT MISSING END BOUNDARY\n");
-      }
-      if (r8) {
-        if (verbose) {
-          printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
+      va = NULL; /* lazy mmap */
+      for (j=mb->n_old_msgs_valid, here=mb->new_msgs; j<N; j++, here=next) {
+        int n;
+        off_t start;
+        size_t len;
+        struct rfc822 *r8;
+        struct msg_src *msg_src;
+
+        next = here->next;
+        mb->start[j] = here->start;
+        mb->len[j] = here->len;
+        memcpy(&mb->check_all[j], &here->csum, sizeof(checksum_t));
+        free(here);
+
+        if (!va) {
+          create_ro_mapping(mb->path, &va, &valen);
         }
-        db->msgs[n].date = r8->hdrs.date;
-        tokenise_message(n, db, r8);
-        free_rfc822(r8);
-      } else {
-        printf("Message in %s at [%d,%d) is misformatted\n", mb->path, (int)start, (int)(start + len));
-      }
+        if (!va) {
+          fprintf(stderr, "Couldn't create mapping of file %s\n", mb->path);
+          unlock_and_exit(1);
+        }
 
-      ++db->n_msgs;
-      any_new = 1;
-    }
-    if (va) {
-    	free_ro_mapping(va, valen);
+        start = mb->start[j];
+        len   = mb->len[j];
+        msg_src = setup_msg_src(mb->path, start, len);
+        r8 = data_to_rfc822(msg_src, (char *) va + start, len, &error);
+
+        /* Only do this once a valid rfc822 structure has been obtained. */
+        maybe_grow_message_arrays(db);
+        n = db->n_msgs;
+        db->type[n] = MTY_MBOX;
+        db->msgs[n].src.mbox.file_index = i;
+        db->msgs[n].src.mbox.msg_index = j;
+
+        if (error == DTR8_MISSING_END) {
+          fprintf(stderr, "<<>><<>> GOT MISSING END BOUNDARY\n");
+        }
+        if (r8) {
+          if (verbose) {
+            printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
+          }
+          db->msgs[n].date = r8->hdrs.date;
+          tokenise_message(n, db, r8);
+          free_rfc822(r8);
+        } else {
+          printf("Message in %s at [%d,%d) is misformatted\n", mb->path, (int)start, (int)(start + len));
+        }
+
+        ++db->n_msgs;
+        any_new = 1;
+      }
+      mb->n_msgs = N;
+      if (va) {
+        free_ro_mapping(va, valen);
+      }
     }
   }
   return any_new;
