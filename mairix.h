@@ -157,7 +157,6 @@ struct message_list {/*{{{*/
   struct message_list *next;
   off_t start;
   size_t len;
-  checksum_t csum;
 };
 /*}}}*/
 struct mbox {/*{{{*/
@@ -317,6 +316,7 @@ enum data_to_rfc822_error {
 struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length, enum data_to_rfc822_error *error);
 void create_ro_mapping(const char *filename, unsigned char **data, int *len);
 void free_ro_mapping(unsigned char *data, int len);
+char *format_msg_src(struct msg_src *src);
 
 /* In tok.c */
 struct toktable *new_toktable(void);

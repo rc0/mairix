@@ -590,7 +590,7 @@ static char *unencode_data(char *input, int input_len, char *enc, int *output_le
   return result;
 }
 /*}}}*/
-static char *format_msg_src(struct msg_src *src)/*{{{*/
+char *format_msg_src(struct msg_src *src)/*{{{*/
 {
   static char *buffer = NULL;
   static int buffer_len = 0;
@@ -820,8 +820,6 @@ static void do_multipart(struct msg_src *src,
   /* Scan input to look for boundary markers */
   be = strstr(input, end_boundary);
   if (!be) {
-    fprintf(stderr, "Can't find end boundary in multipart message %s\n",
-        format_msg_src(src));
     if (error) {
       *error = DTR8_MISSING_END;
       return;

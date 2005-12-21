@@ -366,7 +366,6 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
     } else {
       next->len = end_from - start_pos;
     }
-    compute_checksum(va + start_pos, next->len, &next->csum);
     if (!result) {
       result = here = next;
     } else {
@@ -878,6 +877,8 @@ int add_mbox_messages(struct database *db)/*{{{*/
     struct message_list *here, *next;
 
     if (mb->new_msgs) {
+      /* Upper bound : we may need to coalesce 2 or more messages if false
+       * matches on From lines have occurred inside MIME encoded body parts. */
       N = mb->n_old_msgs_valid + mb->n_new_msgs;
       if (N > mb->max_msgs) {
         mb->max_msgs = N;
@@ -885,23 +886,17 @@ int add_mbox_messages(struct database *db)/*{{{*/
         mb->len = grow_array(size_t, N, mb->len);
         mb->check_all = grow_array(checksum_t, N, mb->check_all);
       }
-#if 0
-      append_new_messages(mb, mb->new_msgs, mb->n_new_msgs);
-#endif
 
       va = NULL; /* lazy mmap */
-      for (j=mb->n_old_msgs_valid, here=mb->new_msgs; j<N; j++, here=next) {
+      for (j=mb->n_old_msgs_valid, here=mb->new_msgs; here; j++, here=next) {
         int n;
         off_t start;
         size_t len;
         struct rfc822 *r8;
         struct msg_src *msg_src;
+        struct message_list *last, *xx, *xn;
 
         next = here->next;
-        mb->start[j] = here->start;
-        mb->len[j] = here->len;
-        memcpy(&mb->check_all[j], &here->csum, sizeof(checksum_t));
-        free(here);
 
         if (!va) {
           create_ro_mapping(mb->path, &va, &valen);
@@ -911,10 +906,56 @@ int add_mbox_messages(struct database *db)/*{{{*/
           unlock_and_exit(1);
         }
 
-        start = mb->start[j];
-        len   = mb->len[j];
-        msg_src = setup_msg_src(mb->path, start, len);
-        r8 = data_to_rfc822(msg_src, (char *) va + start, len, &error);
+
+        /* Try to parse the next 'From' -to- 'From' chunk as an rfc822 message.
+         * If we get an unterminated MIME encoding, coalesce the next chunk
+         * onto the current one and try again.  Keep going until it works, or
+         * we run out of chunks.  If we run out, back up to just using the
+         * first chunk and assume it is broken.
+         *
+         * This is to deal with cases such as having a text/plain attachment
+         * that is actually an mbox file in its own right, i.e. will have
+         * embedded '^From ' lines in it.
+         * 
+         * 'last' is the last chunk currently in the putative message. */
+        last = here;
+        do {
+          len = last->start + last->len - here->start;
+          msg_src = setup_msg_src(mb->path, here->start, len);
+          r8 = data_to_rfc822(msg_src, (char *) va + here->start, len, &error);
+          if (error == DTR8_MISSING_END) {
+            if (r8) free_rfc822(r8);
+            r8 = NULL;
+            last = last->next; /* Try with another chunk on the end */
+          } else {
+            /* Treat as success */
+            next = last->next;
+            break;
+          }
+        } while (last);
+
+        if (last) {
+          start = mb->start[j] = here->start;
+          mb->len[j] = len;
+          compute_checksum((char *) va + here->start, len, &mb->check_all[j]);
+        } else {
+          /* Faulty message or last message in the file */
+          start = mb->start[j] = here->start;
+          len = mb->len[j] = here->len;
+          compute_checksum((char *) va + here->start, len, &mb->check_all[j]);
+          msg_src = setup_msg_src(mb->path, start, len);
+          r8 = data_to_rfc822(msg_src, (char *) va + start, len, &error);
+          if (error == DTR8_MISSING_END) {
+            fprintf(stderr, "Can't find end boundary in multipart message %s\n",
+                format_msg_src(msg_src));
+          }
+        }
+
+        /* Release all the list entries in the range [here,last] (inclusive) */
+        for (xx=here; xx!=last; xx=xn) {
+          xn = xx->next;
+          free(xx);
+        }
 
         /* Only do this once a valid rfc822 structure has been obtained. */
         maybe_grow_message_arrays(db);
@@ -923,9 +964,6 @@ int add_mbox_messages(struct database *db)/*{{{*/
         db->msgs[n].src.mbox.file_index = i;
         db->msgs[n].src.mbox.msg_index = j;
 
-        if (error == DTR8_MISSING_END) {
-          fprintf(stderr, "<<>><<>> GOT MISSING END BOUNDARY\n");
-        }
         if (r8) {
           if (verbose) {
             printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
@@ -940,7 +978,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
         ++db->n_msgs;
         any_new = 1;
       }
-      mb->n_msgs = N;
+      mb->n_msgs = j;
       if (va) {
         free_ro_mapping(va, valen);
       }
