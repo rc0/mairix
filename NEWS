@@ -2,7 +2,19 @@ NEW IN VERSION 0.18
 ===================
 
 * Support bzip2'd mbox folders
-* Fix bug in configure script that made it failed on plain Bourne shells.
+* Fix bugs in parsing mbox folders containing unquoted 'From ' lines inside
+  MIME body parts.
+* Fix bug in parsing content-type data containing quotes with whitespace
+  before.
+* Clone the message flags (when both the source folder and mfolder are both
+  maildir).
+
+NEW IN VERSION 0.17.1
+=====================
+
+* Fix detection of MH folder subtype used by nnml (Gnus)
+* Fix filename format generated in the /cur/ directory for maildir mfolders.
+* Syntax fix in configure script
 
 NEW IN VERSION 0.17
 ===================
