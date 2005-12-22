@@ -153,6 +153,12 @@ struct rfc822 {/*{{{*/
 
 typedef char checksum_t[16];
 
+struct message_list {/*{{{*/
+  struct message_list *next;
+  off_t start;
+  size_t len;
+};
+/*}}}*/
 struct mbox {/*{{{*/
   /* If path==NULL, this indicates that the mbox is dead, i.e. no longer
    * exists. */
@@ -170,6 +176,11 @@ struct mbox {/*{{{*/
      (whch may actually be old ones that have moved, but they're treated as
      new.) */
   int n_old_msgs_valid;
+
+  /* Hold list of new messages and their number.  Number is temporary -
+   * eventually just list walking in case >=2 have to be reattached. */
+  struct message_list *new_msgs;
+  int n_new_msgs;
 
   int n_so_far; /* Used during database load. */
   
@@ -295,9 +306,17 @@ int filter_is_mh(const char *path, const struct stat *sb);
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
-struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length);
+enum data_to_rfc822_error {
+  DTR8_OK,
+  DTR8_MISSING_END, /* missing endpoint marker. */
+  DTR8_MULTIPART_SANS_BOUNDARY, /* multipart with no boundary string defined */
+  DTR8_BAD_HEADERS, /* corrupt headers */
+  DTR8_BAD_ATTACHMENT /* corrupt attachment (e.g. no body part) */
+};
+struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length, enum data_to_rfc822_error *error);
 void create_ro_mapping(const char *filename, unsigned char **data, int *len);
 void free_ro_mapping(unsigned char *data, int len);
+char *format_msg_src(struct msg_src *src);
 
 /* In tok.c */
 struct toktable *new_toktable(void);
