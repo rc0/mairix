@@ -2,7 +2,7 @@
 #
 # mairix - message index builder and finder for maildir folders.
 #
-# Copyright (C) Richard P. Curnow  2002-2004
+# Copyright (C) Richard P. Curnow  2002-2004,2006
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
@@ -40,6 +40,7 @@ prefix=$(DESTDIR)@prefix@
 bindir=$(DESTDIR)@bindir@
 mandir=$(DESTDIR)@mandir@
 man1dir=$(mandir)/man1
+man5dir=$(mandir)/man5
 infodir=$(DESTDIR)@infodir@
 docdir=$(DESTDIR)@docdir@
 
@@ -78,9 +79,6 @@ clean:
 	-rm -f fromcheck.c datescan.c
 	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
 
-clean_docs:
-	-rm -f mairix.txt mairix.html mairix.dvi mairix.ps mairix.pdf mairix.info
-
 distclean: clean
 	-rm -f Makefile config.log
 
@@ -89,39 +87,15 @@ install:
 	[ -d $(bindir) ] || mkdir -p $(bindir)
 	[ -d $(mandir) ] || mkdir -p $(mandir)
 	[ -d $(man1dir) ] || mkdir -p $(man1dir)
+	[ -d $(man5dir) ] || mkdir -p $(man5dir)
 	cp -f mairix $(bindir)
 	chmod 555 $(bindir)/mairix
+	cp -f mairix.1 $(man1dir)
+	chmod 444 $(man1dir)/mairix.1
+	cp -f mairixrc.5 $(man5dir)
+	chmod 444 $(man5dir)/mairixrc.5
 
-install_docs:
-	if [ -f mairix.info ]; then [ -d $(infodir) ] || mkdir -p $(infodir) ; cp -f mairix.info* $(infodir) ; chmod 444 $(infodir)/mairix.info* ; fi
-	if [ -f mairix.txt ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.txt $(docdir) ; chmod 444 $(docdir)/mairix.txt ; fi
-	if [ -f mairix.html ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.html $(docdir) ; chmod 444 $(docdir)/mairix.html ; fi
-	if [ -f mairix.dvi ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.dvi $(docdir) ; chmod 444 $(docdir)/mairix.dvi ; fi
-	if [ -f mairix.pdf ]; then [ -d $(docdir) ] || mkdir -p $(docdir) ; cp -f mairix.pdf $(docdir) ; chmod 444 $(docdir)/mairix.pdf ; fi
-
-docs : mairix.info mairix.txt mairix.html mairix.dvi mairix.pdf
-
-mairix.info : mairix.texi
-	makeinfo mairix.texi
-
-mairix.txt : mairix.texi
-	makeinfo --no-split --number-sections --no-headers mairix.texi > mairix.txt
-
-mairix.html : mairix.texi
-	makeinfo --no-split --number-sections --html mairix.texi > mairix.html
-
-mairix.dvi : mairix.texi
-	tex mairix.texi
-	tex mairix.texi
-
-mairix.ps : mairix.dvi
-	dvips mairix.dvi -o
-
-mairix.pdf : mairix.texi
-	pdftex mairix.texi
-	pdftex mairix.texi
-
-.PHONY : all docs install install_docs clean clean_docs distclean
+.PHONY : all install clean distclean
 
 mairix.o : version.h
 

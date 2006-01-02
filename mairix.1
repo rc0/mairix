@@ -1,0 +1,582 @@
+.TH MAIRIX 1 "January 2006"
+.de Sx
+.PP
+.ne \\$1
+.nf
+.na
+.RS 7
+..
+.de Ex
+.RE 
+.fi
+.ad
+.PP
+..
+.de Sy
+.PP
+.ne \\$1
+.nf
+.na
+.RS 12
+..
+.de Ey
+.RE 
+.fi
+.ad
+.IP "" 7
+..
+.SH NAME
+mairix \- index and search mail folders
+.SH SYNOPSIS
+.SS Indexing
+.B mairix
+[
+.BR \-v | \-\-verbose
+] [
+.BR \-p | \-\-purge
+] [
+.BR \-f | \-\-rcfile
+.I mairixrc
+]
+
+.SS Searching
+.B mairix
+[
+.BR \-v | \-\-verbose
+] [
+.BR \-f | \-\-rcfile
+.I mairixrc
+] [
+.BR \-r | \-\-raw-output
+] [
+.BR \-o | \-\-mfolder
+.I mfolder
+] [
+.BR \-a | \-\-augment
+] [
+.BR \-t | \-\-threads
+]
+.I search-patterns
+
+.SS Other
+.B mairix
+[
+.BR \-h | \-\-help
+]
+
+.B mairix
+[
+.BR \-V | \-\-version
+]
+
+.B mairix
+[
+.BR \-d | \-\-dump
+]
+
+.SH DESCRIPTION
+.I mairix
+indexes and searches a collection of email messages.  The folders containing
+the messages for indexing are defined in the configuration file.  The indexing
+stage produces a database file.  The database file provides rapid access to
+details of the indexed messages during searching operations.  A search normally
+produces a folder (so-called
+.BR mfolder )
+containing the matched messages.  However, a raw mode
+.RB ( \-r )
+exists which just lists the matched messages instead.
+.PP
+It can operate with the following folder types
+.IP *
+maildir
+.IP *
+MH (compatible with the MH folder formats used by xmh, sylpheed, nnml (Gnus) and evolution)
+.IP *
+mbox (including mboxes that have been compressed with gzip or bzip2)
+.PP
+If maildir or MH source folders are used, and a search outputs its matches to
+an mfolder in maildir or MH format, symbolic links are used to reference the
+original messages inside the mfolder.  However, if mbox folders are involved,
+copies of messages are made instead.
+
+.SH OPTIONS
+
+.B mairix
+decides whether indexing or searching is required by looking for the presence of any
+.I search-patterns
+on the command line.
+
+.SS Special modes
+.TP
+.B -h, --help
+.br
+Show usage summary and exit
+
+.TP
+.B -V, --version
+Show program version and exit
+
+.TP
+.B -d
+.br
+Dump the database's contents in human-readable form to stdout.
+
+.SS General options
+.TP
+.BI "-f " mairixrc
+.br
+.ns
+.TP
+.BI "--rcfile " mairixrc
+.br
+Specify an alternative configuration file to use.  The default configuration file is
+.IR ~/.mairixrc .
+
+.TP
+.B -v, --verbose
+.br
+Make the output more verbose
+
+.TP
+.B -Q, --no-integrity-checks
+.br
+Normally
+.I mairix
+will do some internal integrity tests on the database.  The
+.B -Q
+option removes these checks, making
+.I mairix
+run faster, but it will be less likely to detect internal problems if any bugs creep in.
+
+The
+.I nochecks
+directive in the rc file has the same effect.
+
+.TP
+.B \-\-unlock
+.br
+.I mairix
+locks its database file during any indexing or searching operation to prevent
+multiple indexing runs intefering with each other, or an indexing run
+interfering with search runs.  The
+.B --unlock
+option removes the lockfile before doing the requested indexing or searching
+operation.  This is a convenient way of cleaning up a stale lockfile if an
+earlier run crashed for some reason or was aborted.
+
+.SS Indexing options
+
+.TP
+.B -p, --purge
+.br
+Cause stale (dead) messages to be purged from the database during an indexing
+run.  (Normally, stale messages are left in the database because of the
+additional const of compacting away the storage that they take up.)
+
+.SS Search options
+.TP
+.B -a, --augment
+.br
+Append newly matches messages to the current mfolder instead of creating the
+mfolder from scratch.
+
+.TP
+.B -t, --threads
+.br
+As well as returning the matched messages, also return every message in the
+same thread as one of the real matches.
+
+.TP
+.B -r, --raw-output
+.br
+Instead of creating an mfolder containing the matched messages, just show their
+paths on stdout.
+
+.TP
+.BI "-o " mfolder
+.br
+.ns
+.TP
+.BI "--mfolder " mfolder
+.br
+Specify a temporary alternative path for the mfolder to use, overriding the
+.I mfolder
+directive in the rc file.
+
+.B mairix
+will refuse to output search results into any folder that appears to be amongst
+those that are indexed.  This is to prevent accidental deletion of emails.
+
+.SS Search patterns
+.TP
+.BI t: word
+.br
+Match
+.I word
+in the To: header.
+
+.TP
+.BI c: word
+.br
+Match
+.I word
+in the Cc: header.
+
+.TP
+.BI f: word
+.br
+Match
+.I word
+in the From: header.
+
+.TP
+.BI s: word
+.br
+Match
+.I word
+in the Subject: header.
+
+.TP
+.BI m: word
+.br
+Match
+.I word
+in the Message-ID: header.
+
+.TP
+.BI b: word
+.br
+Match
+.I word
+in the message body.
+
+.B Message body
+is taken to mean any body part of type text/plain or text/html.  For text/html,
+text within meta tags is ignored.  In particular, the URLs inside <A
+HREF="..."> tags are not currently indexed.  Non-text attachments are ignored.
+If there's an attachment of type message/rfc822, this is parsed and the match
+is performed on this sub-message too.  If a hit occurs, the enclosing message
+is treated as having a hit.
+
+.TP
+.BI d: "[start-datespec]" - "[end-datespec]"
+.br
+Match messages with Date: headers lying in the specific range.
+
+.TP
+.BI z: "[low-size]" - "[high-size]"
+.br
+Match messages whose size lies in the specified range.  If the
+.I low-size
+argument is omitted it defaults to zero.  If the
+.I high-size
+argument is omitted it defaults to infinite size.
+
+For example, to match messages between 10kbytes and 20kbytes in size, the
+following search term can be used:
+.Sy 1
+mairix z:10k-20k
+.Ey
+
+The suffix 'k' on a number means multiply by 1024, and the suffix 'M' on a
+number means multiply by 1024*1024.
+
+.PP
+Multiple body parts may be grouped together, if a match in any of them is
+sought.  Common examples follow.
+
+.TP
+.BI tc: word
+.br
+Match
+.I word
+in either the To: or Cc: headers (or both).
+
+.TP
+.BI bs: word
+.br
+Match
+.I word
+in either the Subject: header or the message body (or both).
+
+.PP
+The
+.B a:
+search pattern is an abbreviation for
+.BR tcf: ;
+i.e. match the word in the To:, Cc: or From: headers.  ("a" stands for
+"address" in this case.)
+
+.SS Match words
+The
+.I word
+argument to the search strings can take various forms.
+
+.TP
+.I ~word
+.br
+Match messages
+.B not
+containing the word.
+
+.TP
+.I word1,word2
+.br
+This matches if both the words are matched in the specified message part.
+
+.TP
+.I word1/word2
+.br
+This matches if either of the words are matched in the specified message part.
+
+.TP
+.I substring=
+.br
+Match any word containing
+.I substring
+as a substring
+
+.TP
+.I substring=N
+.br
+Match any word containing
+.IR substring ,
+allowing up to
+.I N
+errors in the match.  For example, if
+.I N
+is 1, a single error is allowed, where an error can be
+.IP *
+a missing letter
+.IP *
+an extra letter
+.IP *
+a different letter.
+
+.TP
+.I ^substring=
+.br
+Match any word containing
+.I substring
+as a substring, with the requirement that
+.I substring
+occurs at the beginning of the matched word.
+
+.SS Precedence matters
+
+The binding order of the constructions is:
+
+.IP "1." 
+Individual command line arguments define separate conditions which are AND-ed
+together
+
+.IP "2."
+Within a single argument, the letters before the colon define which message
+parts the expression applies to.  If there is no colon, the expression applies
+to all the headers listed earlier and the body.
+
+.IP "3."
+After the colon, commas delineate separate disjuncts, which are
+OR-ed together.
+
+.IP "4."
+Each disjunct may contain separate conjuncts, which are separated
+by plus signs.  These conditions are AND-ed together.
+
+.IP "5."
+Each conjunct may start with a tilde to negate it, and may be
+followed by a slash to indicate a substring match, optionally
+followed by an integer to define the maximum number of errors
+allowed.
+
+.SS Date specification
+.PP
+This section describes the syntax used for specifying dates when
+searching using the `d:' option.
+
+Dates are specified as a range.  The start and end of the range can both be
+specified.  Alternatively, if the start is omitted, it is treated as being the
+beginning of time.  If the end is omitted, it is treated as the current time.
+
+There are 4 basic formats:
+.TP
+.BI d: start-end
+.br
+Specify both start and end explicitly
+.TP
+.BI d: start-
+Specify start, end is the current time
+.TP
+.BI d: -end
+Specify end, start is 'a long time ago' (i.e. early enough to include any
+message).
+.TP
+.BI d: period
+Specify start and end implicitly, as the start and end of the
+period given.
+
+.PP
+The start and end can be specified either absolute or relative.  A relative
+endpoint is given as a number followed by a single letter defining the scaling:
+
+.TS
+box tab(&);
+lb | lb | lb | lb.
+letter & short for & example & meaning
+=
+.T&
+l | l | l | l.
+d & days   & 3d & 3 days
+w & weeks  & 2w & 2 weeks (14 days)
+m & months & 5m & 5 months (150 days)
+y & years  & 4y & 4 years (4*365 days)
+.TE
+
+.PP
+Months are always treated as 30 days, and years as 365 days, for
+this purpose.
+
+Absolute times can be specified in many forms.  Some forms have different
+meanings when they define a start date from that when they define an end date.
+Where a single expression specifies both the start and end (i.e. where the
+argument to d: doesn't contain a `-'), it will usually have different
+interpretations in the two cases.
+
+In the examples below, suppose the current date is Sunday May 18th,
+2003 (when I started to write this material.)
+
+.TS
+box tab(&);
+l | l | l | l.
+Example & Start date & End date & Notes
+=
+d:20030301\-20030425 & March 1st, 2003 & 25th April, 2003
+d:030301\-030425 & March 1st, 2003 & April 25th, 2003 & century assumed
+d:mar1\-apr25    & March 1st, 2003 & April 25th, 2003
+d:Mar1\-Apr25    & March 1st, 2003 & April 25th, 2003 & case insensitive
+d:MAR1\-APR25    & March 1st, 2003 & April 25th, 2003 & case insensitive
+d:1mar\-25apr    & March 1st, 2003 & April 25th, 2003 & date and month in either order
+d:2002          & January 1st, 2002 & December 31st, 2002 & whole year
+d:mar           & March 1st, 2003 & March 31st, 2003 & most recent March
+d:oct           & October 1st, 2002 & October 31st, 2002 & most recent October
+d:21oct\-mar     & October 21st, 2002 & March 31st, 2003 & start before end
+d:21apr\-mar     & April 21st, 2002 & March 31st, 2003 & start before end
+d:21apr\-        & April 21st, 2003 & May 18th, 2003 & end omitted
+d:\-21apr        & January 1st, 1900 & April 21st, 2003 & start omitted
+d:6w\-2w         & April 6th, 2003 & May 4th, 2003 & both dates relative
+d:21apr\-1w      & April 21st, 2003 & May 11th, 2003 & one date relative
+d:21apr\-2y      & April 21st, 2001 & May 11th, 2001 & start before end
+d:99\-11         & January 1st, 1999 & May 11th, 2003 &T{
+2 digits are a day of the month if possible, otherwise a year
+T}
+d:99oct\-1oct    & October 1st, 1999 & October 1st, 2002 &T{
+end before now, single digit is a day of the month
+T}
+d:99oct\-01oct   & October 1st, 1999 & October 31st, 2001 &T{
+2 digits starting with zero treated as a year
+T}
+d:oct99\-oct1    & October 1st, 1999 & October 1st, 2002 &T{
+day and month in either order
+T}
+d:oct99\-oct01   & October 1st, 1999 & October 31st, 2001 &T{
+year and month in either order
+T}
+.TE
+
+.PP
+The principles in the table work as follows.
+.IP \(bu
+When the expression defines a period of more than a day (i.e. if a month or
+year is specified), the earliest day in the period is taken when the start date
+is defined, and the last day in the period if the end of the range is being
+defined.
+.IP \(bu
+The end date is always taken to be on or before the current date.
+.IP \(bu
+The start date is always taken to be on or before the end date.
+
+.SH "SETTING UP THE MATCH FOLDER"
+
+If the match folder does not exist when running in search mode, it is
+automatically created.  For 'mformat=maildir' (the default), this
+should be all you need to do.  If you use 'mformat=mh', you may have to
+run some commands before your mailer will recognize the folder.  e.g.
+for mutt, you could do
+.Sx 2
+mkdir -p /home/richard/Mail/mfolder
+touch /home/richard/Mail/mfolder/.mh_sequences
+.Ex
+which seems to work.  Alternatively, within mutt, you could set MBOX_TYPE to
+'mh' and save a message to '+mfolder' to have mutt set up the structure for you
+in advance.
+
+If you use Sylpheed, the best way seems to be to create the new folder from
+within Sylpheed before letting mairix write into it.
+
+.SH EXAMPLES
+.PP
+Suppose my email address is <richard@doesnt.exist>.
+
+Either of the following will match all messages newer than 3 months from me
+with the word 'chrony' in the subject line:
+.Sx 2
+mairix d:3m- f:richard+doesnt+exist s:chrony
+mairix d:3m- f:richard@doesnt.exist s:chrony
+.Ex
+Suppose I don't mind a few spurious matches on the address, I want a wider date
+range, and I suspect that some messages I replied to might have had the subject
+keyword spelt wrongly (let's allow up to 2 errors):
+.Sx 1
+mairix d:6m- f:richard s:chrony=2
+.Ex
+
+.SH NOTES
+.PP
+.B mairix
+works exclusively in terms of
+.IR words .
+The index that's built
+in indexing mode contains a table of which words occur in which
+messages.  Hence, the search capability is based on finding messages
+that contain particular words.
+.B mairix
+defines a word as any string of alphanumeric characters + underscore.  Any
+whitespace, punctuation, hyphens etc are treated as word boundaries.
+
+.B mairix
+has special handling for the To:, Cc: and From: headers.
+Besides the normal word scan, these headers are scanned a second time,
+where the characters '@', '-' and '.' are also treated as word
+characters.  This allows most (if not all) email addresses to appear in
+the database as single words.  So if you have a mail from
+wibble@foobar.zzz, it will match on both these searches
+
+.Sx 2
+mairix f:foobar
+mairix f:wibble@foobar.zzz
+.Ex
+It should be clear by now that the searching cannot be used to find messages
+matching general regular expressions.  This has never been much of a
+limitation.  Most searches are for particular keywords that were in the
+messages, or details of the recipients, or the approximate date.
+
+It's also worth pointing out that there is no 'locality' information
+stored, so you can't search for messages that have one words 'close' to
+some other word.  For every message and every word, there is a simple
+yes/no condition stored - whether the message contains the word in a
+particular header or in the body.  So far this has proved to be
+adequate.
+.B mairix
+has a similar feel to using an Internet search engine.
+
+.SH FILES
+.I ~/.mairixrc
+
+.SH AUTHOR
+Copyright (C) 2002-2006 Richard P. Curnow <rc@rc0.org.uk>
+.SH "SEE ALSO"
+mairixrc(5)
+.SH BUGS
+.PP
+We need a plugin scheme to allow more types of attachment to be scanned and indexed.
+

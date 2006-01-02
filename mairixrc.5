@@ -1,0 +1,383 @@
+.TH MAIRIXRC 5 "January 2006"
+.de Sx
+.PP
+.ne \\$1
+.nf
+.na
+.RS 12
+..
+.de Ex
+.RE 
+.fi
+.ad
+.IP "" 7
+..
+.SH NAME
+mairixrc \- configuration file for mairix(1)
+.SH SYNOPSIS
+$HOME/.mairixrc
+.SH DESCRIPTION
+.PP
+The
+.I mairixrc
+file tells
+.B mairix
+where your mail folders are located.  It also tells
+.B mairix
+where the results of searches are to be written.
+
+.B mairix
+searches for this file at
+.I $HOME/.mairixrc
+unless the
+.B -f
+option is used.
+
+The directives
+.BR base ,
+.BR mfolder ,
+and
+.B database
+must always appear in the file.  There must also be some folder definitions
+(using the
+.BR maildir ,
+.BR mh ,
+or
+.BR mbox )
+directives.
+
+.SS Comments
+Any line starting with a '#' character is treated as a comment.
+
+.SS Directives
+.TP
+.BI base= base-directory
+.br
+This defines the path to the common parent directory of all your
+maildir folders.
+
+If the path is relative, it is treated as relative to the location of the
+.I mairixrc
+file.
+
+.TP
+.BI maildir= list-of-folder-specifications
+This is a colon-separated list of the Maildir folders (relative to
+`base') that you want indexed.  Any entry that ends `...' is
+recursively scanned to find any Maildir folders underneath it.
+
+More than one line starting with `maildir' can be included.  In
+this case, mairix joins the lines together with colons as though a
+single list of folders had been given on a single very long line.
+
+Each colon-separated entry may be a wildcard.  See the discussion
+under mbox (below) for the wildcard syntax.  For example
+.Sx 1
+maildir=zzz/foo*...
+.Ex
+will match maildir folders like these (relative to the 
+.IR base-directory )
+.Sx 4
+zzz/foobar/xyz
+zzz/fooquux
+zzz/foo
+zzz/fooabc/u/v/w
+.Ex
+
+and
+.Sx 1
+maildir=zzz/foo[abc]*
+.Ex
+will match maildir folders like these (relative to the folder_base)
+.Sx 4
+zzz/fooa
+zzz/fooaaaxyz
+zzz/foobcd
+zzz/fooccccccc
+.Ex
+If a folder name contains a colon, you can write this by using the
+sequence '\\:' to escape the colon.  Otherwise, the backslash
+character is treated normally.  (If the folder name actually
+contains the sequence '\\:', you're out of luck.)
+
+.TP
+.BI mh= list-of-folder-specifications
+.br
+This is a colon-separated list of the MH folders (relative to
+'base') that you want indexed.  Any entry that ends '...' is
+recursively scanned to find any MH folders underneath it.
+
+More than one line starting with 'mh' can be included.  In this
+case, mairix joins the lines together with colons as though a
+single list of folders had been given on a single very long line.
+
+Each colon-separated entry may be a wildcard, see the discussion
+under maildir (above) and mbox (below) for the syntax and
+semantics of specifying wildcards.
+
+.TP
+.BI mbox= list-of-folder-specifications
+.br
+This is a colon-separated list of the mbox folders (relative to
+'base') that you want indexed.
+
+Each colon-separated item in the list can be suffixed by '...'.
+If the item matches a regular file, that file is treated as a mbox
+folder and the '...' suffix is ignored.  If the item matches a
+directory, a recursive scan of everything inside that directory is
+made, and all regular files are initially considered as mbox
+folders.  (Any directories found in this scan are themselves
+scanned, since the scan is recursive.)
+
+Each colon-separated item may contain wildcard operators, but only
+in its final path component.  The wildcard operators currently
+supported are
+
+.TP
+*
+.br
+Match zero or more characters (each character matched is
+arbitrary)
+
+.TP
+?
+.br
+Match exactly one arbitrary character
+
+.TP
+[abcs-z]
+.br
+Character class : match a single character from the set a, b,
+c, s, t, u, v, w, x, y and z.
+
+To include a literal ']' in the class, place it immediately
+after the opening '['.  To include a literal '-' in the
+class, place it immediately before the closing ']'.
+
+If these metacharacters are included in non-final path components,
+they have no special meaning.
+
+Here are some examples
+
+.TP
+mbox=foo/bar*
+.br
+matches 'foo/bar', 'foo/bar1', 'foo/barrrr' etc
+
+.TP
+mbox=foo*/bar*
+.br
+matches 'foo*/bar', 'foo*/bar1', 'foo*/barrrr' etc
+
+.TP
+mbox=foo/*
+.br
+matches 'foo/bar', 'foo/bar1', 'foo/barrrr', 'foo/foo',
+\'foo/x' etc
+
+.TP
+mbox=foo...
+.br
+matches any regular file in the tree rooted at 'foo'
+
+.TP
+mbox=foo/*...
+.br
+same as before
+
+.TP
+mbox=foo/[a-z]*...
+.br
+matches 'foo/a', 'foo/aardvark/xxx', 'foo/zzz/foobar',
+\'foo/w/x/y/zzz', but not 'foo/A/foobar'
+
+Regular files that are mbox folder candidates are examined
+internally.  Only files containing standard mbox 'From ' separator
+lines will be scanned for messages.
+
+If a regular file has a name ending in '.gz', and gzip support is
+compiled into the 
+.B mairix
+binary, the file will be treated as a gzipped mbox.
+
+If a regular file has a name ending in '.bz2', and bzip support is
+compiled into the
+.B mairix
+binary, the file will be treated as a bzip2'd mbox.
+
+More than one line starting with 'mbox' can be included.  In this
+case, 
+.B mairix
+joins the lines together with colons as though a
+single list of folders had been given on a single very long line.
+
+.B mairix
+performs no locking of mbox folders when it is accessing
+them.  If a mail delivery program is modifying the mbox at the
+same time, it is likely that one or messages in the mbox will
+never get indexed by 
+.B mairix
+(until the database is removed and recreated from scratch, anyway.)  The
+assumption is that
+.B mairix
+will be used to index archive folders rather than incoming ones, so this is
+unlikely to be much of a problem in reality.
+
+.B mairix
+can support a maximum of 65536 separate mboxes, and a
+maximum of 65536 messages within any one mbox.
+
+.TP
+.BI omit= list-of-glob-patterns
+This is a colon-separated list of glob patterns for folders to be omitted from
+the indexing.  This allows wide wildcards and recursive elements to be used
+in the 
+.BR maildir , mh ", and" mbox
+directives, with the
+.B omit
+option used to selectively remove unwanted folders from the folder
+lists.
+
+Within the glob patterns, a single '*' matches any
+sequence of characters other than '/'.  However '**' matches any
+sequence of characters including '/'.  This allows glob patterns
+to be constructed which have a wildcard for just one directory
+component, or for any number of directory components.
+
+The _omit_ option can be specified as many times as required so
+that the list of patterns doesn't all have to fit on one line.
+
+As an example,
+.Sx 2
+mbox=bulk...
+omit=bulk/spam*
+.Ex
+will index all mbox folders at any level under the 'bulk'
+subdirectory of the base folder, except for those folders whose
+names start 'bulk/spam', e.g. 'bulk/spam', 'bulk/spam2005' etc.
+
+In constrast,
+.Sx 2
+mbox=bulk...
+omit=bulk/spam**
+.Ex
+will index all mbox folders at any level under the 'bulk'
+subdirectory of the base folder, except for those folders whose
+names start 'bulk/spam', e.g. 'bulk/spam', 'bulk/spam2005',
+\'bulk/spam/2005', 'bulk/spam/2005/jan' etc.
+
+.TP
+.B nochecks
+This takes no arguments.  If a line starting with
+.B nochecks is
+present, it is the equivalent of specifying the 
+.B -Q
+flag to every indexing run.
+
+.TP
+.BI mfolder= match-folder-name
+This defines the name of the folder (within the directory
+specified by 
+.BR base )
+into which the search mode writes its output.  (If the 
+.B mformat
+used is 'raw', then this setting is not used and may be omitted.)
+
+The
+.B mfolder
+setting may be over-ridden for a particular search by using the
+.B -o
+option to
+.BR mairix .
+
+.B mairix
+will refuse to output search results to a folder that appears to be amongst
+those that are indexed.  This is to prevent accidental deletion of emails.
+
+If the first character of the mfolder value is '/' or '.', it is
+taken as a pathname in its own right.  This allows you to specify
+absolute paths and paths relative to the current directory where
+the mfolder should be written.  Otherwise, the value of mfolder is
+appended to the value of base, in the same way as for the source
+folders.
+
+.TP
+.BI mformat= format
+This defines the type of folder used for the match folder where
+the search results go.  There are four valid settings for
+.IR format ,
+namely 'maildir', 'mh', 'mbox' or `raw'.  If the 'raw' setting is used then
+mairix will just print out the path names of the files that match and no match
+folder will be created.  'maildir' is the default if this option is not
+defined.  The setting is case-insensitive.
+
+.TP
+.BI database= path-to-database
+.br
+This defines the path where
+.BR mairix 's
+index database is kept.  You can keep this file anywhere you like.
+
+Currently,
+.B mairix
+will place a single database file at the location indicated by
+.IR path-to-database .
+However, a future version of
+.B mairix
+may instead place a directory containing several files at this location.
+
+.I path-to-database
+should be an absolute pathname (starting with '/').  If a relative pathname is
+used, it will be interpreted relative to the current directory at the time
+.B mairix
+is run,
+.RB ( not
+relative to the location of the 
+.I mairixrc
+file or anything like that.)
+
+.SS Expansions
+
+The part of each line in '.mairixrc' following the equals sign can
+contain the following types of expansion:
+
+.TP
+.B Home directory expansion
+If the sequence '~/' appears at the start of the text after the
+equals sign, it is expanded to the user's home directory.  Example:
+.Sx 1
+database=~/Mail/mairix_database
+.Ex
+.TP
+.B Environment expansion
+If a '$' is followed by a sequence of alpha-numeric characters (or
+\'_'), the whole string is replaced by looking up the corresponding
+environment variable.  Similarly, if '$' is followed by an open
+brace ('{'), everything up to the next close brace is looked up as
+an environment variable and the result replaces the entire
+sequence.
+
+Suppose in the shell we do
+.Sx 1
+export FOO=bar
+.Ex
+and the '.mairixrc' file contains
+.Sx 2
+maildir=xxx/$FOO
+mbox=yyy/a${FOO}b
+.Ex
+this is equivalent to
+.Sx 2
+maildir=xxx/bar
+mbox=yyy/abarb
+.Ex
+If the specified environment variable is not set, the replacement
+is the empty string.
+
+.SH NOTES
+.PP
+An alternative path to the configuration file may be given with the
+.B \-f
+option to mairix(1).
+
+
