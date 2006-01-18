@@ -9,8 +9,8 @@ unless (-d "RELEASES") {
 
 system ("git-tag -s $version");
 die "git-tag failed" if ($? != 0);
-if (-d $subdir) {
-  system ("rm -rf $subdir");
+if (-d "RELEASES/$subdir") {
+  system ("rm -rf RELEASES/$subdir");
 }
 
 system ("git-tar-tree $version RELEASES/${subdir} | tar xf -");
