@@ -23,94 +23,88 @@
 
 # Stuff to pass through verbatim
 %{
-#include "dates.h"
+#include "datescan_new.h"
 %}
 
-Tokens D0 D1 D2 D3 D49 A
-Abbrev D01 = D0 | D1
-Abbrev D12 = D1 | D2
-Abbrev D29 = D2 | D3 | D49
-Abbrev D19 = D1 | D29
-Abbrev D09 = D0 | D19
-Abbrev D = D09
+Abbrev A = [a-zA-Z]
 
-BLOCK day
+BLOCK day {
     State in
-        D12 ; D09 -> out
-        D3 ; D01  -> out
-ENDBLOCK
+        [12] ; [0-9] -> out
+        [3] ; [01]  -> out
+}
 
 # Match 2 digit year
-BLOCK year
+BLOCK year {
     State in
-        D0 ; D09  -> out
-        D3 ; D29 -> out
-        D49 ; D09 -> out
-ENDBLOCK
+        [04-9] ; [0-9]  -> out
+        [3] ; [2-9] -> out
+}
 
-BLOCK month
+BLOCK month {
     State in
         A ; A ; A -> out
-ENDBLOCK
+}
 
-BLOCK scaled
+BLOCK scaled {
     State in
-        D -> in, after_value
+        [0-9] -> in, after_value
 
     State after_value
         A -> out
-ENDBLOCK
+}
 
-BLOCK ccyy
+BLOCK ccyy {
     State in
-        D19 ; D ; D ; D -> out
-ENDBLOCK
+        [1-9] ; [0-9] ; [0-9] ; [0-9] -> out
+}
 
-BLOCK main
+BLOCK main {
     State in
-        D19 = DS_D
+        [1-9] = DS_D
         <day:in->out> = DS_D
         <year:in->out> = DS_Y
         <ccyy:in->out> = DS_Y
-        D ; D ; D ; D ; D ; D = DS_YYMMDD
-        D ; D ; D ; D ; D ; D ; D ; D = DS_YYMMDD
+        [0-9] ; [0-9] ; [0-9] ; [0-9] ; [0-9] ; [0-9] = DS_YYMMDD
+        [0-9] ; [0-9] ; [0-9] ; [0-9] ;
+            [0-9] ; [0-9] ; [0-9] ; [0-9] = DS_YYMMDD
         <scaled:in->out> = DS_SCALED
         <month:in->out> = DS_M
-        D19 ; <month:in->out> = DS_DM
+        [1-9] ; <month:in->out> = DS_DM
         <day:in->out> ; <month:in->out> = DS_DM
-        <month:in->out> ; D19 = DS_MD
+        <month:in->out> ; [1-9] = DS_MD
         <month:in->out> ; <day:in->out> = DS_MD
         <year:in->out> ; <month:in->out> = DS_YM
         <month:in->out> ; <year:in->out> = DS_MY
         <ccyy:in->out> ; <month:in->out> = DS_YM
         <month:in->out> ; <ccyy:in->out> = DS_MY
         
-        <year:in->out> ; <month:in->out> ; D19 = DS_YMD
+        <year:in->out> ; <month:in->out> ; [1-9] = DS_YMD
         <year:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
-        D19 ; <month:in->out> ; <year:in->out> = DS_DMY
+        [1-9] ; <month:in->out> ; <year:in->out> = DS_DMY
         <day:in->out> ; <month:in->out> ; <year:in->out> = DS_DMY
         
-        <ccyy:in->out> ; <month:in->out> ; D19 = DS_YMD
+        <ccyy:in->out> ; <month:in->out> ; [1-9] = DS_YMD
         <ccyy:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
-        D19 ; <month:in->out> ; <ccyy:in->out> = DS_DMY
+        [1-9] ; <month:in->out> ; <ccyy:in->out> = DS_DMY
         <day:in->out> ; <month:in->out> ; <ccyy:in->out> = DS_DMY
-ENDBLOCK
+}
 
-RESULT DS_D
-RESULT DS_Y
-RESULT DS_YYMMDD
-RESULT DS_SCALED
-RESULT DS_M
-RESULT DS_DM
-RESULT DS_MD
-RESULT DS_YM
-RESULT DS_MY
-RESULT DS_YMD
-RESULT DS_DMY
+ATTR DS_D
+ATTR DS_Y
+ATTR DS_YYMMDD
+ATTR DS_SCALED
+ATTR DS_M
+ATTR DS_DM
+ATTR DS_MD
+ATTR DS_YM
+ATTR DS_MY
+ATTR DS_YMD
+ATTR DS_DMY
 
-DEFRESULT DS_FAILURE
+DEFATTR DS_FAILURE
 
-TYPE "enum DATESCAN_TYPE"
+TYPE "DATESCAN_TYPE"
 PREFIX datescan
 
 

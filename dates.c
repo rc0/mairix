@@ -26,7 +26,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "mairix.h"
-#include "dates.h"
+#include "datescan_new.h"
 
 static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
 {
@@ -35,19 +35,7 @@ static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
   char *p;
   p = first;
   while (p < last) {
-    switch (*p) {
-      case '0': token = 0; break;
-      case '1': token = 1; break;
-      case '2': token = 2; break;
-      case '3': token = 3; break;
-      case '4' ... '9':
-                token = 4; break;
-      case 'a' ... 'z':
-      case 'A' ... 'Z':
-                token = 5; break;
-      default:
-                token = -1; break;
-    }
+    token = datescan_char2tok[(int)*(unsigned char*)p];
     current_state = datescan_next_state(current_state, token);
     if (current_state < 0) break;
     p++;
@@ -56,7 +44,7 @@ static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
   if (current_state < 0) {
     return DS_FAILURE;
   } else {
-    return datescan_exitval[current_state];
+    return datescan_attr[current_state];
   }
 }
 /*}}}*/

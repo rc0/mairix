@@ -30,7 +30,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "mairix.h"
-#include "fromcheck.h"
+#include "fromcheck_new.h"
 #include "md5.h"
 
 struct extant_mbox {/*{{{*/
@@ -183,8 +183,6 @@ static void init_fromtab(void)/*{{{*/
 }
 /*}}}*/
 
-static signed char fromcheck_table[256];
-
 /* REAL CHECKING : need to see if the line looks like this:
  * From [ <return-path> ] <weekday> <month> <day> <time> [ <timezone> ] <year>
    (from the mutt sources).
@@ -205,7 +203,7 @@ static int looks_like_from_separator(off_t n, char *va, size_t len, int verbose)
     if (verbose) {
       printf("current_state=%d, p=%02x (%1c) ", current_state, (int)(unsigned char)p, ((p>=32)&&(p<=126))?p:'.');
     }
-    current_state = fromcheck_next_state(current_state, (int)fromcheck_table[(int)(unsigned char)p]);
+    current_state = fromcheck_next_state(current_state, (int)fromcheck_char2tok[(int)(unsigned char)p]);
     if (verbose) {
       printf("next_state=%d\n", current_state);
     }
@@ -213,7 +211,7 @@ static int looks_like_from_separator(off_t n, char *va, size_t len, int verbose)
       /* not matched */
       break;
     }
-    if (fromcheck_exitval[current_state] == FROMCHECK_PASS) {
+    if (fromcheck_attr[current_state] == FROMCHECK_PASS) {
       result = 1; /* matched good separator */
       break;
     }
@@ -227,27 +225,6 @@ static int looks_like_from_separator(off_t n, char *va, size_t len, int verbose)
 }
 /*}}}*/
 
-static void init_fromcheck_table()/*{{{*/
-{
-  int i;
-  for (i=0; i<256; i++)   fromcheck_table[i] = -1;
-  for (i='A'; i<='Z'; i++) fromcheck_table[i] = FS_UPPER;
-  for (i='a'; i<='z'; i++) fromcheck_table[i] = FS_LOWER;
-  for (i='0'; i<='9'; i++) fromcheck_table[i] = FS_DIGIT;
-
-  fromcheck_table['+'] = FS_PLUSMINUS;
-  fromcheck_table['-'] = FS_PLUSMINUS;
-  fromcheck_table['@'] = FS_AT;
-  fromcheck_table[':'] = FS_COLON;
-  fromcheck_table['\n'] = FS_LF;
-  fromcheck_table['\r'] = FS_CR;
-  fromcheck_table[' '] = FS_WHITE;
-  fromcheck_table['\t'] = FS_WHITE;
-  fromcheck_table['_'] = FS_OTHEREMAIL;
-  fromcheck_table['.'] = FS_OTHEREMAIL;
-  fromcheck_table['='] = FS_OTHEREMAIL;
-}
-/*}}}*/
 static off_t find_next_from(off_t n, char *va, size_t len)/*{{{*/
 {
   unsigned char c;
@@ -818,8 +795,6 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
   check_duplicates(extant_mboxen, n_extant);
 
   marry_up_mboxen(db, extant_mboxen, n_extant);
-
-  init_fromcheck_table();
 
   /* Now look for new/modified mboxen, find how many of the old messages are
    * still valid and scan the remainder. */

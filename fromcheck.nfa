@@ -20,7 +20,7 @@
 # =======================================================================
 
 %{
-#include "fromcheck.h"
+#include "fromcheck_new.h"
 %}
 
 
@@ -35,11 +35,20 @@
 # PLUSMINUS : [+-]
 # OTHER_EMAIL : other stuff valid in an address, at least [_.]
 
-Tokens LF CR DIGIT AT COLON WHITE LOWER UPPER PLUSMINUS OTHER_EMAIL
+Abbrev LF = [\n]
+Abbrev CR = [\r]
+Abbrev DIGIT = [0-9]
+Abbrev AT = [@]
+Abbrev LOWER = [a-z]
+Abbrev UPPER = [A-Z]
+Abbrev COLON = [:]
+Abbrev WHITE = [ \t]
+Abbrev PLUSMINUS = [+\-]
+Abbrev OTHER_EMAIL = [_.=]
 Abbrev EMAIL = LOWER | UPPER | DIGIT | PLUSMINUS | OTHER_EMAIL
 
 
-BLOCK email
+BLOCK email {
     STATE in
         EMAIL -> in, before_at
 
@@ -53,9 +62,9 @@ BLOCK email
     STATE after_at
         EMAIL -> after_at, out
 
-ENDBLOCK
+}
 
-BLOCK zone
+BLOCK zone {
     # Make this pretty lenient
     STATE in
         UPPER -> zone2
@@ -65,9 +74,9 @@ BLOCK zone
     STATE zone2
         UPPER | LOWER -> zone2, out
         DIGIT         -> zone2, out
-ENDBLOCK
+}
 
-BLOCK date
+BLOCK date {
     STATE in
         WHITE -> in, before_weekday
 
@@ -125,13 +134,12 @@ BLOCK date
         WHITE -> after_year
         -> out
         
-ENDBLOCK
-
+}
 
 # Assume the earlier code has identified the '\nFrom ' sequence,
 # and the validator starts scanning from the character beyond the space
 
-BLOCK main
+BLOCK main {
 
     STATE in
         # Real return address.
@@ -156,12 +164,12 @@ BLOCK main
 
     STATE in
 
-ENDBLOCK
+}
 
-RESULT FROMCHECK_PASS
-RESULT FROMCHECK_FAIL
-DEFRESULT FROMCHECK_FAIL
+ATTR FROMCHECK_PASS
+ATTR FROMCHECK_FAIL
+DEFATTR FROMCHECK_FAIL
 PREFIX fromcheck
-TYPE "enum fromcheck_result"
+TYPE "fromcheck_result"
 
 # vim:ft=txt:et:sw=4:sts=4:ht=4
