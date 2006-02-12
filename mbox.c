@@ -30,7 +30,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "mairix.h"
-#include "fromcheck_new.h"
+#include "from.h"
+#include "fromcheck.h"
 #include "md5.h"
 
 struct extant_mbox {/*{{{*/

@@ -59,11 +59,14 @@ mairix : $(OBJ)
 %.o : %.c memmac.h mairix.h reader.h Makefile
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
-datescan.c : datescan.nfa ../dfasyn/dfasyn
-	../dfasyn/dfasyn -o datescan.c -ho datescan_new.h -r datescan.report -v -u datescan.nfa
+datescan.c datescan.h : datescan.nfa ../dfasyn/dfasyn
+	../dfasyn/dfasyn -o datescan.c -ho datescan.h -r datescan.report -v -u datescan.nfa
 
-fromcheck.c : fromcheck.nfa ../dfasyn/dfasyn fromcheck.h
-	../dfasyn/dfasyn -o fromcheck.c -ho fromcheck_new.h -r fromcheck.report -v -u fromcheck.nfa
+fromcheck.c fromcheck.h : fromcheck.nfa ../dfasyn/dfasyn
+	../dfasyn/dfasyn -o fromcheck.c -ho fromcheck.h -r fromcheck.report -v -u fromcheck.nfa
+
+dates.o : datescan.h
+mbox.o : fromcheck.h
 
 ../dfasyn/dfasyn:
 	echo "Assume dfasyn is up to date"

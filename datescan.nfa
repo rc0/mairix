@@ -23,7 +23,7 @@
 
 # Stuff to pass through verbatim
 %{
-#include "datescan_new.h"
+#include "dates.h"
 %}
 
 Abbrev A = [a-zA-Z]
@@ -104,7 +104,7 @@ ATTR DS_DMY
 
 DEFATTR DS_FAILURE
 
-TYPE "DATESCAN_TYPE"
+TYPE "enum DATESCAN_TYPE"
 PREFIX datescan
 
 

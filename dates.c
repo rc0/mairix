@@ -26,7 +26,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include "mairix.h"
-#include "datescan_new.h"
+#include "dates.h"
+#include "datescan.h"
 
 static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
 {

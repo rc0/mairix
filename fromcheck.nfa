@@ -20,7 +20,7 @@
 # =======================================================================
 
 %{
-#include "fromcheck_new.h"
+#include "from.h"
 %}
 
 
@@ -170,6 +170,6 @@ ATTR FROMCHECK_PASS
 ATTR FROMCHECK_FAIL
 DEFATTR FROMCHECK_FAIL
 PREFIX fromcheck
-TYPE "fromcheck_result"
+TYPE "enum fromcheck_result"
 
 # vim:ft=txt:et:sw=4:sts=4:ht=4
