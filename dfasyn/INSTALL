@@ -1,0 +1,19 @@
+There is no real configure mechanism (yet).
+
+To build the program
+
+    make
+
+To install the program (perhaps as root)
+
+    make prefix=/usr/local install
+
+or as yourself you might do
+
+    make prefix=$HOME install
+
+or if your distribution puts manpages in /usr/share/man, you might do
+
+    make prefix=/usr/local mandir=/usr/share/man install
+
+# vim:et:sw=4

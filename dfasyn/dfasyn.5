@@ -1,0 +1,650 @@
+.TH DFASYN 5 ""
+.SH NAME
+dfasyn
+.SH SYNOPSYS
+This page describes the format of the
+.I input-file
+for the
+.B dfasyn
+deterministic finite automaton generator.
+.SH DESCRIPTION
+.SS Overview
+Reserved words may be given in all-lowercase, all-uppercase, initial capitals,
+or 'WikiWord' format (e.g.
+.B endblock
+may be given as
+.BR endblock ", " Endblock ", " EndBlock " or " ENDBLOCK .
+
+.SS Block declaration
+A
+.B block
+declaration is used to group together a set of state declarations.  Blocks are
+useful if there are blocks of states and their interconnections that occur more
+than once in the NFA.  In this case it is useful to declare a block, allowing
+that block to be instantiated more than once elsewhere in the input file.
+
+Since state declarations are only allowed inside blocks, there must be at least
+one block declaration in any useful input file.
+
+The syntax of a block declaration is
+.RS
+.B block
+.I block-name
+{
+.br
+.RS 2
+[
+.I instance-declarations
+]
+.br
+[
+.I state-declarations
+]
+.RE
+.br
+}
+.RE
+
+.SS State declarations
+A
+.B state
+declaration gives rise to a state in the input NFA.
+
+The syntax of a state declaration is
+.RS
+.B state
+.I state-name
+[
+.B entry
+.I entry-name
+]
+.br
+.RS 2
+[
+.I transitions
+]
+.RE
+.RE
+
+States are implicitly terminated by the beginning of another type of construct.
+
+.B entry
+.I entry-name
+(if present) defines the name of an entry point into the scanner.  In the
+resulting C-code, a symbol called
+.I entry-name
+will be declared.  Its value will be the DFA state number of the state
+containing just this NFA state (plus its epsilon closure.)  This allows for
+multiple scanners to be generated from the same input file.  For example, if
+one scanner is the same as another but with some extra text that must match at
+the beginning, two different
+.B entry
+states can be declared to represent this.
+.B dfasyn
+will be able to common-up all of the common part of the DFA's transition
+tables.
+
+If there are no
+.B entry
+directives anywhere in the input file,
+.B dfasyn
+defaults to the last mentioned state in the last block being the entry state.
+
+.I transitions
+is a whitespace-separated sequence of zero or more transitions.  These define which
+of the automaton's input symbols cause a transition from this state to which other
+states.
+
+The same state may be declared more than once inside its block.  In this case,
+the transitions given in the second declaration will be merged with those given
+in the first, as though all the transitions had been given in the first place.
+
+.SS Instance declarations
+A block may be instantiated inside another block.  This is useful if there is a
+block of states with their transitions that occurs in more than once place
+within the NFA.
+
+The syntax for an instance declaration is
+
+.RS
+.I instance-name
+:
+.I block-name
+.RE
+
+where
+.I instance-name
+is the name of the new instance, and
+.I block-name
+is the name of the block that is being instantiated.  This block
+.B must
+have been declared earlier in the input file.  For one thing, this prevents
+mutually recursive definitions.
+
+When such an instance has been created, the states inside it may be referred to
+within the enclosing block by prefixing their names with the
+.I instance-name
+followed by a period.
+
+.SS Transitions
+A state-to-state transition is specified as follows.
+
+.RS
+.I transition
+->
+.I destinations
+.RE
+
+.I destinations
+is a comma-separated list of one or more fully-qualified state names.  These
+are the states to which the NFA moves if the
+.I transition
+is matched next in the input.  The destination state names are allowed to be
+forward-references; just the name is stored during parsing, and a second pass
+later is used to resolve all the names.  There is no need for a named
+destination to actually be declared with another state definition; a state just
+comes into being if it is named at all.
+
+A
+.I transition
+defines the inputs that are required to cause the scanner to move
+from one state to another.  A
+.I transition
+is a semicolon-separated list of one or more
+.I stimuli.
+(If there is only one stimulus, no semicolon is required.) The transition
+matches as a whole if the stimuli are matched individually in sequential order
+from left to right.
+
+.SS Transitions to a tag
+Where a transition leads to a tagged exit state, the following syntax is used:
+
+.RS
+.I transition
+=
+.I tags
+.RE
+
+where
+.I tags
+is a comma-separated list of one or more tag names.  Thus a construction like
+
+.RS
+state foo XXX = TAG1
+.RE
+
+indicates that matching the token XXX leads to a state in which TAG1 applies.
+
+.SS Stimuli
+A
+.B stimulus 
+is a pipe-separated list of alternatives.  Each alternative may be one of the following:
+.IP "*" 7
+the name of a token
+.IP "*" 7
+a character class
+.IP "*" 7
+the name of an abbreviation
+.IP "*" 7
+an empty string (which gives rise to an
+.B epsilon transition
+)
+.IP "*" 7
+an inline block instance
+
+.SS Input symbols
+Input symbols can be defined in two ways.  The first is to use ASCII characters
+directly.  The second is to define a set of
+.I tokens
+and use a front-end module to generate these based on the actual input.  You
+can actually mix both types of input symbol.  For example, you might wish to
+use ASCII characters mostly, but detect \(dqend-of-file\(dq as an explicit symbol.
+
+.SS ASCII input and character classes.
+
+Single ASCII characters can be given in double-quotes.  Sets of ASCII
+characters can be given in square brackets, similar to shell globbing.
+Character classes can be negated and differenced.
+
+.IP [a] 12
+The character "a".
+.IP [abe-h] 12
+Any of the characters "a", "b", "e", "f", "g", "h".
+.IP ~[abc] 12
+Any of the 253 characters excluding "a", "b" and "c"; a negated character class.
+.IP [^abc] 12
+Ditto - another way of expressing a negated character class.
+.IP [a-z]~[c] 12
+Equivalent to [abd-z].
+
+.PP
+The following special cases are available within the square brackets:
+
+.IP \(rs- 8
+A hyphen.  Normally the hyphen is used as a range separator.  To get a literal
+hyphen, it must be escaped by a back-slash.
+.IP \(rs] 8
+A closing square bracket.  The escaping is required to prevent it being handled
+as the end of the character class.
+.IP \(rs\(rs 8
+A literal backslash.
+.IP \(rs^ 8
+A literal "^".
+.IP \(rsn 8
+The same character as "\(rsn" in C.
+.IP \(rsr 8
+The same character as "\(rsr" in C.
+.IP \(rsf 8
+The same character as "\(rsf" in C.
+.IP \(rst 8
+The same character as "\(rst" in C.
+.IP ^A 8
+Generate a control character, in this case ASCII character 1.  Defined for ^@
+through to ^Z.
+.IP \(rsxa9 8
+The ASCII character with hex value 0xa9.  Upper or lower case hex may be used.
+.IP \(rs234
+The ASCII character with octal value 0234.
+
+.SS Tokens
+To define non-ASCII inputs, at least one
+.B tokens
+directive must be used.  The syntax is
+.PP
+.B tokens
+.I list-of-tokens
+.PP
+where
+.I list-of-tokens
+is a space-separated list of token names.  Each token name is a string that
+will be acceptable as a C macro name when prefixed by the current prefix string
+plus an underscore.
+
+If more than one
+.B tokens
+line appears in the input file, the 2nd and subsequent lines are treated as
+though their entries were concatenated with the 1st line.
+
+.SS Abbreviations
+An
+.B abbreviation
+provides a convenient way to define a shorthand name for a frequently used
+.B stimulus.
+
+The syntax is
+
+.RS
+.B abbrev
+.I abbrev-name
+=
+.I stimulus
+.RE
+
+For example:
+
+.RS
+abbrev FOO = [aeiouAEIOU] | A_TOKEN | <xyzzy:in->out>
+.RE
+
+.SS Inline block instances
+A
+.B stimulus
+may take the form of a block instance.  This is a convenient shorthand when a
+complex sequence of input tokens needs to be matched as part of a transition.
+
+The syntax of an inline block instance is
+.RS
+.RI < block_name : entry_state "->" exit_state >
+.RE
+
+As an example, given a block
+.B double_a
+defined like this
+.RS
+block double_a
+  state in A -> out
+.br
+endblock
+.RE
+
+the following construction
+.RS
+block x
+  state foo <double_a:in->out> ; B ; <double_a:in->out> -> bar
+.br
+endblock
+.RE
+
+is equivalent to
+.RS
+block x
+  aa1 : double_a
+  aa2 : double_a
+  state foo -> aa1.in
+  state aa1.out
+    B -> aa2.in
+  state aa2.out -> bar
+.br
+endblock
+.RE
+
+Note that in the second example, where explicit instances have been created,
+they must have unique names.  In the first case,
+.B dfasyn
+will create the two anonymous instances automatically and handle all the
+plumbing to connect up the in and out states.  Note there is no requirement for
+the states to be named 'in' and 'out'; that is merely a convention.  An
+instanced block may have multiple inputs, with different inputs being used in
+different instantiations of the block, for example.
+
+.SS Tags and attributes
+.B Tags
+are associated with the NFA states in the input.  An NFA state may have an
+arbitrary number of tags associated with it, through what amounts to a list of
+strings.
+.B Attributes
+are attached to the DFA states in the output.  In the generated C-file, the
+attributes are expressed in terms of an array which is indexed by the DFA state
+number and whose elements are the attribute values applying to the states.
+
+Once the DFA has been generated,
+.B dfasyn
+knows the NFA states that apply in each DFA state.  From this, the tags
+associated with a DFA state are given by the union of all the tags appylying in
+all the NFA states that apply in that DFA state.
+
+The input file defines how a set of tags applying in a DFA state is to be
+reduced to a single attribute value.  A boolean expression language is provided
+for this purpose.
+
+Although the default is to generate a single attribute table,
+.B dfasyn
+can generate arbitrarily many tables if required.  This is achieved by using
+.B attribute groups.
+The NFA tag namespace is shared across all such groups.  The group syntax is as
+follows:
+
+.RS
+.B group
+.I groupname
+.B {
+.I declaration
+[
+.RI ", " declaration 
+\ ...
+]
+.B }
+.RE
+
+where each
+.I declaration
+is one of the following:
+
+.RS
+.B attr
+.I attribute-name
+[
+.RI ", " attribute-name
+\ ... ]
+.br
+.B attr
+.I attribute-name
+.B :
+.I expression
+.br
+.B early
+.B attr
+.I attribute-name
+[
+.RI ", " attribute-name
+\ ... ]
+.br
+.B early
+.B attr
+.I attribute-name
+.B :
+.I expression
+.RE
+
+In the form with no expression, each
+.I attribute-name
+has an implicit expression consisting of just the tag with the same name as
+itself.
+
+.I expression
+is defined in the section
+.B Expressions
+later.  The short form
+
+.RS
+.B attr
+foo
+.RE
+
+is short for 
+.RS
+.B attr
+foo
+.B :
+foo
+.RE
+
+i.e. it allows an attribute to be defined which has the same name as a tag and
+which is active in the cases where precisely that tag is active.
+
+If an attribute is prefixed by
+.BR early ,
+it means that the C-code you provide to drive the DFA is going to stop scanning
+once this state attribute is detected.  For example, this would apply if you
+were coding a "shortest match" scanner.
+.B dfasyn
+will prune all the transitions away from any DFA state having such an
+attribute.  This may lead to greater opportunities for
+.B dfasyn
+to compress the DFA.
+
+A default attribute must be declared.  This is used to fill all the entries in
+the attribute array for DFA states that end up with no explicit attribute
+defined.  (It is also used in determining where the DFA may be optimised to
+remove "dead states".)  The syntax is
+
+.RS
+.B defattr
+.I default-attribute-string
+.RE
+
+Finally, the C-type of the attribute must be declared.  This becomes the base
+type of the array indexed by the DFA state number.  The syntax is
+
+.RS
+.B type
+.I attribute-type-name
+.RE
+
+It is illegal for more than one attribute in a particular attribute group to be
+active in a DFA state.  If this situation occurs, it indicates that the
+expression logic for that group is defective.
+
+.SS Expressions
+An
+.I expression
+defines an attribute in terms of a boolean relationship between one more more
+tags.  An
+.I expression
+may be any one of the following:
+
+.RS
+.IR expression " & " expression
+.br
+.IR expression " | " expression
+.br
+.IR expression " ^ " expression
+.br
+.IR expression " ? " expression " : " expression
+.br
+.RI ( expression )
+.br
+.RI "~" expression
+.br
+.RI "!" expression
+.br
+.I tag-name
+.RE
+
+Note that
+.RI "~" expression
+and
+.RI "!" expression
+both mean the negation of expression.
+
+The operator precedence is what would be expected for a C-programmer.
+
+.SH Prefix specification
+The
+.B prefix
+used in the generated C-file can optionally be set in the input file using the following syntax:
+
+.RS
+.B prefix
+.I prefix-string
+.RE
+
+where
+.IR prefix-string _
+(i.e. the specific string followed by an underscore) will occur at the start of
+each symbol name in the generated C-file.
+
+If the prefix has been set via the command line using
+.BR -p ,
+the
+.B prefix
+line in the input file will be ignored and a warning given.
+
+.SH "THE GENERATED C-FILE"
+The generated file exports the following symbols that can be used by the calling program:
+
+.TP
+.B short
+.IB prefix_ char2tok
+[256];
+.br
+If character classes have been used, this table maps from ASCII values to the
+internal tokens numbers used by the generated DFA.  This array will be defined
+in the generated C-file.  If a header file is being generated, it will be
+declared in there also.
+
+.TP
+.B #define
+.IB prefix_ TOKEN
+.I numeric_value
+.br
+If a
+.b tokens
+directive has been used, each such token will be assigned a number.  These
+assignments are emitted by
+.b dfasyn
+as a series of #define lines.  Each token name from the input file will have the
+.I prefix
+and an underscore prepended to form the name of the symbol in the #define.
+If a header file is being generated
+.RB ( -ho ),
+these definitions are placed in the header file.  Otherwise, they are placed in
+the main output C-file.
+
+.TP 7
+.B int
+.IB prefix_ next_state
+(int current_state, int next_state);
+.br
+This is the prototype for the next state function which the calling program must invoke.
+
+If no 
+.B -I
+option has been used, this function will be defined in the generated C-file.
+If a header file is being generated, it will be prototyped in there also.
+
+If
+.B -I
+has been used, the function will be defined in the header file.
+
+.TP
+.B int
+.IB prefix _ entry-name
+.br
+If the
+.B entrystruct
+directive has not been used, this format is used to define the DFA state
+numbers for the defined entry points.  The calling program uses these values to
+set the
+.I current_state
+at the start of the scanning process, depending on which entry point is being
+used.
+
+If there is more than one entry, there will be more than one such line.
+
+
+.TP
+.B struct
+.I entrystruct-type
+{ ... }
+.I entrystruct-var
+.br
+If the
+.B entrystruct
+directive has been used, the DFA state numbers for the entry points are
+declared as elements of a struct.  The struct member names are identical to the
+entry names used in the
+.B dfasyn
+input file.  The declaration of the struct variable containing the state
+numbers will be in the generated C-file.  If a header file is being generated
+.RB ( -ho ),
+the definition of the struct type will be in there.  Otherwise, it will be in
+the C-file also.
+
+.TP 12
+.I attr-type
+.IB prefix_ attr
+.RI [ #DFA-states ]
+.br
+This defines the attributes for each of the DFA states in the default attribute
+group.  If no
+.B type
+.I attr-type
+declaration was in the input file, the default of
+.B short
+will be used.
+
+If other attribute groups are defined, there will be a similar array for each one:
+
+.TP 18
+.I group-attr-type
+.I prefix_group-name
+.RI [ #DFA-states ]
+.br
+For the attribute group declared with 
+.B group
+.I group-name
+in the input file, this defines the attribute of each of the DFA states in that
+group.
+
+.SH TEXT PASSTHROUGH
+To pass a block of literal text through to the output file without
+interpretation, enclose it in %{ ... %} like this:
+
+.RS
+%{
+.br
+#include "foo.h"
+.br
+%}
+.RE
+
+The opening and closing patterns must be on lines on their own (trailing
+whitespace is allowed).
+
+
+.SH "SEE ALSO"
+.BR dfasyn (1)
+
+
+

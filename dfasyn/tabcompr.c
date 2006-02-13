@@ -1,31 +1,29 @@
 /***************************************
-  $Header: /cvs/src/dfasyn/tabcompr.c,v 1.2 2003/03/02 23:42:11 richard Exp $
-
   Routines to compress the DFA transition tables, by identifying where two DFA
   states have a lot of transitions the same.
   ***************************************/
 
-/* 
+/*
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2001-2003
- * 
+ * Copyright (C) Richard P. Curnow  2001-2003,2005,2006
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
-#include "n2d.h"
+#include "dfasyn.h"
 
 /* ================================================================= */
 /* Treat 'x' as a set of 16 bit pairs, with field (0..15) specifying
@@ -68,17 +66,17 @@ unsigned long count_bits_set(unsigned long x)
    fn. */
 
 static void
-compute_transition_sigs(DFANode **dfas, int ndfas, int ntokens)
+compute_transition_sigs(struct DFA *dfa, int ntokens)
 {
   int i, j;
-  for (i=0; i<ndfas; i++) {
+  for (i=0; i<dfa->n; i++) {
     unsigned long ts = 0UL; /* transition signature */
     for (j=0; j<ntokens; j++) {
-      unsigned long dest = dfas[i]->map[j];
+      unsigned long dest = dfa->s[i]->map[j];
       dest &= 0xf; /* 16 bit pairs in 'ts' */
       ts = increment(ts, dest);
     }
-    dfas[i]->transition_sig = ts;
+    dfa->s[i]->transition_sig = ts;
   }
 }
 
@@ -88,7 +86,7 @@ compute_transition_sigs(DFANode **dfas, int ndfas, int ntokens)
 #define REQUIRED_BENEFIT 2
 
 static void
-find_default_states(DFANode **dfas, int ndfas, int ntokens)
+find_default_states(struct DFA *dfa, int ntokens)
 {
   int i, j, t;
   int best_index;
@@ -96,23 +94,23 @@ find_default_states(DFANode **dfas, int ndfas, int ntokens)
   int trans_count; /* Number of transitions in working state */
   unsigned long tsi;
 
-  for (i=0; i<ndfas; i++) {
+  for (i=0; i<dfa->n; i++) {
     trans_count = 0;
     for (t=0; t<ntokens; t++) {
-      if (dfas[i]->map[t] >= 0) trans_count++;
+      if (dfa->s[i]->map[t] >= 0) trans_count++;
     }
-  
-    dfas[i]->defstate = -1; /* not defaulted */
+
+    dfa->s[i]->defstate = -1; /* not defaulted */
     best_index = -1;
     best_diff = ntokens + 1; /* Worse than any computed value */
-    tsi = dfas[i]->transition_sig;
+    tsi = dfa->s[i]->transition_sig;
     for (j=0; j<i; j++) {
       unsigned long tsj;
       unsigned long sigdiff;
       int diffsize;
 
-      if (dfas[j]->defstate >= 0) continue; /* Avoid chains of defstates */
-      tsj = dfas[j]->transition_sig;
+      if (dfa->s[j]->defstate >= 0) continue; /* Avoid chains of defstates */
+      tsj = dfa->s[j]->transition_sig;
 
       /* This is the heart of the technique : if we xor two vectors of bit
          pairs encoded with the gray code above, and count the number of bits
@@ -121,7 +119,7 @@ find_default_states(DFANode **dfas, int ndfas, int ntokens)
          states must be _at_least_ this value.  It may in fact be much greater
          (i.e. we may get 'false matches').  However, this algorithm is a quick
          way of filtering most of the useless potential default states out. */
-      
+
       sigdiff = tsi ^ tsj;
       diffsize = count_bits_set(sigdiff);
       if (diffsize >= best_diff) continue;
@@ -131,7 +129,7 @@ find_default_states(DFANode **dfas, int ndfas, int ntokens)
          suffered). */
       diffsize = 0;
       for (t=0; t<ntokens; t++) {
-        if (dfas[i]->map[t] != dfas[j]->map[t]) {
+        if (dfa->s[i]->map[t] != dfa->s[j]->map[t]) {
           diffsize++;
         }
       }
@@ -144,18 +142,18 @@ find_default_states(DFANode **dfas, int ndfas, int ntokens)
       }
     }
 
-    dfas[i]->defstate = best_index;
-    dfas[i]->best_diff = best_diff;
+    dfa->s[i]->defstate = best_index;
+    dfa->s[i]->best_diff = best_diff;
   }
 }
 
 /* ================================================================= */
 
 void
-compress_transition_table(DFANode **dfas, int ndfas, int ntokens)
+compress_transition_table(struct DFA *dfa, int ntokens)
 {
-  compute_transition_sigs(dfas, ndfas, ntokens);
-  find_default_states(dfas, ndfas, ntokens);
+  compute_transition_sigs(dfa, ntokens);
+  find_default_states(dfa, ntokens);
 }
 
 /* ================================================================= */
@@ -175,9 +173,9 @@ int main () {
   printf("3=%d\n", count_bits_set(0x00000007));
   printf("4=%d\n", count_bits_set(0x0000000f));
   printf("4=%d\n", count_bits_set(0xf0000000));
-  
+
   return 0;
 }
 #endif
 
-  
+
