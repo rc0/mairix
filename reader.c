@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -41,7 +41,7 @@ int read_increment(unsigned char **encpos) {/*{{{*/
   unsigned char *j = *encpos;
   int result;
   unsigned char x0, x1, x2, x3;
-  
+
   x0 = *j++;
   if ((x0 & 0xc0) == 0xc0) {
     /* 4 byte encoding */
@@ -117,7 +117,7 @@ struct read_db *open_db(char *filename)/*{{{*/
     }
     return NULL;
   }
-  
+
   if (close(fd) < 0) {
     perror("close");
     unlock_and_exit(2);
@@ -169,7 +169,7 @@ struct read_db *open_db(char *filename)/*{{{*/
   result->mbox_checksum_table = uidata + uidata[UI_MBOX_CKSUM];
 
   result->hash_key = uidata[UI_HASH_KEY];
-  
+
   read_toktable_db(data, &result->to, UI_TO_BASE, uidata);
   read_toktable_db(data, &result->cc, UI_CC_BASE, uidata);
   read_toktable_db(data, &result->from, UI_FROM_BASE, uidata);

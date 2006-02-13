@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -33,7 +33,7 @@
 #include <sys/mman.h>
 
 struct write_map_toktable {/*{{{*/
-  
+
   /* Table of character offsets to null-terminated token texts */
   int tok_offset;
 
@@ -42,7 +42,7 @@ struct write_map_toktable {/*{{{*/
   int enc_offset;
 };/*}}}*/
 struct write_map_toktable2 {/*{{{*/
-  
+
   /* Table of character offsets to null-terminated token texts */
   int tok_offset;
 
@@ -90,7 +90,7 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
   int fd;
   char *data;
   struct stat sb;
-  
+
   fd = open(filename, O_RDWR | O_CREAT, 0600);
   if (fd < 0) {
     perror("open");
@@ -132,7 +132,7 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
   *out_fd = fd;
 }
 /*}}}*/
-  
+
 static int toktable_char_length(struct toktable *tab)/*{{{*/
 {
   int result = 0;
@@ -170,7 +170,7 @@ static int char_length(struct database *db)/*{{{*/
 
   /* For type table. */
   result += db->n_msgs;
-  
+
   for (i=0; i<db->n_msgs; i++) {
     switch (db->type[i]) {
       case MTY_DEAD:
@@ -273,7 +273,7 @@ static void write_header(char *data, unsigned int *uidata, struct database *db, 
   uidata[UI_TO_N] = db->to->n;
   uidata[UI_TO_TOK] = map->to.tok_offset;
   uidata[UI_TO_ENC] = map->to.enc_offset;
-  
+
   uidata[UI_CC_N] = db->cc->n;
   uidata[UI_CC_TOK] = map->cc.tok_offset;
   uidata[UI_CC_ENC] = map->cc.enc_offset;
@@ -285,16 +285,16 @@ static void write_header(char *data, unsigned int *uidata, struct database *db, 
   uidata[UI_SUBJECT_N] = db->subject->n;
   uidata[UI_SUBJECT_TOK] = map->subject.tok_offset;
   uidata[UI_SUBJECT_ENC] = map->subject.enc_offset;
-  
+
   uidata[UI_BODY_N] = db->body->n;
   uidata[UI_BODY_TOK] = map->body.tok_offset;
   uidata[UI_BODY_ENC] = map->body.enc_offset;
-  
+
   uidata[UI_MSGID_N]    = db->msg_ids->n;
   uidata[UI_MSGID_TOK]  = map->msg_ids.tok_offset;
   uidata[UI_MSGID_ENC0] = map->msg_ids.enc0_offset;
   uidata[UI_MSGID_ENC1] = map->msg_ids.enc1_offset;
-  
+
   return;
 }
 /*}}}*/
@@ -380,7 +380,7 @@ static  char *write_mbox_headers(struct database *db, struct write_map *map, uns
 {
   int i, len;
   char *start_cdata = cdata;
-  
+
   for (i=0; i<db->n_mboxen; i++) {
     struct mbox *mb = &db->mboxen[i];
     uidata[map->mbox_entries_offset + i] = mb->n_msgs;
@@ -431,7 +431,7 @@ static char *write_toktable(struct toktable *tab, struct write_map_toktable *map
   stok = new_array(struct token *, tab->n);
   max = tab->size;
   n = tab->n;
-  
+
   for (i=0, j=0; i<max; i++) {
     struct token *tok = tab->tokens[i];
     if (tok) {
@@ -487,7 +487,7 @@ static char *write_toktable2(struct toktable2 *tab, struct write_map_toktable2 *
   stok = new_array(struct token2 *, tab->n);
   max = tab->size;
   n = tab->n;
-  
+
   for (i=0, j=0; i<max; i++) {
     struct token2 *tok = tab->tokens[i];
     if (tok) {
@@ -559,12 +559,12 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   if (!verify_mbox_size_constraints(db)) {
     unlock_and_exit(1);
   }
-  
+
   /* Work out mappings */
   compute_mapping(db, &map);
-  
+
   file_len = char_length(db) + (4 * map.beyond_last_ui_offset);
-  
+
   create_rw_mapping(filename, file_len, &fd, &data);
   uidata = (unsigned int *) data; /* align(int) < align(page)! */
   cdata = data + (4 * map.beyond_last_ui_offset);
@@ -580,7 +580,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   cdata = write_toktable(db->subject, &map.subject, uidata, data, cdata, "Subject");
   cdata = write_toktable(db->body, &map.body, uidata, data, cdata, "Body");
   cdata = write_toktable2(db->msg_ids, &map.msg_ids, uidata, data, cdata, "(Threading)");
-  
+
   /* Write data */
   /* Unmap / close file */
   if (munmap(data, file_len) < 0) {

@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -183,7 +183,7 @@ struct mbox {/*{{{*/
   int n_new_msgs;
 
   int n_so_far; /* Used during database load. */
-  
+
   int n_msgs;   /* Number of entries in 'start' and 'len' */
   int max_msgs; /* Allocated size of 'start' and 'len' */
   /* File offset to the start of each message (first line of real header, not to mbox 'From ' line) */
@@ -302,7 +302,7 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs, struct globber_array *omit_globs);
 int filter_is_maildir(const char *path, const struct stat *sb);
 int filter_is_mh(const char *path, const struct stat *sb);
-  
+
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);
 void free_rfc822(struct rfc822 *msg);
@@ -363,7 +363,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
 
 /* In search.c */
 int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose);
-  
+
 /* In stats.c */
 void get_db_stats(struct database *db);
 

@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -39,7 +39,7 @@ void lock_database(char *path, int forced_unlock)/*{{{*/
   char *tname;
   struct stat sb;
   FILE *out;
-  
+
   if (uname(&uu) < 0) {
     perror("uname");
     exit(1);
@@ -58,7 +58,7 @@ void lock_database(char *path, int forced_unlock)/*{{{*/
     unlock_database();
     forced_unlock = 0;
   }
-  
+
   len += strlen(uu.nodename);
   /* add on max width of pid field (allow up to 32 bit pid_t) + 2 '.' chars */
   len += (10 + 2);

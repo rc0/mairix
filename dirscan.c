@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -88,10 +88,10 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
   int folder_len = strlen(folder);
 
   /* FIXME : just store mdir-rooted paths in array and have common prefix elsewhere. */
-  
+
   subdir = new_array(char, folder_len + 6);
   fname = new_array(char, folder_len + 8 + NAME_MAX);
-  for (i=0; i<2; i++) { 
+  for (i=0; i<2; i++) {
     strcpy(subdir, folder);
     strcat(subdir, "/");
     strcat(subdir, subdirs[i]);
@@ -120,7 +120,7 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
 int valid_mh_filename_p(const char *x)/*{{{*/
 {
   const char *p;
-  
+
   if (!*x) return 0; /* Must not be empty */
   p = x;
   while (*p) {
@@ -176,7 +176,7 @@ static int child_stat(const char *base, const char *child, struct stat *sb)/*{{{
   strcpy(scratch, base);
   strcat(scratch, "/");
   strcat(scratch, child);
-  
+
   result = stat(scratch, sb);
   free(scratch);
   return result;
@@ -187,7 +187,7 @@ static int has_child_file(const char *base, const char *child)/*{{{*/
   int result = 0;
   int status;
   struct stat sb;
-  
+
   status = child_stat(base, child, &sb);
   if ((status >= 0) && S_ISREG(sb.st_mode)) {
     result = 1;
@@ -201,7 +201,7 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   int result = 0;
   int status;
   struct stat sb;
-  
+
   status = child_stat(base, child, &sb);
   if ((status >= 0) && S_ISDIR(sb.st_mode)) {
     result = 1;
@@ -265,10 +265,10 @@ int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
         has_child_file(path, ".mh_sequences") ||
         /* Sylpheed */
         has_child_file(path, ".sylpheed_cache") ||
-        has_child_file(path, ".sylpheed_mark") || 
+        has_child_file(path, ".sylpheed_mark") ||
         /* NNML (Gnus) */
         has_child_file(path, ".marks") ||
-        has_child_file(path, ".overview") || 
+        has_child_file(path, ".overview") ||
         /* Evolution */
         has_child_file(path, "cmeta") ||
         has_child_file(path, "summary") ||
@@ -314,7 +314,7 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
     default:
       break;
   }
-  
+
   fname = new_array(char, strlen(name) + 2 + NAME_MAX);
   sname = new_array(char, this_folder_len + 2 + NAME_MAX);
 
@@ -353,7 +353,7 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
 static int message_compare(const void *a, const void *b)/*{{{*/
 {
   /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
-  struct msgpath *aa = (struct msgpath *) a;  
+  struct msgpath *aa = (struct msgpath *) a;
   struct msgpath *bb = (struct msgpath *) b;
   /* This should only get called on 'file' type messages - TBC! */
   return strcmp(aa->src.mpf.path, bb->src.mpf.path);
@@ -390,7 +390,7 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
       assert(0);
       break;
   }
-      
+
   if (paths) free(paths);
 
   sort_message_list(msgs);
@@ -403,7 +403,7 @@ int main (int argc, char **argv)
 {
   int i;
   struct msgpath_array *arr;
-  
+
   arr = build_message_list(".");
 
   for (i=0; i<arr->n; i++) {
@@ -411,7 +411,7 @@ int main (int argc, char **argv)
   }
 
   free_msgpath_array(arr);
-  
+
   return 0;
 }
 #endif

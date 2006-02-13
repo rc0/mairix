@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -105,7 +105,7 @@ static int substring_match_0(unsigned long *a, unsigned long hit, int left_ancho
   char *p;
   unsigned long r0;
   unsigned long anchor, anchor1;
-  
+
   r0 = ~0;
   got_hit = 0;
   anchor = 0;
@@ -453,7 +453,7 @@ static void parse_size_range(char *size_expr, int *has_start, int *start, int *h
   char *x = size_expr;
   char *dash;
   int len;
-  
+
   if (*x == ':') x++;
   len = strlen(x);
   dash = strchr(x, '-');
@@ -491,7 +491,7 @@ static void find_size_matches_in_table(struct read_db *db, char *size_expr, char
   int start, end;
   int has_start, has_end, start_cond, end_cond;
   int i;
-  
+
   start = end = -1; /* avoid compiler warning about uninitialised variables. */
   parse_size_range(size_expr, &has_start, &start, &has_end, &end);
   if (has_start && has_end) {
@@ -518,7 +518,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   int has_start, has_end, start_cond, end_cond;
   int i;
   int status;
-  
+
   status = scan_date_string(date_expr, &start, &has_start, &end, &has_end);
   if (status) {
     unlock_and_exit (2);
@@ -545,7 +545,7 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
 
 static char *mk_maildir_path(int token, char *output_dir, int is_in_new, const char *flags)/*{{{*/
 {
-  char *result; 
+  char *result;
   char uniq_buf[48];
   int len;
   int flag_len;
@@ -565,7 +565,7 @@ static char *mk_maildir_path(int token, char *output_dir, int is_in_new, const c
 /*}}}*/
 static char *mk_mh_path(int token, char *output_dir)/*{{{*/
 {
-  char *result; 
+  char *result;
   char uniq_buf[8];
   int len;
 
@@ -745,15 +745,15 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
    * hit2 gathers the tokens  or'ed with ,
    * hit3 gathers the separate args and'ed with <gap>
    * */
-  
-  
+
+
   /* Everything matches until proven otherwise */
   memset(hit3, 1, db->n_msgs);
-  
+
   while (*args) {
     /* key is a single argument, separate args are and-ed together */
     key = *args++;
-    
+
     memset(hit2, 0, db->n_msgs);
     memset(hit1, 1, db->n_msgs);
 
@@ -766,7 +766,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     do_size = 0;
     do_path = 0;
     do_msgid = 0;
-    
+
     colon = strchr(key, ':');
 
     if (colon) {
@@ -818,7 +818,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       int negate;
       int had_orsep;
       int max_errors;
-      
+
       orsep = strchr(start_words, '/');
       andsep  = strchr(start_words, ',');
       had_orsep = 0;
@@ -865,7 +865,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       } else {
         left_anchor = 0;
       }
-      
+
       equal = strchr(word, '=');
       if (equal) {
         *equal = 0;
@@ -920,7 +920,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         }
         memset(hit1, 1, db->n_msgs);
       }
-      
+
       free(orig_word);
 
     } while (*start_words);
@@ -1109,7 +1109,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
             "Matches were found in mbox folders but the message checksums failed.\n"
             "You may need to run mairix in indexing mode then repeat your search.\n");
   }
-  
+
   /* Return error code 1 to the shell if no messages were matched. */
   return (n_hits == 0) ? 1 : 0;
 }
@@ -1145,7 +1145,7 @@ static void maybe_create_maildir(char *path)/*{{{*/
 {
   char *subdir, *tailpos;
   int len;
-  
+
   if (!directory_exists_remove_other(path)) {
     create_dir(path);
   }

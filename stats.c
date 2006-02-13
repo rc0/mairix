@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002-2004
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -31,7 +31,7 @@ static void do_toktable(struct toktable *x, int *lc, int *elc, int *ec, int size
     struct token *tok = x->tokens[i];
     unsigned char *j, *last_char;
     int incr;
-    
+
     if (tok) {
       int len = strlen(tok->text);
       if (len > size) {
@@ -48,7 +48,7 @@ static void do_toktable(struct toktable *x, int *lc, int *elc, int *ec, int size
         elc[tok->match0.n]++;
         if (tok->match0.n > *mel) *mel = tok->match0.n;
       }
-      
+
       /* Deal with encoding */
       j = tok->match0.msginfo;
       last_char = j + tok->match0.n;
@@ -102,7 +102,7 @@ void get_db_stats(struct database *db)
   memset(enc_len_counts, 0, size * sizeof(int));
   enc_counts = new_array(int, size);
   memset(enc_counts, 0, size * sizeof(int));
-  
+
   do_toktable(db->to, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
   do_toktable(db->cc, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);
   do_toktable(db->from, len_counts, enc_len_counts, enc_counts, size, &max_len, &max_enc_len, &max_enc);

@@ -5,20 +5,20 @@
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
  * Copyright (C) Sanjoy Mahajan 2005
  * - mfolder validation code
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -95,7 +95,7 @@ int member_of (const char *complete_mfolder,
       glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
       break;
     case FT_RAW:			/* cannot happen but to keep compiler happy */
-      break;    
+      break;
   }
   for (i=0; i<n_paths; i++) {
     struct stat mfolder_sb, src_folder_sb; /* for checking inode numbers */
@@ -114,7 +114,7 @@ int member_of (const char *complete_mfolder,
     if (mfolder_sb.st_ino == src_folder_sb.st_ino)
       return 1;
   }
-  return 0;  
+  return 0;
 }
 /*}}}*/
 static char *copy_value(char *text)/*{{{*/
@@ -131,7 +131,7 @@ static char *copy_value(char *text)/*{{{*/
 static void add_folders(char **folders, char *extra_folders)/*{{{*/
 {
   /* note : extra_pointers is stale after this routine exits. */
-  
+
   if (!*folders) {
     *folders = extra_folders;
   } else {
@@ -192,7 +192,7 @@ static void parse_rc_file(char *name)/*{{{*/
     strcat(name, "/.mairixrc");
     used_default_name = 1;
   }
-    
+
   in = fopen(name, "r");
   if (!in) {
     fprintf(stderr, "Cannot open %s, exiting\n", name);
@@ -211,7 +211,7 @@ static void parse_rc_file(char *name)/*{{{*/
     if (line[len-1] == '\n') {
       line[len-1] = '\0';
     }
-    
+
     /* Strip trailing comments. */
     for (p=line; *p && !strchr("#!;%", *p); p++) ;
     if (*p) *p = '\0';
@@ -224,9 +224,9 @@ static void parse_rc_file(char *name)/*{{{*/
         break;
       }
     }
-    
+
     if (all_blank) continue;
-    
+
     /* Now a real line to parse */
     if (!strncasecmp(p, "base", 4)) folder_base = copy_value(p);
     else if (!strncasecmp(p, "folders", 7)) {
@@ -241,7 +241,7 @@ static void parse_rc_file(char *name)/*{{{*/
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
     else if (!strncasecmp(p, "omit=", 5)) add_folders(&omit, copy_value(p));
-      
+
     else if (!strncasecmp(p, "mformat=", 8)) {
       parse_output_folder(p);
     }
@@ -297,7 +297,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
       break;
     }
   }
-  
+
   free(sorted_paths);
   return result;
 }
@@ -324,7 +324,7 @@ static void emit_int(int x)/*{{{*/
   while (p >= buf1) {
     *q++ = *p--;
   }
-  write(2, buf2, q-buf2);  
+  write(2, buf2, q-buf2);
   return;
 }
 /*}}}*/
@@ -335,7 +335,7 @@ void out_of_mem(char *file, int line, size_t size)/*{{{*/
 
   int filelen;
   char *p;
-  
+
   static char msg1[] = "Out of memory (at ";
   static char msg2[] = " bytes)\n";
   /* Perhaps even strlen is unsafe in this situation? */
@@ -349,7 +349,7 @@ void out_of_mem(char *file, int line, size_t size)/*{{{*/
   write(2, ", ", 2);
   emit_int(size);
   write(2, msg2, sizeof(msg2));
-  exit(2); 
+  exit(2);
 }
 /*}}}*/
 static void print_copyright(void)/*{{{*/
@@ -372,7 +372,7 @@ static void print_version(void)/*{{{*/
 static void usage(void)/*{{{*/
 {
   print_copyright();
-  
+
   printf("mairix [-h]                                    : Show help\n"
          "mairix [-f <rcfile>] [-v] [-p]                 : Build index\n"
          "mairix [-f <rcfile>] [-a] [-t] expr1 ... exprN : Run search\n"
@@ -411,14 +411,14 @@ static void usage(void)/*{{{*/
 }
     /*}}}*/
 /* Notes on folder management: {{{
- 
+
    Assumption is that the user wants to keep the 'mfolder' directories under a
    common root with the real maildir folders.  This allows a common value for
    mutt's 'folder' variable => the '+' and '=' prefixes work better.  This
    means the indexer here can't just scan down all subdirectories of a single
    ancestor, because it'll pick up its own mfolders.  So, use environment
    variables to tailor the folders.
- 
+
    MAIRIX_FOLDER_BASE is the common parent directory of the folders (aka
    mutt's 'folder' variable)
 
@@ -514,12 +514,12 @@ int main (int argc, char **argv)/*{{{*/
   if (verbose) {
     print_copyright();
   }
-  
+
   if (*argv) {
     /* There are still args to process */
     do_search = 1;
   }
-      
+
   parse_rc_file(arg_rc_file_path);
 
   if (getenv("MAIRIX_FOLDER_BASE")) {
@@ -549,16 +549,16 @@ int main (int argc, char **argv)/*{{{*/
   if (arg_mfolder) {
     mfolder = arg_mfolder;
   }
-  
+
   if (skip_integrity_checks) {
     do_integrity_checks = 0;
   }
-  
+
   if (!folder_base) {
     fprintf(stderr, "No folder_base/MAIRIX_FOLDER_BASE set\n");
     exit(2);
   }
-  
+
   if (!database_path) {
     fprintf(stderr, "No database/MAIRIX_DATABASE set\n");
     exit(2);
@@ -580,7 +580,7 @@ int main (int argc, char **argv)/*{{{*/
    * Prevent concurrent searching and indexing. */
 
   lock_database(database_path, do_forced_unlock);
-    
+
   if (do_dump) {
     dump_database(database_path);
     result = 0;
@@ -600,7 +600,7 @@ int main (int argc, char **argv)/*{{{*/
 
     /* complete_mfolder is needed by search_top() and member_of() so
        compute it once here rather than in search_top() as well */
-    if ((mfolder[0] == '/') || 
+    if ((mfolder[0] == '/') ||
         ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
       complete_mfolder = new_string(mfolder);
     } else {
@@ -630,7 +630,7 @@ int main (int argc, char **argv)/*{{{*/
       unlock_and_exit(3);
     }
     result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
-    
+
   } else {
     enum filetype ftype;
 
@@ -669,7 +669,7 @@ int main (int argc, char **argv)/*{{{*/
     }
 
     build_mbox_lists(db, folder_base, mboxen, omit_globs);
-    
+
     any_updates = update_database(db, msgs->paths, msgs->n);
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
@@ -689,7 +689,7 @@ int main (int argc, char **argv)/*{{{*/
     result = 0;
   }
 
-  unlock_database(); 
+  unlock_database();
 
   return result;
 }

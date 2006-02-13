@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -333,14 +333,14 @@ void run1(char *ref, char *s, int expected)/*{{{*/
   int result;
   g = make_globber(ref);
   result = is_glob_match(g, s);
-  
+
   printf("ref=%s, str=%s, %s  %s\n", ref, s, result ? "MATCHED" : "not matched", (expected==result) ? "" : "??????");
   free_globber(g);
 }
 /*}}}*/
 int main (int argc, char **argv)/*{{{*/
 {
-  
+
   run1("ab?de", "abdde", 1);
   run1("ab?de", "abcde", 1);
   run1("ab?de", "Abcde", 0);
@@ -385,7 +385,7 @@ int main (int argc, char **argv)/*{{{*/
   run1("x/*/abc**", "x/z/ww/abc/y", 0);
   run1("x/**/abc**", "x/z/w/abc/y", 1);
   run1("x/**/abc**", "x/zz/w/abc/y", 1);
-  
+
   return 0;
 }
 /*}}}*/

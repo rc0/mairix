@@ -7,12 +7,12 @@
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
 # published by the Free Software Foundation.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
@@ -99,7 +99,7 @@ BLOCK date {
         # Accept HH:MM
         DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; WHITE -> after_time
 
-    # Allow either 1 or 2 words of timezone 
+    # Allow either 1 or 2 words of timezone
     STATE after_time
         WHITE -> after_time
         -> after_timezone
@@ -121,11 +121,11 @@ BLOCK date {
     STATE after_timezone_after_year
         WHITE -> after_timezone_after_year
         -> out
-    
+
     STATE after_timezone_1
         WHITE -> after_timezone_1
         <zone:in->out> ; WHITE -> after_timezone
-        
+
     STATE after_timezone
         WHITE -> after_timezone
         DIGIT ; DIGIT ; DIGIT ; DIGIT -> after_year
@@ -133,7 +133,7 @@ BLOCK date {
     STATE after_year
         WHITE -> after_year
         -> out
-        
+
 }
 
 # Assume the earlier code has identified the '\nFrom ' sequence,
@@ -145,7 +145,7 @@ BLOCK main {
         # Real return address.
         WHITE -> in
         <email:in->out> -> before_date
-        
+
         # Cope with Mozilla mbox folder format which just uses a '-' as
         # the return address field.
         PLUSMINUS       -> before_date

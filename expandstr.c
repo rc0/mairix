@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2004
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -32,7 +32,7 @@ static int isenv(unsigned char x)/*{{{*/
   /* Return true if x is valid as part of an environment variable name. */
   if (isalnum(x))
     return 1;
-  else if (x == '_') 
+  else if (x == '_')
     return 1;
   else
     return 0;
@@ -167,7 +167,7 @@ static void do_expand(const char *p, char *result)/*{{{*/
 char *expand_string(const char *p)/*{{{*/
 {
   /* Return a copy of p, but with
-     
+
      ~ expanded to the user's home directory
      $env expanded to the value of that environment variable
   */

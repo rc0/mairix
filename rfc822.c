@@ -7,20 +7,20 @@
  * gzip mbox support Copyright (C) Ico Doornekamp 2005
  * gzip mbox support Copyright (C) Felipe Gustavo de Almeida 2005
  * bzip2 mbox support Copyright (C) Paramjit Oberoi 2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -60,7 +60,7 @@ static void enqueue(void *head, void *x)/*{{{*/
 /*}}}*/
 
 enum encoding_type {/*{{{*/
-  ENC_UNKNOWN, 
+  ENC_UNKNOWN,
   ENC_NONE,
   ENC_BINARY,
   ENC_7BIT,
@@ -134,7 +134,7 @@ static void splice_header_lines(struct line *header)/*{{{*/
 static int audit_header(struct line *header)/*{{{*/
 {
   /* Check for obvious broken-ness
-   * 1st line has no leading spaces, single word then colon 
+   * 1st line has no leading spaces, single word then colon
    * following lines have leading spaces or single word followed by colon
    * */
   struct line *x;
@@ -417,7 +417,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
   result->major = NULL;
   result->minor = NULL;
   result->boundary = NULL;
-    
+
   p = hdrline;
   while (*p && isspace(*(unsigned char *)p)) p++;
   for (q=p+1; *q && (*q != '/'); q++) ;
@@ -427,7 +427,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
     result->major = new_array(char, 1 + (q - p));
     for (s=result->major; p<q;) *s++ = *p++;
     *s = 0;
-   
+
     p = q + 1;
     for (q=p+1; *q && !isspace(*(unsigned char *) q) && (*q != ';'); q++) ;
     result->minor = new_array(char, 1 + (q - p));
@@ -451,14 +451,14 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
       if (!*value) break;
 
       /* Find next semicolon, or end of line, or whitespace (if not a quoted RHS) */
-      for (semi = value+1; 
+      for (semi = value+1;
            *semi && ((*value == '"') || (!isspace(*(unsigned char *)semi))) && (*semi != ';');
            semi++) {}
 
       if (!strncasecmp(name, "boundary", 8)) {
         result->boundary = copy_string_start_end_unquote(value, semi);
       }
-      
+
       semi = strchr(semi, ';'); /* in case value string was ended by whitespace */
 
     }
@@ -468,7 +468,7 @@ static void parse_content_type(char *hdrline, struct content_type_header *result
     result->major = new_array(char, 1 + (q - p));
     for (s=result->major; p<q;) *s++ = *p++;
     *s = 0;
-   
+
     /* Assume text will be plain */
     if (match_string(result->major, "text")) {
       result->minor = new_string("plain");
@@ -499,7 +499,7 @@ static char *unencode_data(char *input, int input_len, char *enc, int *output_le
   enum encoding_type encoding;
   char *result, *end_result;
   char *end_input;
- 
+
   encoding = decode_encoding_type(enc);
   end_input = input + input_len;
 
@@ -612,7 +612,7 @@ char *format_msg_src(struct msg_src *src)/*{{{*/
         buffer = new_array(char, len);
         buffer_len = len;
       }
-      sprintf(buffer, "%s[%d,%d)", src->filename, 
+      sprintf(buffer, "%s[%d,%d)", src->filename,
           (int) src->start, (int) (src->start + src->len));
       result = buffer;
       break;
@@ -642,7 +642,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
         int line_length = eol - sol;
         char *line_text = new_array(char, 1 + line_length);
         struct line *new_header;
-        
+
         strncpy(line_text, sol, line_length);
         line_text[line_length] = '\0';
         new_header = new(struct line);
@@ -676,7 +676,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
 static void do_multipart(struct msg_src *src, char *input, int input_len,
     char *boundary, struct attachment *atts,
     enum data_to_rfc822_error *error);
-  
+
 /*{{{ do_body() */
 static void do_body(struct msg_src *src,
     char *body_start, int body_len,
@@ -753,7 +753,7 @@ static void do_attachment(struct msg_src *src,
   int body_len;
   char *content_type, *content_transfer_encoding;
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
-    fprintf(stderr, "Giving up on attachment with bad header in %s\n", 
+    fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
     return;
   }
@@ -815,7 +815,7 @@ static void do_multipart(struct msg_src *src,
 
   strcpy(normal_boundary, "--");
   strcat(normal_boundary, boundary);
-  
+
   strcpy(end_boundary, "--");
   strcat(end_boundary, boundary);
   strcat(end_boundary, "--");
@@ -834,7 +834,7 @@ static void do_multipart(struct msg_src *src,
   }
 
   line_after_b0 = input;
-  
+
   do {
     int boundary_ok;
     start_b1_search_from = line_after_b0;
@@ -852,7 +852,7 @@ static void do_multipart(struct msg_src *src,
           break;
         }
       }
-      
+
       looking_at_end_boundary = (b1 == be);
       boundary_ok = 1;
       if ((b1 > input) && (*(b1-1) != '\n')) boundary_ok = 0;
@@ -921,7 +921,7 @@ static time_t parse_rfc822_date(char *date_string)/*{{{*/
   } else if (tm.tm_year >= 1900) {
     tm.tm_year -= 1900;
   }
-  
+
   while (isdigit(*s)) s++;
   while (*s && isspace(*s)) s++;
   if (!*s) goto tough_cheese;
@@ -950,7 +950,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   struct line *x, *nx;
   char *content_type, *content_transfer_encoding;
   int body_len;
-  
+
   if (error) *error = DTR8_OK; /* default */
   result = new(struct rfc822);
   init_headers(&result->hdrs);
@@ -1000,7 +1000,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   if (content_transfer_encoding) free(content_transfer_encoding);
 
   return result;
-  
+
 }
 /*}}}*/
 
@@ -1021,7 +1021,7 @@ int data_alloc_type;
 static int get_compression_type(const char *filename) {/*{{{*/
   size_t len = strlen(filename);
   int ptr;
-  
+
 #ifdef USE_GZIP_MBOX
   ptr = len - 3;
   if (len > 3 && strncasecmp(filename + ptr, ".gz", 3) == 0) {
@@ -1057,22 +1057,22 @@ struct zFile {/*{{{*/
   int type;
 };
 /*}}}*/
- 
+
 static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
   struct zFile *zf = new(struct zFile);
-  
+
   zf->type = get_compression_type(filename);
   if (zf->type == COMPRESSION_GZIP) {
     zf->gzf = gzopen(filename, "rb");
   } else {
     zf->bzf = BZ2_bzopen(filename, "rb");
   }
-  
+
   if (!zf->zptr) {
     free(zf);
     return 0;
   }
-  
+
   return zf;
 }
 /*}}}*/
@@ -1104,19 +1104,19 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   struct zFile *zf;
 #endif
 
-  if (stat(filename, &sb) < 0) 
+  if (stat(filename, &sb) < 0)
   {
     perror("Could not stat");
     *data = NULL;
     return;
   }
-  
+
 #if USE_GZIP_MBOX || USE_BZIP_MBOX
   if(is_compressed(filename)) {
     if(verbose) {
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
-  
+
     zf = zopen(filename, "rb");
     if (!zf) {
       fprintf(stderr, "Could not open %s\n", filename);
@@ -1135,7 +1135,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
       } while (extra_bytes_read > 0);
     }
     zclose(zf);
-    
+
     if(*len > 0) {
       *data = grow_array(unsigned char, *len, *data);
     	data_alloc_type = ALLOC_MALLOC;
@@ -1143,17 +1143,17 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
       free(*data);
       data_alloc_type = ALLOC_NONE;
     }
-        
+
     return;
   }
 #endif /* USE_GZIP_MBOX */
-  
+
   *len = sb.st_size;
   if (*len == 0) {
     *data = NULL;
     return;
   }
-  
+
   if (!S_ISREG(sb.st_mode)) {
     *data = NULL;
     return;
@@ -1225,7 +1225,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
 
     free_ro_mapping(data, len);
   }
-  
+
   return result;
 }
 /*}}}*/
@@ -1234,7 +1234,7 @@ void free_rfc822(struct rfc822 *msg)/*{{{*/
   struct attachment *a, *na;
 
   if (!msg) return;
-  
+
   if (msg->hdrs.to) free(msg->hdrs.to);
   if (msg->hdrs.cc) free(msg->hdrs.cc);
   if (msg->hdrs.from) free(msg->hdrs.from);
@@ -1242,7 +1242,7 @@ void free_rfc822(struct rfc822 *msg)/*{{{*/
   if (msg->hdrs.message_id) free(msg->hdrs.message_id);
   if (msg->hdrs.in_reply_to) free(msg->hdrs.in_reply_to);
   if (msg->hdrs.references) free(msg->hdrs.references);
-  
+
   for (a = msg->atts.next; a != &msg->atts; a = na) {
     na = a->next;
     if (a->ct == CT_MESSAGE_RFC822) {
@@ -1309,7 +1309,7 @@ static void show_rfc822(struct rfc822 *msg, int indent)/*{{{*/
 int main (int argc, char **argv)/*{{{*/
 {
   struct rfc822 *msg;
-  
+
   if (argc < 2) {
     fprintf(stderr, "Need a path\n");
     unlock_and_exit(2);
@@ -1318,7 +1318,7 @@ int main (int argc, char **argv)/*{{{*/
   msg = make_rfc822(argv[1]);
   show_rfc822(msg, 0);
   free_rfc822(msg);
-  
+
   /* Print out some stuff */
 
   return 0;

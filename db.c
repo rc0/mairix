@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -60,7 +60,7 @@ static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{
   int broken_chains = 0;
   struct sortable_token *sort_list;
   int any_duplicates;
-  
+
   for (i=0; i<table->size; i++) {
     struct token *tok = table->tokens[i];
     if (tok) {
@@ -104,7 +104,7 @@ static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{
   any_duplicates = 0;
   for (i=0; i<(table->n - 1); i++) {
     if (!strcmp(sort_list[i].text, sort_list[i+1].text)) {
-      fprintf(stderr, "Token table contains duplicated token %s at indices %d and %d\n", 
+      fprintf(stderr, "Token table contains duplicated token %s at indices %d and %d\n",
                sort_list[i].text, sort_list[i].index, sort_list[i+1].index);
       any_duplicates = 1;
     }
@@ -136,7 +136,7 @@ static void check_message_path_integrity(struct database *db)/*{{{*/
   int i;
   int n;
   int has_duplicate = 0;
-  
+
   char **paths;
   paths = new_array(char *, db->n_msgs);
   for (i=0, n=0; i<db->n_msgs; i++) {
@@ -170,7 +170,7 @@ void check_database_integrity(struct database *db)/*{{{*/
 {
   if (verbose) fprintf(stderr, "Checking message path integrity\n");
   check_message_path_integrity(db);
-  
+
   /* Just check encoding chains for now */
   if (verbose) fprintf(stderr, "Checking to\n");
   check_toktable_enc_integrity(db->n_msgs, db->to);
@@ -403,12 +403,12 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
 }
 /*}}}*/
 struct database *new_database_from_file(char *db_filename, int do_integrity_checks)/*{{{*/
-{ 
+{
   /* Read existing database from file for doing incremental update */
   struct database *result;
   struct read_db *input;
   int i, n, N;
-  
+
   result = new_database();
   input = open_db(db_filename);
   if (!input) {
@@ -496,7 +496,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   if (do_integrity_checks) {
     check_database_integrity(result);
   }
-  
+
   return result;
 }
 /*}}}*/
@@ -575,7 +575,7 @@ static void tokenise_string(int file_index, unsigned int hash_key, struct toktab
     if (!*ss) break;
     es = ss + 1;
     while (*es && char_valid_p(*es,match_mask)) es++;
-    
+
     /* deal with token [ss,es) */
     old_es = *es;
     *es = '\0';
@@ -593,7 +593,7 @@ static void tokenise_html_string(int file_index, unsigned int hash_key, struct t
   char *ss, *es, old_es;
 
   /* FIXME : Probably want to rewrite this as an explicit FSM */
-  
+
   ss = data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
@@ -604,10 +604,10 @@ static void tokenise_html_string(int file_index, unsigned int hash_key, struct t
       }
     }
     if (!*ss) break;
-    
+
     es = ss + 1;
     while (*es && char_valid_p(*es, 1)) es++;
-    
+
     /* deal with token [ss,es) */
     old_es = *es;
     *es = '\0';
@@ -688,7 +688,7 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
         msg = make_rfc822(db->msgs[i].src.mpf.path);
         break;
     }
-    if(msg) 
+    if(msg)
     {
       db->msgs[i].date = msg->hdrs.date;
       tokenise_message(i, db, msg);
@@ -738,11 +738,11 @@ static void find_threading(struct database *db)/*{{{*/
 
   int i, m, np, nm, sm;
   int next_tid;
-  
+
   np = db->n_msgs;
   nm = db->msg_ids->n;
   sm = db->msg_ids->size;
-  
+
   ix = new_array(int, np);
   for (i=0; i<np; i++) {
     ix[i] = i; /* default - every message in a thread of its own */
@@ -853,7 +853,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   int matched_index;
   int i, new_entries_start_at;
   int any_new, n_newly_pruned, n_already_dead;
-  
+
   file_in_db = new_array(char, n_msgs);
   file_in_new_list = new_array(char, db->n_msgs);
   bzero(file_in_db, n_msgs);
@@ -883,7 +883,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
 
   /* Add new entries to database */
   new_entries_start_at = db->n_msgs;
-  
+
   for (i=0; i<db->n_msgs; i++) {
     /* Weed dead entries */
     switch (db->type[i]) {
@@ -936,13 +936,13 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
 
   /* Add newly found mbox messages. */
   any_new |= add_mbox_messages(db);
-  
+
   if (any_new) {
     find_threading(db);
   } else {
     if (verbose) fprintf(stderr, "No new messages found\n");
   }
-  
+
   free(file_in_db);
   free(file_in_new_list);
 
@@ -958,7 +958,7 @@ static void recode_encoding(struct matches *m, int *new_idx)/*{{{*/
   old_enc = m->msginfo;
   j = old_enc;
   last_char = old_enc + m->n;
-  
+
   new_enc = new_array(unsigned char, m->max); /* Probably not bigger than this. */
   m->n = 0;
   m->highest = 0;
@@ -983,7 +983,7 @@ static void recode_toktable(struct toktable *tbl, int *new_idx)/*{{{*/
   int i;
   int any_dead = 0;
   int any_moved, pass;
-  
+
   for (i=0; i<tbl->size; i++) {
     struct token *tok = tbl->tokens[i];
     if (tok) {
@@ -1066,7 +1066,7 @@ static void recode_toktable2(struct toktable2 *tbl, int *new_idx)/*{{{*/
   int i;
   int any_dead = 0;
   int any_moved, pass;
-  
+
   for (i=0; i<tbl->size; i++) {
     struct token2 *tok = tbl->tokens[i];
     if (tok) {
@@ -1181,7 +1181,7 @@ int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
   recode_toktable(db->subject, new_idx);
   recode_toktable(db->body, new_idx);
   recode_toktable2(db->msg_ids, new_idx);
-  
+
   /* And crunch down the filename table */
   for (i=0, j=0; i<n_old; i++) {
     switch (db->type[i]) {

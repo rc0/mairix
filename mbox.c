@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2003,2004,2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -75,7 +75,7 @@ static void append_new_mboxen_to_db(struct database *db, struct extant_mbox *ext
   for (i=N=0; i<n_extant; i++) {
     if (extant_mboxen[i].db_index < 0) N++;
   }
-  
+
   n_reqd = db->n_mboxen + N;
   if (n_reqd > db->max_mboxen) {
     db->max_mboxen = n_reqd;
@@ -380,7 +380,7 @@ static void deaden_mbox(struct mbox *mb)/*{{{*/
 {
   mb->n_old_msgs_valid = 0;
   mb->n_msgs = 0;
-  
+
   free(mb->path);
   mb->path = NULL;
 
@@ -497,7 +497,7 @@ static int append_deep(char *path, int base_len, struct stat *sb, struct string_
 
   this_file_matched = append_shallow(path, base_len, sb, list, methods, omit_globs);
   appended_any |= this_file_matched;
-  
+
   if (S_ISDIR(sb->st_mode)) {
     xpath = new_array(char, strlen(path) + 2 + NAME_MAX);
     d = opendir(path);
@@ -606,7 +606,7 @@ static void handle_wild(char *path, int base_len, char *last_comp, struct string
     fprintf(stderr, "WARNING: Folder path %s does not exist\n", temp_path);
   }
 
-  
+
   free(temp_path);
   free(xpath);
   free(gg);
@@ -735,7 +735,7 @@ void glob_and_expand_paths(const char *folder_base,
 
   for (i=0; i<n_in; i++) {
     char *path = paths_in[i];
-    handle_one_path(folder_base, path, &list, methods, omit_globs); 
+    handle_one_path(folder_base, path, &list, methods, omit_globs);
   }
 
   string_list_to_array(&list, n_out, paths_out);
@@ -892,7 +892,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
          * This is to deal with cases such as having a text/plain attachment
          * that is actually an mbox file in its own right, i.e. will have
          * embedded '^From ' lines in it.
-         * 
+         *
          * 'last' is the last chunk currently in the putative message. */
         last = here;
         do {

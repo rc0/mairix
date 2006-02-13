@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002-2004, 2005
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -264,7 +264,7 @@ void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, st
   index = hash & table->mask;
   while (table->tokens[index]) {
     /* strcmp ok as text has been tolower'd earlier */
-    if (!strcmp(lc_tok_text, table->tokens[index]->text)) 
+    if (!strcmp(lc_tok_text, table->tokens[index]->text))
       break;
     index++;
     index &= table->mask;
@@ -281,9 +281,9 @@ void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, st
   } else {
     free(lc_tok_text);
   }
-   
+
   tok = table->tokens[index];
-  
+
   check_and_enlarge_encoding(&tok->match0);
   insert_index_on_encoding(&tok->match0, file_index);
 }
@@ -310,7 +310,7 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
   index = hash & table->mask;
   while (table->tokens[index]) {
     /* strcmp ok as text has been tolower'd earlier */
-    if (!strcmp(lc_tok_text, table->tokens[index]->text)) 
+    if (!strcmp(lc_tok_text, table->tokens[index]->text))
       break;
     index++;
     index &= table->mask;
@@ -327,9 +327,9 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
   } else {
     free(lc_tok_text);
   }
-   
+
   tok = table->tokens[index];
-  
+
   check_and_enlarge_encoding(&tok->match0);
   insert_index_on_encoding(&tok->match0, file_index);
   if (add_to_chain1) {

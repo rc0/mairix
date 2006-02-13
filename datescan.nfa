@@ -7,12 +7,12 @@
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
 # published by the Free Software Foundation.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
@@ -78,12 +78,12 @@ BLOCK main {
         <month:in->out> ; <year:in->out> = DS_MY
         <ccyy:in->out> ; <month:in->out> = DS_YM
         <month:in->out> ; <ccyy:in->out> = DS_MY
-        
+
         <year:in->out> ; <month:in->out> ; [1-9] = DS_YMD
         <year:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
         [1-9] ; <month:in->out> ; <year:in->out> = DS_DMY
         <day:in->out> ; <month:in->out> ; <year:in->out> = DS_DMY
-        
+
         <ccyy:in->out> ; <month:in->out> ; [1-9] = DS_YMD
         <ccyy:in->out> ; <month:in->out> ; <day:in->out> = DS_YMD
         [1-9] ; <month:in->out> ; <ccyy:in->out> = DS_DMY

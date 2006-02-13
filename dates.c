@@ -3,20 +3,20 @@
 
  **********************************************************************
  * Copyright (C) Richard P. Curnow  2002-2004
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- * 
+ *
  **********************************************************************
  */
 
@@ -41,7 +41,7 @@ static enum DATESCAN_TYPE discover_type(char *first, char *last)/*{{{*/
     if (current_state < 0) break;
     p++;
   }
-  
+
   if (current_state < 0) {
     return DS_FAILURE;
   } else {
@@ -120,7 +120,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
 {
   enum DATESCAN_TYPE type;
   time_t now;
-  
+
   time(&now);
   type = discover_type(first, last);
 
@@ -161,7 +161,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
     int v1, v3;
     int m2;   /* decoded month */
     char *p;
-    
+
     v1 = v3 = m2 = 0;
     p = first;
     while (p < last && isdigit(*p)) {
@@ -174,7 +174,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
       if (m2 == 0) {
         return -1; /* failure */
       }
-        
+
     }
     while (p < last && isdigit(*p)) {
       v3 = (v3*10) + (*p - '0');
@@ -257,7 +257,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
         if (start) {
           start->tm_mon = m2-1;
           start->tm_mday = v1;
-          start->tm_year = year_fix(v3); 
+          start->tm_year = year_fix(v3);
         }
         if (end) {
           end->tm_mon = m2-1;
@@ -311,7 +311,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
       case DS_SCALED:
         assert(0);
         break;
-          
+
     }
   }
   return 0;
