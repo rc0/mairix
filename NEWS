@@ -8,8 +8,8 @@ NEW IN VERSION 0.18
   before
 * Clone the message flags (when both the source folder and mfolder are both
   of maildir type)
-* New manpages mairix.1 and mairixrc.5 are included, and the old documentation
-  is depracated.
+* New manpages mairix.1 and mairixrc.5 are included, and the old texinfo-based
+  documentation is deprecated into the old_docs/ directory.
 * Upgrade scanners to new version of dfasyn
 * Support Mew's MH folder subtype
 
