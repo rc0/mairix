@@ -44,8 +44,6 @@ $here = qx/pwd/;
 chomp $here;
 chdir $subdir;
 
-system("make -f Makefile.in mairix.txt");
-
 open (OUT, ">version.txt");
 print OUT $version."\n";
 close OUT;
