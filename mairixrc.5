@@ -296,7 +296,7 @@ specified by
 .BR base )
 into which the search mode writes its output.  (If the 
 .B mformat
-used is 'raw', then this setting is not used and may be omitted.)
+used is 'raw' or 'excerpt', then this setting is not used and may be omitted.)
 
 The
 .B mfolder
@@ -321,9 +321,14 @@ folders.
 This defines the type of folder used for the match folder where
 the search results go.  There are four valid settings for
 .IR format ,
-namely 'maildir', 'mh', 'mbox' or `raw'.  If the 'raw' setting is used then
-mairix will just print out the path names of the files that match and no match
-folder will be created.  'maildir' is the default if this option is not
+namely 'maildir', 'mh', 'mbox', 'raw' or 'excerpt'.  If the 'raw' setting is
+used then
+.B mairix
+will just print out the path names of the files that match and no match folder
+will be created.  If the 'excerpt' setting is used,
+.B mairix
+will also print out the To:, Cc:, From:, Subject: and Date: headers of the
+matching messages.  'maildir' is the default if this option is not
 defined.  The setting is case-insensitive.
 
 .TP

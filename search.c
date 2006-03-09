@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -716,6 +716,16 @@ static void try_copy_to_path(struct read_db *db, int msg_index, char *target_pat
   return;
 }
 /*}}}*/
+static struct msg_src *setup_mbox_msg_src(char *filename, off_t start, size_t len)/*{{{*/
+{
+  static struct msg_src result;
+  result.type = MS_MBOX;
+  result.filename = filename;
+  result.start = start;
+  result.len = len;
+  return &result;
+}
+/*}}}*/
 static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose)/*{{{*/
 {
   char *colon, *start_words;
@@ -1089,6 +1099,69 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
       break;
 /*}}}*/
+    case FT_EXCERPT:/*{{{*/
+      for (i=0; i<db->n_msgs; i++) {
+        if (hit3[i]) {
+          struct rfc822 *parsed = NULL;
+          switch (db->msg_type[i]) {
+            case DB_MSG_FILE:
+              {
+                char *filename;
+                ++n_hits;
+                printf("---------------------------------\n");
+                filename = db->data + db->path_offsets[i];
+                printf("%s\n", filename);
+                parsed = make_rfc822(filename);
+              }
+              break;
+            case DB_MSG_MBOX:
+              {
+                unsigned int mbix, msgix;
+                int start, len, after_end;
+                unsigned char *mbox_start, *msg_start;
+                int mbox_len, msg_len;
+                int mbox_index;
+
+                start = db->mtime_table[i];
+                len   = db->size_table[i];
+                after_end = start + len;
+                ++n_hits;
+                printf("---------------------------------\n");
+                decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+                printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
+
+                get_validated_mbox_msg(db, i, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
+                if (msg_start) {
+                  enum data_to_rfc822_error error;
+                  struct msg_src *msg_src;
+                  msg_src = setup_mbox_msg_src(db->data + db->mbox_paths_table[mbix], start, msg_len);
+                  parsed = data_to_rfc822(msg_src, (char *) msg_start, msg_len, &error);
+                }
+                if (mbox_start) {
+                  free_ro_mapping(mbox_start, mbox_len);
+                }
+              }
+              break;
+            case DB_MSG_DEAD:
+              break;
+          }
+
+          if (parsed) {
+            char datebuf[64];
+            struct tm *thetm;
+            if (parsed->hdrs.to)      printf("  To:      %s\n", parsed->hdrs.to);
+            if (parsed->hdrs.cc)      printf("  Cc:      %s\n", parsed->hdrs.cc);
+            if (parsed->hdrs.from)    printf("  From:    %s\n", parsed->hdrs.from);
+            if (parsed->hdrs.subject) printf("  Subject: %s\n", parsed->hdrs.subject);
+            thetm = gmtime(&parsed->hdrs.date);
+            strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y", thetm);
+            printf("  Date:     %s\n", datebuf);
+            free_rfc822(parsed);
+          }
+        }
+      }
+      break;
+/*}}}*/
     default:
       assert(0);
       break;
@@ -1098,7 +1171,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   free(hit1);
   free(hit2);
   free(hit3);
-  if (ft != FT_RAW) {
+  if ((ft != FT_RAW) && (ft != FT_EXCERPT)) {
     printf("Matched %d messages\n", n_hits);
   }
   fflush(stdout);
@@ -1275,6 +1348,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
       /* Nothing to do */
       break;
     case FT_RAW:
+    case FT_EXCERPT:
       break;
     default:
       assert(0);
@@ -1293,6 +1367,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
         clear_mbox_folder(complete_mfolder);
         break;
       case FT_RAW:
+      case FT_EXCERPT:
         break;
       default:
         assert(0);
