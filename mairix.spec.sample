@@ -8,6 +8,7 @@ Group:		Application/Internet
 Packager:	Richard P. Curnow
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root-%(id -u -n)
 Requires:	info
+URL:		http://www.rc0.org.uk/mairix
 
 %description
 mairix is a tool for indexing email messages stored in maildir format folders
@@ -20,26 +21,25 @@ maildir folder containing symbolic links to the matched messages.
 %build
 CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix}
 make
-make mairix.txt
-make mairix.info
-make mairix.html
 
 %install
 rm -rf $RPM_BUILD_ROOT
 cd $RPM_BUILD_DIR/mairix-%{version}
-make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_infodir}
-cp mairix.info* $RPM_BUILD_ROOT%{_infodir}
-cp README mairix.txt mairix.html dotmairixrc.eg ..
+make install DESTDIR=$RPM_BUILD_ROOT mandir=$RPM_BUILD_ROOT/%{_mandir}
+cp README dotmairixrc.eg ..
 
 %files
 %{_bindir}/mairix
-%{_infodir}/mairix.info*
 %doc README
-%doc mairix.txt
-%doc mairix.html
 %doc dotmairixrc.eg
+%doc %{_mandir}/man1/mairix.1.gz
+%doc %{_mandir}/man5/mairixrc.5.gz
 
-%post
-install-info %{_infodir}/%{name}.info.gz %{_infodir}/dir
-
+%changelog
+* Fri Mar 24 2006 Andre Costa <blueser@gmail.com> - 0.18
+- Updated to version 0.18
+- Included URL on header
+- removed references to 'mairix.txt', 'mairix.html' and 'mairix.info'
+- .info files have been deprecated
+- removed useless 'post' section
+- makefile's "mandir" is pointing to /usr/man instead of /usr/share/man
