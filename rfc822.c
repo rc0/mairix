@@ -1050,8 +1050,12 @@ struct zFile {/*{{{*/
     /* Both gzFile and BZFILE* are defined as void pointers
      * in their respective header files.
      */
+#ifdef USE_GZIP_MBOX
     gzFile gzf;
+#endif
+#ifdef USE_BZIP_MBOX
     BZFILE *bzf;
+#endif
     void *zptr;
   };
   int type;
@@ -1062,10 +1066,20 @@ static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
   struct zFile *zf = new(struct zFile);
 
   zf->type = get_compression_type(filename);
-  if (zf->type == COMPRESSION_GZIP) {
-    zf->gzf = gzopen(filename, "rb");
-  } else {
-    zf->bzf = BZ2_bzopen(filename, "rb");
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      zf->gzf = gzopen(filename, "rb");
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      zf->bzf = BZ2_bzopen(filename, "rb");
+      break;
+#endif
+    default:
+      zf->zptr = NULL;
+      break;
   }
 
   if (!zf->zptr) {
@@ -1077,19 +1091,39 @@ static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
 }
 /*}}}*/
 static void zclose(struct zFile *zf) {/*{{{*/
-  if (zf->type == COMPRESSION_GZIP) {
-    gzclose(zf->gzf);
-  } else {
-    BZ2_bzclose(zf->bzf);
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      gzclose(zf->gzf);
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      BZ2_bzclose(zf->bzf);
+      break;
+#endif
+    default:
+      zf->zptr = NULL;
+      break;
   }
   free(zf);
 }
 /*}}}*/
 static int zread(struct zFile *zf, void *buf, int len) {/*{{{*/
-  if (zf->type == COMPRESSION_GZIP) {
-    return gzread(zf->gzf, buf, len);
-  } else {
-    return BZ2_bzread(zf->bzf, buf, len);
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      return gzread(zf->gzf, buf, len);
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      return BZ2_bzread(zf->bzf, buf, len);
+      break;
+#endif
+    default:
+      return 0;
+      break;
   }
 }
 /*}}}*/
@@ -1146,7 +1180,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
 
     return;
   }
-#endif /* USE_GZIP_MBOX */
+#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
   *len = sb.st_size;
   if (*len == 0) {
