@@ -1062,7 +1062,7 @@ struct zFile {/*{{{*/
 };
 /*}}}*/
 
-static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
+static struct zFile * xx_zopen(const char *filename, const char *mode) {/*{{{*/
   struct zFile *zf = new(struct zFile);
 
   zf->type = get_compression_type(filename);
@@ -1090,7 +1090,7 @@ static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
   return zf;
 }
 /*}}}*/
-static void zclose(struct zFile *zf) {/*{{{*/
+static void xx_zclose(struct zFile *zf) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
@@ -1109,7 +1109,7 @@ static void zclose(struct zFile *zf) {/*{{{*/
   free(zf);
 }
 /*}}}*/
-static int zread(struct zFile *zf, void *buf, int len) {/*{{{*/
+static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
@@ -1151,7 +1151,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
 
-    zf = zopen(filename, "rb");
+    zf = xx_zopen(filename, "rb");
     if (!zf) {
       fprintf(stderr, "Could not open %s\n", filename);
       *data = NULL;
@@ -1159,16 +1159,16 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
       return;
     }
     *data = new_array(unsigned char, SIZE_STEP);
-    *len = zread(zf, *data, SIZE_STEP);
+    *len = xx_zread(zf, *data, SIZE_STEP);
     if (*len >= SIZE_STEP) {
       int extra_bytes_read;
       do {
         *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
-        extra_bytes_read = zread(zf, *data + *len, SIZE_STEP);
+        extra_bytes_read = xx_zread(zf, *data + *len, SIZE_STEP);
         *len += extra_bytes_read;
       } while (extra_bytes_read > 0);
     }
-    zclose(zf);
+    xx_zclose(zf);
 
     if(*len > 0) {
       *data = grow_array(unsigned char, *len, *data);
