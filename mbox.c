@@ -927,8 +927,8 @@ int add_mbox_messages(struct database *db)/*{{{*/
           }
         }
 
-        /* Release all the list entries in the range [here,last] (inclusive) */
-        for (xx=here; xx!=last; xx=xn) {
+        /* Release all the list entries in the range [here,next) (inclusive) */
+        for (xx=here; xx!=next; xx=xn) {
           xn = xx->next;
           free(xx);
         }
