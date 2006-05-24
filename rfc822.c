@@ -1050,22 +1050,36 @@ struct zFile {/*{{{*/
     /* Both gzFile and BZFILE* are defined as void pointers
      * in their respective header files.
      */
+#ifdef USE_GZIP_MBOX
     gzFile gzf;
+#endif
+#ifdef USE_BZIP_MBOX
     BZFILE *bzf;
+#endif
     void *zptr;
   };
   int type;
 };
 /*}}}*/
 
-static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
+static struct zFile * xx_zopen(const char *filename, const char *mode) {/*{{{*/
   struct zFile *zf = new(struct zFile);
 
   zf->type = get_compression_type(filename);
-  if (zf->type == COMPRESSION_GZIP) {
-    zf->gzf = gzopen(filename, "rb");
-  } else {
-    zf->bzf = BZ2_bzopen(filename, "rb");
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      zf->gzf = gzopen(filename, "rb");
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      zf->bzf = BZ2_bzopen(filename, "rb");
+      break;
+#endif
+    default:
+      zf->zptr = NULL;
+      break;
   }
 
   if (!zf->zptr) {
@@ -1076,20 +1090,40 @@ static struct zFile * zopen(const char *filename, const char *mode) {/*{{{*/
   return zf;
 }
 /*}}}*/
-static void zclose(struct zFile *zf) {/*{{{*/
-  if (zf->type == COMPRESSION_GZIP) {
-    gzclose(zf->gzf);
-  } else {
-    BZ2_bzclose(zf->bzf);
+static void xx_zclose(struct zFile *zf) {/*{{{*/
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      gzclose(zf->gzf);
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      BZ2_bzclose(zf->bzf);
+      break;
+#endif
+    default:
+      zf->zptr = NULL;
+      break;
   }
   free(zf);
 }
 /*}}}*/
-static int zread(struct zFile *zf, void *buf, int len) {/*{{{*/
-  if (zf->type == COMPRESSION_GZIP) {
-    return gzread(zf->gzf, buf, len);
-  } else {
-    return BZ2_bzread(zf->bzf, buf, len);
+static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
+  switch (zf->type) {
+#ifdef USE_GZIP_MBOX
+    case COMPRESSION_GZIP:
+      return gzread(zf->gzf, buf, len);
+      break;
+#endif
+#ifdef USE_BZIP_MBOX
+    case COMPRESSION_BZIP:
+      return BZ2_bzread(zf->bzf, buf, len);
+      break;
+#endif
+    default:
+      return 0;
+      break;
   }
 }
 /*}}}*/
@@ -1117,7 +1151,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
 
-    zf = zopen(filename, "rb");
+    zf = xx_zopen(filename, "rb");
     if (!zf) {
       fprintf(stderr, "Could not open %s\n", filename);
       *data = NULL;
@@ -1125,16 +1159,16 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
       return;
     }
     *data = new_array(unsigned char, SIZE_STEP);
-    *len = zread(zf, *data, SIZE_STEP);
+    *len = xx_zread(zf, *data, SIZE_STEP);
     if (*len >= SIZE_STEP) {
       int extra_bytes_read;
       do {
         *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
-        extra_bytes_read = zread(zf, *data + *len, SIZE_STEP);
+        extra_bytes_read = xx_zread(zf, *data + *len, SIZE_STEP);
         *len += extra_bytes_read;
       } while (extra_bytes_read > 0);
     }
-    zclose(zf);
+    xx_zclose(zf);
 
     if(*len > 0) {
       *data = grow_array(unsigned char, *len, *data);
@@ -1146,7 +1180,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
 
     return;
   }
-#endif /* USE_GZIP_MBOX */
+#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
   *len = sb.st_size;
   if (*len == 0) {
