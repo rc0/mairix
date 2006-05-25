@@ -381,4 +381,7 @@ void lock_database(char *path, int forced_unlock);
 void unlock_database(void);
 void unlock_and_exit(int code);
 
+/* In mairix.c */
+void report_error(const char *str, const char *filename);
+
 #endif /* MAIRIX_H */

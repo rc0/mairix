@@ -1106,7 +1106,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
 
   if (stat(filename, &sb) < 0)
   {
-    perror("Could not stat");
+    report_error("stat", filename);
     *data = NULL;
     return;
   }
@@ -1162,16 +1162,16 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   fd = open(filename, O_RDONLY);
   if (fd < 0)
   {
-    perror("Could not open");
+    report_error("open", filename);
     *data = NULL;
     return;
   }
 
   *data = (unsigned char *) mmap(0, *len, PROT_READ, MAP_SHARED, fd, 0);
   if (close(fd) < 0)
-    perror("close");
+    report_error("close", filename);
   if (*data == MAP_FAILED) {
-    perror("rfc822:mmap");
+    report_error("rfc822:mmap", filename);
     *data = NULL;
     return;
   }

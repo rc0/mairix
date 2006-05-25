@@ -352,6 +352,20 @@ void out_of_mem(char *file, int line, size_t size)/*{{{*/
   exit(2);
 }
 /*}}}*/
+void report_error(const char *str, const char *filename)/*{{{*/
+{
+  if (filename) {
+    int len = strlen(str) + strlen(filename) + 4;
+    char *t;
+    t = new_array(char, len);
+    sprintf(t, "%s '%s'", str, filename);
+    perror(t);
+    free(t);
+  } else {
+    perror(str);
+  }
+}
+/*}}}*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,

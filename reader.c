@@ -92,12 +92,12 @@ struct read_db *open_db(char *filename)/*{{{*/
 
   fd = open(filename, O_RDONLY);
   if (fd < 0) {
-    perror("open");
+    report_error("open", filename);
     unlock_and_exit (2);
   }
 
   if (fstat(fd, &sb) < 0) {
-    perror("stat");
+    report_error("stat", filename);
     unlock_and_exit(2);
   }
 
@@ -105,21 +105,21 @@ struct read_db *open_db(char *filename)/*{{{*/
 
   data = (char *) mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    perror("reader:mmap");
+    report_error("reader:mmap", filename);
     unlock_and_exit(2);
   }
 
   if (!data) {
     /* Empty file opened => database corrupt for sure */
     if (close(fd) < 0) {
-      perror("close");
+      report_error("close", filename);
       unlock_and_exit(2);
     }
     return NULL;
   }
 
   if (close(fd) < 0) {
-    perror("close");
+    report_error("close", filename);
     unlock_and_exit(2);
   }
 
