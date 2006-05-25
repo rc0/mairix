@@ -71,7 +71,7 @@ State *get_curstate(void) { return curstate; }
 
 %token LSQUARE RSQUARE
 %token LSQUARE_CARET
-%token CHAR HYPHEN;
+%token CHAR HYPHEN
 
 %right QUERY COLON
 %left PIPE
