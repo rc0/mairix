@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006
  * Copyright (C) Sanjoy Mahajan 2005
  * - mfolder validation code
  *
@@ -95,6 +95,7 @@ int member_of (const char *complete_mfolder,
       glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
       break;
     case FT_RAW:			/* cannot happen but to keep compiler happy */
+    case FT_EXCERPT:
       break;
   }
   for (i=0; i<n_paths; i++) {
@@ -159,6 +160,8 @@ static void parse_output_folder(char *p)/*{{{*/
     output_folder_type = FT_MAILDIR;
   } else if (!strncasecmp(temp, "raw", 3)) {
     output_folder_type = FT_RAW;
+  } else if (!strncasecmp(temp, "excerpt", 3)) {
+    output_folder_type = FT_EXCERPT;
   } else if (!strncasecmp(temp, "mbox", 4)) {
     output_folder_type = FT_MBOX;
   }
@@ -352,6 +355,20 @@ void out_of_mem(char *file, int line, size_t size)/*{{{*/
   exit(2);
 }
 /*}}}*/
+void report_error(const char *str, const char *filename)/*{{{*/
+{
+  if (filename) {
+    int len = strlen(str) + strlen(filename) + 4;
+    char *t;
+    t = new_array(char, len);
+    sprintf(t, "%s '%s'", str, filename);
+    perror(t);
+    free(t);
+  } else {
+    perror(str);
+  }
+}
+/*}}}*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
@@ -452,6 +469,7 @@ int main (int argc, char **argv)/*{{{*/
   int any_purges = 0;
   int do_help = 0;
   int do_raw_output = 0;
+  int do_excerpt_output = 0;
   int do_dump = 0;
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
@@ -483,6 +501,8 @@ int main (int argc, char **argv)/*{{{*/
       do_dump = 1;
     } else if (!strcmp(*argv, "-r") || !strcmp(*argv, "--raw-output")) {
       do_raw_output = 1;
+    } else if (!strcmp(*argv, "-x") || !strcmp(*argv, "--excerpt-output")) {
+      do_excerpt_output = 1;
     } else if (!strcmp(*argv, "-Q") || !strcmp(*argv, "--no-integrity-checks")) {
       do_integrity_checks = 0;
     } else if (!strcmp(*argv, "--unlock")) {
@@ -566,6 +586,8 @@ int main (int argc, char **argv)/*{{{*/
 
   if (do_raw_output) {
     output_folder_type = FT_RAW;
+  } else if (do_excerpt_output) {
+    output_folder_type = FT_EXCERPT;
   }
 
   if (omit) {
@@ -591,9 +613,13 @@ int main (int argc, char **argv)/*{{{*/
     enum filetype ftype;
 
     if (!mfolder) {
-      if (output_folder_type != FT_RAW) {
-        fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
-        unlock_and_exit(2);
+      switch (output_folder_type) {
+        case FT_RAW:
+        case FT_EXCERPT:
+          break;
+        default:
+          fprintf(stderr, "No mfolder/MAIRIX_MFOLDER set\n");
+          unlock_and_exit(2);
       }
       mfolder = new_string("");
     }
@@ -611,16 +637,21 @@ int main (int argc, char **argv)/*{{{*/
       strcat(complete_mfolder, mfolder);
     }
     /* check whether mfolder output would destroy a mail folder or mbox */
-    if (output_folder_type != FT_RAW &&	/* raw output cannot damage a folder */
-        (member_of(complete_mfolder,folder_base, maildir_folders, FT_MAILDIR, omit_globs)||
-         member_of (complete_mfolder, folder_base, mh_folders, FT_MH, omit_globs) ||
-         member_of (complete_mfolder, folder_base, mboxen, FT_MBOX, omit_globs))) {
-      fprintf (stderr,
-          "You asked search results to go to the folder '%s'.\n"
-          "That folder appears to be one of the indexed mail folders!\n"
-          "For your own good, I refuse to output search results to an indexed mail folder.\n",
-          mfolder);
-      unlock_and_exit(3);
+    switch (output_folder_type) {
+      case FT_RAW:
+      case FT_EXCERPT:
+        break;
+      default:
+        if ((member_of(complete_mfolder,folder_base, maildir_folders, FT_MAILDIR, omit_globs)||
+             member_of (complete_mfolder, folder_base, mh_folders, FT_MH, omit_globs) ||
+             member_of (complete_mfolder, folder_base, mboxen, FT_MBOX, omit_globs))) {
+          fprintf (stderr,
+              "You asked search results to go to the folder '%s'.\n"
+              "That folder appears to be one of the indexed mail folders!\n"
+              "For your own good, I refuse to output search results to an indexed mail folder.\n",
+              mfolder);
+          unlock_and_exit(3);
+        }
     }
 
     ftype = classify_file(database_path);

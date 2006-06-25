@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -233,7 +233,8 @@ enum folder_type {/*{{{*/
   FT_MAILDIR,
   FT_MH,
   FT_MBOX,
-  FT_RAW
+  FT_RAW,
+  FT_EXCERPT
 };
 /*}}}*/
 
@@ -380,5 +381,8 @@ char *expand_string(const char *p);
 void lock_database(char *path, int forced_unlock);
 void unlock_database(void);
 void unlock_and_exit(int code);
+
+/* In mairix.c */
+void report_error(const char *str, const char *filename);
 
 #endif /* MAIRIX_H */

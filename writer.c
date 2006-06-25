@@ -93,29 +93,29 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
 
   fd = open(filename, O_RDWR | O_CREAT, 0600);
   if (fd < 0) {
-    perror("open");
+    report_error("open", filename);
     unlock_and_exit(2);
   }
 
   if (fstat(fd, &sb) < 0) {
-    perror("stat");
+    report_error("stat", filename);
     unlock_and_exit(2);
   }
 
   if (sb.st_size < len) {
     /* Extend */
     if (lseek(fd, len - 1, SEEK_SET) < 0) {
-      perror("lseek");
+      report_error("lseek", filename);
       unlock_and_exit(2);
     }
     if (write(fd, "\000", 1) < 0) {
-      perror("write");
+      report_error("write", filename);
       unlock_and_exit(2);
     }
   } else if (sb.st_size > len) {
     /* Truncate */
     if (ftruncate(fd, len) < 0) {
-      perror("ftruncate");
+      report_error("ftruncate", filename);
       unlock_and_exit(2);
     }
   } else {
@@ -124,7 +124,7 @@ static void create_rw_mapping(char *filename, size_t len, int *out_fd, char **ou
 
   data = mmap(0, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    perror("writer:mmap");
+    report_error("writer:mmap", filename);
     unlock_and_exit(2);
   }
 
@@ -584,15 +584,15 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   /* Write data */
   /* Unmap / close file */
   if (munmap(data, file_len) < 0) {
-    perror("munmap");
+    report_error("munmap", filename);
     unlock_and_exit(2);
   }
   if (fsync(fd) < 0) {
-    perror("fsync");
+    report_error("fsync", filename);
     unlock_and_exit(2);
   }
   if (close(fd) < 0) {
-    perror("close");
+    report_error("close", filename);
     unlock_and_exit(2);
   }
 }
