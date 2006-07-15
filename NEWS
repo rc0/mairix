@@ -2,8 +2,8 @@ NEW IN VERSION 0.19
 ===================
 * mairix.spec fixes (André Costa)
 * bug fix: freeing of message structures (Karsten Petersen)
-* Add new -x (--excerpt) option, an alternative mode for searching.  This
-  displays the key headers from the matching messages on stdout.
+* Add new -x (--excerpt-output) option, an alternative mode for searching.
+  This displays the key headers from the matching messages on stdout.
 * Add notes about the mairix-users mailing list and the SourceForge page to
   README.
 * Fix configuration + compilation to allow building with gzip support but
