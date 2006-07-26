@@ -1129,6 +1129,84 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
 /*}}}*/
 #endif
 
+/* do we need ROCACHE_SIZE > 1? the code supports any number here */
+#define ROCACHE_SIZE 1
+struct ro_mapping {
+  char filename[255];
+  unsigned char *map;
+  size_t len;
+};
+static int ro_cache_init = 0;
+static struct ro_mapping ro_mapping_cache[ROCACHE_SIZE];
+
+/* find a temp file in the mapping cache.  If nothing is found lasti is
+ * set to the next slot to use for insertion.  You have to check that slot
+ * to see if it is currently in use
+ */
+static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
+{
+  int i = 0;
+  struct ro_mapping *ro = NULL;
+  int len = strlen(filename);
+  if (lasti)
+    *lasti = 0;
+  if (len > sizeof(ro_mapping_cache[0].filename))
+    return NULL;
+  if (!ro_cache_init)
+    return NULL;
+  for (i = 0 ; i < ROCACHE_SIZE ; i++) {
+    ro = ro_mapping_cache + i;
+    if (!ro->map) {
+      if (lasti)
+	*lasti = i;
+      return NULL;
+    }
+    if (strcmp(filename, ro->filename) == 0)
+      return ro;
+  }
+  /* if we're here, the map is full.  They will reuse slot 0 */
+  return NULL;
+}
+
+/*
+ * put a new tempfile into the cache.  It is mmaped as part of this function
+ * so you can safely close the file handle after calling this.
+ */
+static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
+{
+  int i = 0;
+  struct ro_mapping *ro = NULL;
+  int namelen = strlen(filename);
+  if (namelen > sizeof(ro_mapping_cache[0].filename)) {
+    fprintf(stderr, "cannot add %s to mapping cache\n", filename);
+    return NULL;
+  }
+  if (!ro_cache_init) {
+    memset(&ro_mapping_cache, 0, sizeof(ro_mapping_cache));
+    ro_cache_init = 1;
+  }
+  ro = find_ro_cache(filename, &i);
+  if (ro) {
+    fprintf(stderr, "%s already in ro cache\n", filename);
+    return NULL;
+  }
+  ro = ro_mapping_cache + i;
+  if (ro->map) {
+    munmap(ro->map, ro->len);
+    ro->map = NULL;
+    ro->filename[0] = '\0';
+  }
+  ro->map = (unsigned char *)mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
+  if (ro->map == MAP_FAILED) {
+    ro->map = NULL;
+    perror("rfc822:mmap");
+    return NULL;
+  }
+  ro->len = len;
+  strcpy(ro->filename, filename);
+  return ro;
+}
+
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
@@ -1147,37 +1225,75 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
 
 #if USE_GZIP_MBOX || USE_BZIP_MBOX
   if(is_compressed(filename)) {
+    unsigned char *p;
+    size_t cur_read;
+    struct ro_mapping *ro;
+    FILE *tmpf;
+
+    /* this branch never returns things that are freeable */
+    data_alloc_type = ALLOC_NONE;
+    ro = find_ro_cache(filename, NULL);
+    if (ro) {
+      *data = ro->map;
+      *len = ro->len;
+      return;
+    }
+
     if(verbose) {
     	fprintf(stderr, "Decompressing %s...\n", filename);
     }
 
+    tmpf = tmpfile();
+    if (!tmpf) {
+      perror("tmpfile");
+      goto comp_error;
+    }
     zf = xx_zopen(filename, "rb");
     if (!zf) {
       fprintf(stderr, "Could not open %s\n", filename);
-      *data = NULL;
-      *len = 0;
-      return;
+      goto comp_error;
     }
-    *data = new_array(unsigned char, SIZE_STEP);
-    *len = xx_zread(zf, *data, SIZE_STEP);
-    if (*len >= SIZE_STEP) {
-      int extra_bytes_read;
-      do {
-        *data = grow_array(unsigned char, *len + SIZE_STEP, *data);
-        extra_bytes_read = xx_zread(zf, *data + *len, SIZE_STEP);
-        *len += extra_bytes_read;
-      } while (extra_bytes_read > 0);
+    p = new_array(unsigned char, SIZE_STEP);
+    cur_read = xx_zread(zf, p, SIZE_STEP);
+    if (fwrite(p, cur_read, 1, tmpf) != 1) {
+      fprintf(stderr, "failed writing to temp file for %s\n", filename);
+      goto comp_error;
     }
+    *len = cur_read;
+    if (cur_read >= SIZE_STEP) {
+      while(1) {
+        int ret;
+        cur_read = xx_zread(zf, p, SIZE_STEP);
+	if (cur_read <= 0)
+	  break;
+        *len += cur_read;
+	ret = fwrite(p, cur_read, 1, tmpf);
+	if (ret != 1) {
+          fprintf(stderr, "failed writing to temp file for %s\n", filename);
+          goto comp_error;
+	}
+      }
+    }
+    free(p);
     xx_zclose(zf);
 
     if(*len > 0) {
-      *data = grow_array(unsigned char, *len, *data);
-    	data_alloc_type = ALLOC_MALLOC;
+      ro = add_ro_cache(filename, fileno(tmpf), *len);
+      if (!ro)
+        goto comp_error;
+      *data = ro->map;
+      *len = ro->len;
     } else {
-      free(*data);
-      data_alloc_type = ALLOC_NONE;
+      *data = NULL;
     }
+    fclose(tmpf);
+    return;
 
+comp_error:
+    *data = NULL;
+    *len = 0;
+    if (tmpf)
+      fclose(tmpf);
     return;
   }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
