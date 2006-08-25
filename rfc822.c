@@ -1129,6 +1129,7 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
 /*}}}*/
 #endif
 
+#if USE_GZIP_MBOX || USE_BZIP_MBOX
 /* do we need ROCACHE_SIZE > 1? the code supports any number here */
 #define ROCACHE_SIZE 1
 struct ro_mapping {
@@ -1206,6 +1207,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
   strcpy(ro->filename, filename);
   return ro;
 }
+#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
