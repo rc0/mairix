@@ -333,6 +333,12 @@ int scan_date_string(char *in, time_t *start, int *has_start, time_t *end, int *
 
   time(&now);
   start_tm = end_tm = *localtime(&now);
+  start_tm.tm_hour = 0;
+  start_tm.tm_min = 0;
+  start_tm.tm_sec = 0;
+  end_tm.tm_hour = 23;
+  end_tm.tm_min = 59;
+  end_tm.tm_sec = 59;
 
   hyphen = strchr(in, '-');
   if (!hyphen) {
