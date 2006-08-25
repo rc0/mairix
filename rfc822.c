@@ -1133,7 +1133,7 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
 /* do we need ROCACHE_SIZE > 1? the code supports any number here */
 #define ROCACHE_SIZE 1
 struct ro_mapping {
-  char filename[255];
+  char *filename;
   unsigned char *map;
   size_t len;
 };
@@ -1148,11 +1148,8 @@ static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
 {
   int i = 0;
   struct ro_mapping *ro = NULL;
-  int len = strlen(filename);
   if (lasti)
     *lasti = 0;
-  if (len > sizeof(ro_mapping_cache[0].filename))
-    return NULL;
   if (!ro_cache_init)
     return NULL;
   for (i = 0 ; i < ROCACHE_SIZE ; i++) {
@@ -1177,11 +1174,6 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 {
   int i = 0;
   struct ro_mapping *ro = NULL;
-  int namelen = strlen(filename);
-  if (namelen > sizeof(ro_mapping_cache[0].filename)) {
-    fprintf(stderr, "cannot add %s to mapping cache\n", filename);
-    return NULL;
-  }
   if (!ro_cache_init) {
     memset(&ro_mapping_cache, 0, sizeof(ro_mapping_cache));
     ro_cache_init = 1;
@@ -1195,7 +1187,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
   if (ro->map) {
     munmap(ro->map, ro->len);
     ro->map = NULL;
-    ro->filename[0] = '\0';
+    free(ro->filename);
   }
   ro->map = (unsigned char *)mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
   if (ro->map == MAP_FAILED) {
@@ -1204,7 +1196,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
     return NULL;
   }
   ro->len = len;
-  strcpy(ro->filename, filename);
+  ro->filename = new_string(filename);
   return ro;
 }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
