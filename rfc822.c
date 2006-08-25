@@ -338,7 +338,7 @@ static void decode_header_value(char *text){/*{{{*/
         }
       }
     } else {
-      continue;	/* unknown encoding */
+      continue; /* unknown encoding */
     }
     q = e + 2;
   }
@@ -1004,9 +1004,9 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
 }
 /*}}}*/
 
-#define ALLOC_NONE	1
-#define ALLOC_MMAP	2
-#define ALLOC_MALLOC	3
+#define ALLOC_NONE   1
+#define ALLOC_MMAP   2
+#define ALLOC_MALLOC 3
 
 int data_alloc_type;
 
@@ -1158,7 +1158,7 @@ static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
     ro = ro_mapping_cache + i;
     if (!ro->map) {
       if (lasti)
-	*lasti = i;
+        *lasti = i;
       return NULL;
     }
     if (strcmp(filename, ro->filename) == 0)
@@ -1240,7 +1240,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     }
 
     if(verbose) {
-    	fprintf(stderr, "Decompressing %s...\n", filename);
+      fprintf(stderr, "Decompressing %s...\n", filename);
     }
 
     tmpf = tmpfile();
@@ -1264,14 +1264,14 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
       while(1) {
         int ret;
         cur_read = xx_zread(zf, p, SIZE_STEP);
-	if (cur_read <= 0)
-	  break;
+        if (cur_read <= 0)
+          break;
         *len += cur_read;
-	ret = fwrite(p, cur_read, 1, tmpf);
-	if (ret != 1) {
+        ret = fwrite(p, cur_read, 1, tmpf);
+        if (ret != 1) {
           fprintf(stderr, "failed writing to temp file for %s\n", filename);
           goto comp_error;
-	}
+        }
       }
     }
     free(p);
