@@ -838,6 +838,22 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
   ++db->n_msgs;
 }
 /*}}}*/
+
+static int do_stat(struct msgpath *mp)/*{{{*/
+{
+  struct stat sb;
+  int status;
+  status = stat(mp->src.mpf.path, &sb);
+  if ((status < 0) ||
+      !S_ISREG(sb.st_mode)) {
+    return 0;
+  } else {
+    mp->src.mpf.mtime = sb.st_mtime;
+    mp->src.mpf.size = sb.st_size;
+    return 1;
+  }
+}
+/*}}}*/
 int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
@@ -853,6 +869,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   int matched_index;
   int i, new_entries_start_at;
   int any_new, n_newly_pruned, n_already_dead;
+  int status;
 
   file_in_db = new_array(char, n_msgs);
   file_in_new_list = new_array(char, db->n_msgs);
@@ -866,11 +883,20 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
     switch (db->type[i]) {
       case MTY_FILE:
         matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
-        if ((matched_index >= 0) &&
-            (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime)) {
-        /* Treat stale files as though the path has changed. */
-          file_in_db[matched_index] = 1;
-          file_in_new_list[i] = 1;
+        if (matched_index >= 0) {
+          status = do_stat(sorted_paths + matched_index);
+          if (status) {
+            if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
+              /* Treat stale files as though the path has changed. */
+              file_in_db[matched_index] = 1;
+              file_in_new_list[i] = 1;
+            } else {
+              fprintf(stderr, "mtime failed for '%s'\n", sorted_paths[matched_index].src.mpf.path);
+            }
+          } else {
+            /* This path will get treated as dead, and be re-stated below.
+             * When that stat fails, the path won't get added to the db. */
+          }
         }
         break;
       case MTY_MBOX:
@@ -924,9 +950,17 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   any_new = 0;
   for (i=0; i<n_msgs; i++) {
     if (!file_in_db[i]) {
+      int status;
       any_new = 1;
       /* The 'sorted_paths' array is only used for file-per-message folders. */
-      add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
+      status = do_stat(sorted_paths + i);
+      if (status) {
+        /* We only add files that could be successfully stat()'d as regular
+         * files. */
+        add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
+      } else {
+        fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+      }
     }
   }
 
