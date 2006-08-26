@@ -391,7 +391,7 @@ static void usage(void)/*{{{*/
   print_copyright();
 
   printf("mairix [-h]                                    : Show help\n"
-         "mairix [-f <rcfile>] [-v] [-p]                 : Build index\n"
+         "mairix [-f <rcfile>] [-v] [-p] [-F]            : Build index\n"
          "mairix [-f <rcfile>] [-a] [-t] expr1 ... exprN : Run search\n"
          "mairix [-f <rcfile>] -d                        : Dump database to stdout\n"
          "-h           : show this help\n"
@@ -399,6 +399,7 @@ static void usage(void)/*{{{*/
          "-V           : show version\n"
          "-v           : be verbose\n"
          "-p           : purge messages that no longer exist\n"
+         "-F           : fast scan for maildir and MH folders (no mtime or size checks)\n"
          "-a           : add new matches to match folder (default : clear it first)\n"
          "-t           : include all messages in same threads as matching messages\n"
          "-o <mfolder> : override setting of mfolder from mairixrc file\n"
