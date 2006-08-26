@@ -854,7 +854,7 @@ static int do_stat(struct msgpath *mp)/*{{{*/
   }
 }
 /*}}}*/
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs)/*{{{*/
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
    * possible.  We search for each existing path in the incoming sorted array.
@@ -884,18 +884,25 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
       case MTY_FILE:
         matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
         if (matched_index >= 0) {
-          status = do_stat(sorted_paths + matched_index);
-          if (status) {
-            if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
-              /* Treat stale files as though the path has changed. */
-              file_in_db[matched_index] = 1;
-              file_in_new_list[i] = 1;
-            } else {
-              fprintf(stderr, "mtime failed for '%s'\n", sorted_paths[matched_index].src.mpf.path);
-            }
+          if (do_fast_index) {
+            /* Assume the presence of a matching path is good enough without
+             * even bothering to stat the file that's there now. */
+            file_in_db[matched_index] = 1;
+            file_in_new_list[i] = 1;
           } else {
-            /* This path will get treated as dead, and be re-stated below.
-             * When that stat fails, the path won't get added to the db. */
+            status = do_stat(sorted_paths + matched_index);
+            if (status) {
+              if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
+                /* Treat stale files as though the path has changed. */
+                file_in_db[matched_index] = 1;
+                file_in_new_list[i] = 1;
+              } else {
+                fprintf(stderr, "mtime failed for '%s'\n", sorted_paths[matched_index].src.mpf.path);
+              }
+            } else {
+              /* This path will get treated as dead, and be re-stated below.
+               * When that stat fails, the path won't get added to the db. */
+            }
           }
         }
         break;

@@ -473,6 +473,7 @@ int main (int argc, char **argv)/*{{{*/
   int do_dump = 0;
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
+  int do_fast_index = 0;
 
   struct globber_array *omit_globs;
 
@@ -507,6 +508,9 @@ int main (int argc, char **argv)/*{{{*/
       do_integrity_checks = 0;
     } else if (!strcmp(*argv, "--unlock")) {
       do_forced_unlock = 1;
+    } else if (!strcmp(*argv, "-F") ||
+               !strcmp(*argv, "--fast-index")) {
+      do_fast_index = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-V") || !strcmp(*argv, "--version")) {
@@ -701,7 +705,7 @@ int main (int argc, char **argv)/*{{{*/
 
     build_mbox_lists(db, folder_base, mboxen, omit_globs);
 
-    any_updates = update_database(db, msgs->paths, msgs->n);
+    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index);
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
     }
