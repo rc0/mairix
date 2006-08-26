@@ -37,6 +37,8 @@ mairix \- index and search mail folders
 ] [
 .BR \-f | \-\-rcfile
 .I mairixrc
+] [
+.BR \-F | \-\-fast-index
 ]
 
 .SS Searching
@@ -174,6 +176,24 @@ earlier run crashed for some reason or was aborted.
 Cause stale (dead) messages to be purged from the database during an indexing
 run.  (Normally, stale messages are left in the database because of the
 additional const of compacting away the storage that they take up.)
+
+.TP
+.B -F, --fast-index
+.br
+When processing maildir and MH folders,
+.I mairix
+normally compares the mtime and size of each message against the values stored
+in the database.  If they have changed, the message will be rescanned.  This
+check requires each message file to be stat'ed.  For large numbers of messages
+in these folder types, this can be a sizeable overhead.
+
+This option tells
+.I mairix
+to assume that when a message currently on-disc has a name matching one already
+in the database, it should assume the message is unchanged.
+
+A later indexing run without using this option will fix up any rescans that
+were missed due to its use.
 
 .SS Search options
 .TP
