@@ -139,6 +139,7 @@ struct nvp *make_nvp(char *s)/*{{{*/
     current_action = nvp_action[current_state];
     switch (current_action) {
       case GOT_NAME:
+      case GOT_NAME_TRAILING_SPACE:
       case GOT_MAJORMINOR:
       case GOT_NAMEVALUE:
         last_action = current_action;
@@ -147,6 +148,11 @@ struct nvp *make_nvp(char *s)/*{{{*/
         switch (last_action) {
           case GOT_NAME:
             *nn = 0;
+            append_name(result, name);
+            break;
+          case GOT_NAME_TRAILING_SPACE:
+            while (isspace(*--nn)) {}
+            *++nn = 0;
             append_name(result, name);
             break;
           case GOT_MAJORMINOR:

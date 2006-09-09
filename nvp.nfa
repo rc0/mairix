@@ -23,7 +23,6 @@ Tokens EOS
 Abbrev VALUE = [\041-~]~[\\";]
 Abbrev QVALUE = VALUE | [\040;] | <escape:in->out>
 Abbrev NAME1 = [0-9a-zA-Z_\-]
-Abbrev NAME2 = NAME1 | [0-9\-]
 Abbrev OWS = <optwhite:in->out>
 
 %{
@@ -44,15 +43,26 @@ Block optwhite {
 }
 
 Block name {
+    # This needs to cope with embedded spaces, e.g. for mailers that write '7
+    # bit' instead of '7bit'
     State in
         NAME1 -> name1
 
     State name1
         = COPY_TO_NAME
-        NAME2 -> name1
+        = GOT_NAME
+        NAME1 -> name1
+        [ \t] -> name2
         -> out
 
-    State out = GOT_NAME
+    State name2
+        = COPY_TO_NAME
+        = GOT_NAME_TRAILING_SPACE
+        [ \t] -> name2
+        NAME1 -> name1
+        -> out
+
+    State out
 }
 
 Block value {
@@ -150,6 +160,7 @@ Prefix nvp
 Group action {
     Attr GOT_NAMEVALUE
     Attr GOT_NAME
+    Attr GOT_NAME_TRAILING_SPACE
     Attr GOT_MAJORMINOR
     Attr GOT_TERMINATOR
     Defattr GOT_NOTHING
