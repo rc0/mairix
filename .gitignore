@@ -13,5 +13,8 @@ mairix.info
 mairix.pdf
 mairix.txt
 make.log
+nvpscan.c
+nvpscan.h
+nvp.report
 test
 version.h

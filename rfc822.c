@@ -25,6 +25,7 @@
  */
 
 #include "mairix.h"
+#include "nvp.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -70,9 +71,9 @@ enum encoding_type {/*{{{*/
 };
 /*}}}*/
 struct content_type_header {/*{{{*/
-  char *major; /* e.g. text */
-  char *minor; /* e.g. plain */
-  char *boundary; /* for multipart */
+  const char *major; /* e.g. text */
+  const char *minor; /* e.g. plain */
+  const char *boundary; /* for multipart */
   /* charset? */
 };
 /*}}}*/
@@ -197,7 +198,7 @@ static int audit_header(struct line *header)/*{{{*/
   /* If we get here the header must have been OK */
   return 1;
 }/*}}}*/
-static int match_string(char *ref, char *candidate)/*{{{*/
+static int match_string(const char *ref, const char *candidate)/*{{{*/
 {
   int len = strlen(ref);
   return !strncasecmp(ref, candidate, len);
@@ -358,10 +359,10 @@ static char *copy_header_value(char *text){/*{{{*/
   return p;
 }
 /*}}}*/
-static enum encoding_type decode_encoding_type(char *e)/*{{{*/
+static enum encoding_type decode_encoding_type(const char *e)/*{{{*/
 {
   enum encoding_type result;
-  char *p;
+  const char *p;
   if (!e) {
     result = ENC_NONE;
   } else {
@@ -409,73 +410,21 @@ static char *copy_string_start_end_unquote(char *start, char *end)/*{{{*/
   return result;
 }
 /*}}}*/
-static void parse_content_type(char *hdrline, struct content_type_header *result)/*{{{*/
+static void parse_content_type(struct nvp *ct_nvp, struct content_type_header *result)/*{{{*/
 {
-  char *p, *q, *s;
-  char *eq, *semi, *name, *value;
-
   result->major = NULL;
   result->minor = NULL;
   result->boundary = NULL;
 
-  p = hdrline;
-  while (*p && isspace(*(unsigned char *)p)) p++;
-  for (q=p+1; *q && (*q != '/'); q++) ;
-/*  assert(*q); */
-  if (*q)
-  {
-    result->major = new_array(char, 1 + (q - p));
-    for (s=result->major; p<q;) *s++ = *p++;
-    *s = 0;
-
-    p = q + 1;
-    for (q=p+1; *q && !isspace(*(unsigned char *) q) && (*q != ';'); q++) ;
-    result->minor = new_array(char, 1 + (q - p));
-    for (s=result->minor; p<q;) *s++ = *p++;
-    *s = 0;
-
-    /* Now try to extract other fields */
-    /* FIXME : won't work if ; or = occur within quotation marks */
-
-    while (*q && (*q != ';')) q++;
-    semi = q;
-    while (semi && *semi) {
-
-      name = semi + 1;
-      while (*name && isspace(*(unsigned char *) name)) name++;
-      if (!*name) break;
-
-      for (eq=name+1; *eq && (*eq != '='); eq++) ;
-      if (!*eq) break;
-      value = eq + 1;
-      if (!*value) break;
-
-      /* Find next semicolon, or end of line, or whitespace (if not a quoted RHS) */
-      for (semi = value+1;
-           *semi && ((*value == '"') || (!isspace(*(unsigned char *)semi))) && (*semi != ';');
-           semi++) {}
-
-      if (!strncasecmp(name, "boundary", 8)) {
-        result->boundary = copy_string_start_end_unquote(value, semi);
-      }
-
-      semi = strchr(semi, ';'); /* in case value string was ended by whitespace */
-
-    }
+  result->major = nvp_major(ct_nvp);
+  if (result->major) {
+    result->minor = nvp_minor(ct_nvp);
   } else {
-    /* If we can't find the '/', just take the first word */
-    for (q=p+1; *q && (*q != '/') && (*q != ' '); q++) ;
-    result->major = new_array(char, 1 + (q - p));
-    for (s=result->major; p<q;) *s++ = *p++;
-    *s = 0;
-
-    /* Assume text will be plain */
-    if (match_string(result->major, "text")) {
-      result->minor = new_string("plain");
-    } else {
-      result->minor = new_string("\0");
-    }
+    result->minor = NULL;
+    result->major = nvp_first(ct_nvp);
   }
+
+  result->boundary = nvp_lookupcase(ct_nvp, "boundary");
 }
 
 /*}}}*/
@@ -494,7 +443,7 @@ static char *looking_at_ws_then_newline(char *start)/*{{{*/
 }
 /*}}}*/
 
-static char *unencode_data(char *input, int input_len, char *enc, int *output_len)/*{{{*/
+static char *unencode_data(struct msg_src *src, char *input, int input_len, const char *enc, int *output_len)/*{{{*/
 {
   enum encoding_type encoding;
   char *result, *end_result;
@@ -582,6 +531,7 @@ static char *unencode_data(char *input, int input_len, char *enc, int *output_le
       break;
         /*}}}*/
     case ENC_UNKNOWN:/*{{{*/
+      fprintf(stderr, "Unknown encoding type in %s\n", format_msg_src(src));
       /* fall through - ignore this data */
     /*}}}*/
     default:/*{{{*/
@@ -674,25 +624,35 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
 
 /* Forward prototypes */
 static void do_multipart(struct msg_src *src, char *input, int input_len,
-    char *boundary, struct attachment *atts,
+    const char *boundary, struct attachment *atts,
     enum data_to_rfc822_error *error);
 
 /*{{{ do_body() */
 static void do_body(struct msg_src *src,
     char *body_start, int body_len,
-    char *content_type, char *content_transfer_encoding,
+    struct nvp *ct_nvp, struct nvp *cte_nvp,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
   char *decoded_body;
   int decoded_body_len;
+  const char *content_transfer_encoding;
+  content_transfer_encoding = NULL;
+  if (cte_nvp) {
+    content_transfer_encoding = nvp_first(cte_nvp);
+    if (!content_transfer_encoding) {
+      fprintf(stderr, "Giving up on %s, content_transfer_encoding header not parseable\n",
+          format_msg_src(src));
+      return;
+    }
+  }
 
-  decoded_body = unencode_data(body_start, body_len, content_transfer_encoding, &decoded_body_len);
+  decoded_body = unencode_data(src, body_start, body_len, content_transfer_encoding, &decoded_body_len);
 
-  if (content_type) {
+  if (ct_nvp) {
     struct content_type_header ct;
-    parse_content_type(content_type, &ct);
-    if (!strcasecmp(ct.major, "multipart")) {
+    parse_content_type(ct_nvp, &ct);
+    if (ct.major && !strcasecmp(ct.major, "multipart")) {
       do_multipart(src, decoded_body, decoded_body_len, ct.boundary, atts, error);
       /* Don't need decoded body any longer - copies have been taken if
        * required when handling multipart attachments. */
@@ -702,15 +662,16 @@ static void do_body(struct msg_src *src,
       /* unipart */
       struct attachment *new_att;
       new_att = new(struct attachment);
-      if (!strcasecmp(ct.major, "text")) {
-        if (!strcasecmp(ct.minor, "plain")) {
+      if (ct.major && !strcasecmp(ct.major, "text")) {
+        if (ct.minor && !strcasecmp(ct.minor, "plain")) {
           new_att->ct = CT_TEXT_PLAIN;
-        } else if (!strcasecmp(ct.minor, "html")) {
+        } else if (ct.minor && !strcasecmp(ct.minor, "html")) {
           new_att->ct = CT_TEXT_HTML;
         } else {
           new_att->ct = CT_TEXT_OTHER;
         }
-      } else if (!strcasecmp(ct.major, "message") && !strcasecmp(ct.minor, "rfc822")) {
+      } else if (ct.major && !strcasecmp(ct.major, "message") &&
+                 ct.minor && !strcasecmp(ct.minor, "rfc822")) {
         new_att->ct = CT_MESSAGE_RFC822;
       } else {
         new_att->ct = CT_OTHER;
@@ -725,9 +686,6 @@ static void do_body(struct msg_src *src,
       }
       enqueue(atts, new_att);
     }
-    free(ct.major);
-    free(ct.minor);
-    if (ct.boundary) free(ct.boundary);
   } else {
     /* Treat as text/plain {{{*/
     struct attachment *new_att;
@@ -751,7 +709,9 @@ static void do_attachment(struct msg_src *src,
   struct line header, *x, *nx;
   char *body_start;
   int body_len;
-  char *content_type, *content_transfer_encoding;
+
+  struct nvp *ct_nvp, *cte_nvp;
+  
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
@@ -759,12 +719,30 @@ static void do_attachment(struct msg_src *src,
   }
 
   /* Extract key headers */
-  content_type = NULL;
-  content_transfer_encoding = NULL;
+  ct_nvp = cte_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
-         if (match_string("content-type", x->text)) content_type = copy_header_value(x->text);
-    else if (match_string("content-transfer-encoding", x->text)) content_transfer_encoding = copy_header_value(x->text);
+    if (match_string("content-type:", x->text)) {
+      ct_nvp = make_nvp(x->text + sizeof("content-type:"));
+    } else if (match_string("content-transfer-encoding:", x->text)) {
+      cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
+    }
   }
+
+#if 0
+  if (ct_nvp) {
+    fprintf(stderr, "======\n");
+    fprintf(stderr, "Dump of content-type hdr\n");
+    nvp_dump(ct_nvp, stderr);
+    free(ct_nvp);
+  }
+
+  if (cte_nvp) {
+    fprintf(stderr, "======\n");
+    fprintf(stderr, "Dump of content-transfer-encoding hdr\n");
+    nvp_dump(cte_nvp, stderr);
+    free(cte_nvp);
+  }
+#endif
 
   if (body_start > after_end) {
     /* This is a (maliciously?) b0rken attachment, e.g. maybe empty */
@@ -775,7 +753,7 @@ static void do_attachment(struct msg_src *src,
   } else {
     body_len = after_end - body_start;
     /* Ignore errors in nested body parts. */
-    do_body(src, body_start, body_len, content_type, content_transfer_encoding, atts, NULL);
+    do_body(src, body_start, body_len, ct_nvp, cte_nvp, atts, NULL);
   }
 
   /* Free header memory */
@@ -785,14 +763,14 @@ static void do_attachment(struct msg_src *src,
     free(x);
   }
 
-  if (content_type) free(content_type);
-  if (content_transfer_encoding) free(content_transfer_encoding);
+  if (ct_nvp) free_nvp(ct_nvp);
+  if (cte_nvp) free(cte_nvp);
 }
 /*}}}*/
 /*{{{ do_multipart() */
 static void do_multipart(struct msg_src *src,
     char *input, int input_len,
-    char *boundary,
+    const char *boundary,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
@@ -948,7 +926,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   char *body_start;
   struct line header;
   struct line *x, *nx;
-  char *content_type, *content_transfer_encoding;
+  struct nvp *ct_nvp, *cte_nvp;
   int body_len;
 
   if (error) *error = DTR8_OK; /* default */
@@ -966,15 +944,16 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   }
 
   /* Extract key headers {{{*/
-  content_type = NULL;
-  content_transfer_encoding = NULL;
+  ct_nvp = cte_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if      (match_string("to", x->text)) result->hdrs.to = copy_header_value(x->text);
     else if (match_string("cc", x->text)) result->hdrs.cc = copy_header_value(x->text);
     else if (match_string("from", x->text)) result->hdrs.from = copy_header_value(x->text);
     else if (match_string("subject", x->text)) result->hdrs.subject = copy_header_value(x->text);
-    else if (match_string("content-type", x->text)) content_type = copy_header_value(x->text);
-    else if (match_string("content-transfer-encoding", x->text)) content_transfer_encoding = copy_header_value(x->text);
+    else if (match_string("content-type", x->text))
+      ct_nvp = make_nvp(x->text + sizeof("content-type:"));
+    else if (match_string("content-transfer-encoding", x->text))
+      cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
     else if (match_string("date", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);
@@ -987,7 +966,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
 
   /* Process body */
   body_len = length - (body_start - data);
-  do_body(src, body_start, body_len, content_type, content_transfer_encoding, &result->atts, error);
+  do_body(src, body_start, body_len, ct_nvp, cte_nvp, &result->atts, error);
 
   /* Free header memory */
   for (x=header.next; x!=&header; x=nx) {
@@ -996,8 +975,8 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
     free(x);
   }
 
-  if (content_type) free(content_type);
-  if (content_transfer_encoding) free(content_transfer_encoding);
+  if (ct_nvp) free_nvp(ct_nvp);
+  if (cte_nvp) free_nvp(cte_nvp);
 
   return result;
 

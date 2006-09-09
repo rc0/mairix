@@ -1,0 +1,147 @@
+Tokens EOS
+Abbrev VALUE = [\041-~]~[\\";]
+Abbrev QVALUE = VALUE | [\040;] | <escape:in->out>
+Abbrev NAME1 = [0-9a-zA-Z_\-]
+Abbrev NAME2 = NAME1 | [0-9\-]
+Abbrev OWS = <optwhite:in->out>
+
+%{
+#include "nvptypes.h"
+%}
+
+Block escape {
+    State in
+        [\\] ; [\\] -> out
+        [\\] ; ["]  -> out
+}
+
+Block optwhite {
+    State in
+        -> out
+        # I have seen headers with ^M in them...
+        [ \t\r] -> in
+}
+
+Block name {
+    State in
+        NAME1 -> name1
+
+    State name1
+        = COPY_TO_NAME
+        NAME2 -> name1
+        -> out
+
+    State out = GOT_NAME
+}
+
+Block value {
+    State in
+        VALUE -> v1
+    State v1
+        = COPY_TO_VALUE
+        -> out
+        VALUE -> v1
+}
+
+Block qvalue {
+    State in
+        ["] -> qv0
+
+    State qv0
+        QVALUE -> qv1
+
+    State qv1
+        = COPY_TO_VALUE
+        QVALUE -> qv1
+        -> qv2
+
+    State qv2
+        ["] -> out
+}
+
+Block namevalue {
+    State in
+        OWS ; <name:in->out> ; OWS ; [=] -> rhs
+
+    State rhs
+        OWS ; <qvalue:in->out> ; OWS -> out
+        OWS ; <value:in->out> ; OWS -> out
+
+    State out = GOT_NAMEVALUE
+}
+
+Block major {
+    State in
+        NAME1 -> name1
+
+    State name1
+        NAME1 -> name1
+        -> out
+}
+
+Block minor {
+    State in
+        NAME1 -> name1
+
+    State name1
+        = COPY_TO_MINOR
+        NAME1 -> name1
+        -> out
+}
+
+Block majorminor {
+    State in
+        <major:in->out> -> foo
+
+    State foo
+        [/] -> bar
+
+    State bar
+        <minor:in->out> -> out
+
+    State out = GOT_MAJORMINOR
+}
+
+Block component {
+    State in
+        <namevalue:in->out> -> out
+        <name:in->out> -> out
+        <majorminor:in->out> -> out
+}
+
+Block main {
+    State in Entry in
+        OWS ; <component:in->out> ; OWS ; EOS -> out2
+        OWS ; <component:in->out> ; OWS ; [;] -> in2
+        
+    State in2
+        = GOT_TERMINATOR
+        -> in
+
+    State out2
+        = GOT_TERMINATOR
+        -> out
+}
+
+Defattr 0
+Prefix nvp
+
+Group action {
+    Attr GOT_NAMEVALUE
+    Attr GOT_NAME
+    Attr GOT_MAJORMINOR
+    Attr GOT_TERMINATOR
+    Defattr GOT_NOTHING
+    Type "enum nvp_action"
+}
+
+Group copier {
+    Attr COPY_TO_NAME
+    Attr COPY_TO_MINOR
+    Attr COPY_TO_VALUE
+    Defattr COPY_NOWHERE
+    Type "enum nvp_copier"
+}
+
+# vim:et:sts=4:sw=4:ht=8
+
