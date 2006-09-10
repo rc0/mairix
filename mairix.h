@@ -122,6 +122,7 @@ struct attachment {/*{{{*/
   struct attachment *next;
   struct attachment *prev;
   enum content_type ct;
+  char *filename;
   union attachment_body {
     struct normal_attachment_body {
       int len;

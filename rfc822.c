@@ -631,6 +631,7 @@ static void do_multipart(struct msg_src *src, char *input, int input_len,
 static void do_body(struct msg_src *src,
     char *body_start, int body_len,
     struct nvp *ct_nvp, struct nvp *cte_nvp,
+    struct nvp *cd_nvp,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
@@ -661,7 +662,19 @@ static void do_body(struct msg_src *src,
     } else {
       /* unipart */
       struct attachment *new_att;
+      const char *disposition;
       new_att = new(struct attachment);
+      disposition = nvp_first(cd_nvp);
+      if (disposition && !strcasecmp(disposition, "attachment")) {
+        new_att->filename = new_string(nvp_lookupcase(cd_nvp, "filename"));
+        if (!new_att->filename) {
+          /* Some messages have name=... in content-type: instead of
+           * filename=... in content-disposition. */
+          new_att->filename = new_string(nvp_lookupcase(ct_nvp, "name"));
+        }
+      } else {
+        new_att->filename = NULL;
+      }
       if (ct.major && !strcasecmp(ct.major, "text")) {
         if (ct.minor && !strcasecmp(ct.minor, "plain")) {
           new_att->ct = CT_TEXT_PLAIN;
@@ -690,6 +703,7 @@ static void do_body(struct msg_src *src,
     /* Treat as text/plain {{{*/
     struct attachment *new_att;
     new_att = new(struct attachment);
+    new_att->filename = NULL;
     new_att->ct = CT_TEXT_PLAIN;
     new_att->data.normal.len = decoded_body_len;
     /* Add null termination on the end */
@@ -710,7 +724,7 @@ static void do_attachment(struct msg_src *src,
   char *body_start;
   int body_len;
 
-  struct nvp *ct_nvp, *cte_nvp;
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
   
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
@@ -719,12 +733,14 @@ static void do_attachment(struct msg_src *src,
   }
 
   /* Extract key headers */
-  ct_nvp = cte_nvp = NULL;
+  ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if (match_string("content-type:", x->text)) {
       ct_nvp = make_nvp(x->text + sizeof("content-type:"));
     } else if (match_string("content-transfer-encoding:", x->text)) {
       cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
+    } else if (match_string("content-disposition:", x->text)) {
+      cd_nvp = make_nvp(x->text + sizeof("content-disposition:"));
     }
   }
 
@@ -753,7 +769,7 @@ static void do_attachment(struct msg_src *src,
   } else {
     body_len = after_end - body_start;
     /* Ignore errors in nested body parts. */
-    do_body(src, body_start, body_len, ct_nvp, cte_nvp, atts, NULL);
+    do_body(src, body_start, body_len, ct_nvp, cte_nvp, cd_nvp, atts, NULL);
   }
 
   /* Free header memory */
@@ -764,7 +780,8 @@ static void do_attachment(struct msg_src *src,
   }
 
   if (ct_nvp) free_nvp(ct_nvp);
-  if (cte_nvp) free(cte_nvp);
+  if (cte_nvp) free_nvp(cte_nvp);
+  if (cd_nvp) free_nvp(cd_nvp);
 }
 /*}}}*/
 /*{{{ do_multipart() */
@@ -926,7 +943,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   char *body_start;
   struct line header;
   struct line *x, *nx;
-  struct nvp *ct_nvp, *cte_nvp;
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
   int body_len;
 
   if (error) *error = DTR8_OK; /* default */
@@ -944,7 +961,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   }
 
   /* Extract key headers {{{*/
-  ct_nvp = cte_nvp = NULL;
+  ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if      (match_string("to", x->text)) result->hdrs.to = copy_header_value(x->text);
     else if (match_string("cc", x->text)) result->hdrs.cc = copy_header_value(x->text);
@@ -954,6 +971,8 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
       ct_nvp = make_nvp(x->text + sizeof("content-type:"));
     else if (match_string("content-transfer-encoding", x->text))
       cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
+    else if (match_string("content-disposition", x->text))
+      cd_nvp = make_nvp(x->text + sizeof("content-disposition:"));
     else if (match_string("date", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);
@@ -966,7 +985,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
 
   /* Process body */
   body_len = length - (body_start - data);
-  do_body(src, body_start, body_len, ct_nvp, cte_nvp, &result->atts, error);
+  do_body(src, body_start, body_len, ct_nvp, cte_nvp, cd_nvp, &result->atts, error);
 
   /* Free header memory */
   for (x=header.next; x!=&header; x=nx) {
@@ -977,6 +996,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
 
   if (ct_nvp) free_nvp(ct_nvp);
   if (cte_nvp) free_nvp(cte_nvp);
+  if (cd_nvp) free_nvp(cd_nvp);
 
   return result;
 
@@ -1258,6 +1278,7 @@ void free_rfc822(struct rfc822 *msg)/*{{{*/
 
   for (a = msg->atts.next; a != &msg->atts; a = na) {
     na = a->next;
+    if (a->filename) free(a->filename);
     if (a->ct == CT_MESSAGE_RFC822) {
       free_rfc822(a->data.rfc822);
     } else {
