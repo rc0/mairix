@@ -78,6 +78,7 @@ struct write_map {/*{{{*/
   struct write_map_toktable from;
   struct write_map_toktable subject;
   struct write_map_toktable body;
+  struct write_map_toktable attachment_name;
   struct write_map_toktable2 msg_ids;
 
   /* To get base address for character data */
@@ -197,6 +198,7 @@ static int char_length(struct database *db)/*{{{*/
   result += toktable_char_length(db->from);
   result += toktable_char_length(db->subject);
   result += toktable_char_length(db->body);
+  result += toktable_char_length(db->attachment_name);
   result += toktable2_char_length(db->msg_ids);
 
   return result;
@@ -233,6 +235,9 @@ static void compute_mapping(struct database *db, struct write_map *map)/*{{{*/
 
   map->body.tok_offset = total, total += db->body->n;
   map->body.enc_offset = total, total += db->body->n;
+
+  map->attachment_name.tok_offset = total, total += db->attachment_name->n;
+  map->attachment_name.enc_offset = total, total += db->attachment_name->n;
 
   map->msg_ids.tok_offset = total, total += db->msg_ids->n;
   map->msg_ids.enc0_offset = total, total += db->msg_ids->n;
@@ -289,6 +294,10 @@ static void write_header(char *data, unsigned int *uidata, struct database *db, 
   uidata[UI_BODY_N] = db->body->n;
   uidata[UI_BODY_TOK] = map->body.tok_offset;
   uidata[UI_BODY_ENC] = map->body.enc_offset;
+
+  uidata[UI_ATTACHMENT_NAME_N] = db->attachment_name->n;
+  uidata[UI_ATTACHMENT_NAME_TOK] = map->attachment_name.tok_offset;
+  uidata[UI_ATTACHMENT_NAME_ENC] = map->attachment_name.enc_offset;
 
   uidata[UI_MSGID_N]    = db->msg_ids->n;
   uidata[UI_MSGID_TOK]  = map->msg_ids.tok_offset;
@@ -579,6 +588,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   cdata = write_toktable(db->from, &map.from, uidata, data, cdata, "From");
   cdata = write_toktable(db->subject, &map.subject, uidata, data, cdata, "Subject");
   cdata = write_toktable(db->body, &map.body, uidata, data, cdata, "Body");
+  cdata = write_toktable(db->attachment_name, &map.attachment_name, uidata, data, cdata, "Attachment Name");
   cdata = write_toktable2(db->msg_ids, &map.msg_ids, uidata, data, cdata, "(Threading)");
 
   /* Write data */

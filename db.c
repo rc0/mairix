@@ -182,6 +182,8 @@ void check_database_integrity(struct database *db)/*{{{*/
   check_toktable_enc_integrity(db->n_msgs, db->subject);
   if (verbose) fprintf(stderr, "Checking body\n");
   check_toktable_enc_integrity(db->n_msgs, db->body);
+  if (verbose) fprintf(stderr, "Checking attachment_name\n");
+  check_toktable_enc_integrity(db->n_msgs, db->attachment_name);
 }
 /*}}}*/
 struct database *new_database(void)/*{{{*/
@@ -195,6 +197,7 @@ struct database *new_database(void)/*{{{*/
   result->from = new_toktable();
   result->subject = new_toktable();
   result->body = new_toktable();
+  result->attachment_name = new_toktable();
 
   result->msg_ids = new_toktable2();
 
@@ -223,6 +226,7 @@ void free_database(struct database *db)/*{{{*/
   free_toktable(db->from);
   free_toktable(db->subject);
   free_toktable(db->body);
+  free_toktable(db->attachment_name);
   free_toktable2(db->msg_ids);
 
   if (db->msgs) {
@@ -489,6 +493,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->from, result->from);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->subject, result->subject);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->body, result->body);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->attachment_name, result->body);
   import_toktable2(input->data, input->hash_key, result->n_msgs, &input->msg_ids, result->msg_ids);
 
   close_db(input);
@@ -661,6 +666,10 @@ void tokenise_message(int file_index, struct database *db, struct rfc822 *msg)/*
          * something that can parse PDF to get the basic text strings out of
          * the pages? */
         break;
+    }
+
+    if (a->filename) {
+      add_token_in_file(file_index, db->hash_key, a->filename, db->attachment_name);
     }
 
   }
@@ -1180,6 +1189,7 @@ int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
   recode_toktable(db->from, new_idx);
   recode_toktable(db->subject, new_idx);
   recode_toktable(db->body, new_idx);
+  recode_toktable(db->attachment_name, new_idx);
   recode_toktable2(db->msg_ids, new_idx);
 
   /* And crunch down the filename table */

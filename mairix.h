@@ -221,6 +221,7 @@ struct database {/*{{{*/
   struct toktable *from;
   struct toktable *subject;
   struct toktable *body;
+  struct toktable *attachment_name;
 
   /* Encoding chain 0 stores all msgids appearing in the following message headers:
    * Message-Id, In-Reply-To, References.  Used for thread reconciliation.

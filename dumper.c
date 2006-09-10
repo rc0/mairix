@@ -122,6 +122,8 @@ void dump_database(char *filename)
   printf("--------------------------------\n");
   dump_toktable(db, &db->body, "Body");
   printf("--------------------------------\n");
+  dump_toktable(db, &db->attachment_name, "Attachment names");
+  printf("--------------------------------\n");
 
   close_db(db);
   return;

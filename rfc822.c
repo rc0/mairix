@@ -664,13 +664,21 @@ static void do_body(struct msg_src *src,
       struct attachment *new_att;
       const char *disposition;
       new_att = new(struct attachment);
-      disposition = nvp_first(cd_nvp);
+      disposition = cd_nvp ? nvp_first(cd_nvp) : NULL;
       if (disposition && !strcasecmp(disposition, "attachment")) {
-        new_att->filename = new_string(nvp_lookupcase(cd_nvp, "filename"));
-        if (!new_att->filename) {
+        const char *lookup;
+        lookup = nvp_lookupcase(cd_nvp, "filename");
+        if (lookup) {
+          new_att->filename = new_string(lookup);
+        } else {
           /* Some messages have name=... in content-type: instead of
            * filename=... in content-disposition. */
-          new_att->filename = new_string(nvp_lookupcase(ct_nvp, "name"));
+          lookup = nvp_lookup(ct_nvp, "name");
+          if (lookup) {
+            new_att->filename = new_string(lookup);
+          } else {
+            new_att->filename = NULL;
+          }
         }
       } else {
         new_att->filename = NULL;
