@@ -730,6 +730,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
+  int do_att_name;
   int do_path, do_msgid;
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
@@ -776,6 +777,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     do_size = 0;
     do_path = 0;
     do_msgid = 0;
+    do_att_name = 0;
 
     colon = strchr(key, ':');
 
@@ -794,6 +796,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           case 'z': do_size = 1; break;
           case 'p': do_path = 1; break;
           case 'm': do_msgid = 1; break;
+          case 'n': do_att_name = 1; break;
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
@@ -899,6 +902,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_from) match_substring_in_table(db, &db->from, lower_word, max_errors, left_anchor, hit0);
         if (do_subject) match_substring_in_table(db, &db->subject, lower_word, max_errors, left_anchor, hit0);
         if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, left_anchor, hit0);
+        if (do_att_name) match_substring_in_table(db, &db->attachment_name, lower_word, max_errors, left_anchor, hit0);
         if (do_path) match_substring_in_paths(db, word, max_errors, left_anchor, hit0);
         if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, left_anchor, hit0);
       } else {
@@ -907,6 +911,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_from) match_string_in_table(db, &db->from, lower_word, hit0);
         if (do_subject) match_string_in_table(db, &db->subject, lower_word, hit0);
         if (do_body) match_string_in_table(db, &db->body, lower_word, hit0);
+        if (do_att_name) match_string_in_table(db, &db->attachment_name, lower_word, hit0);
         /* FIXME */
         if (do_path) match_substring_in_paths(db, word, 0, left_anchor, hit0);
         if (do_msgid) match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
