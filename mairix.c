@@ -412,6 +412,7 @@ static void usage(void)/*{{{*/
          "    s:word        : match word in Subject: header\n"
          "    b:word        : match word in message body\n"
          "    m:word        : match word in Message-ID: header\n"
+         "    n:word        : match name of attachment within message\n"
          "    p:substring   : match substring of path\n"
          "    d:start-end   : match date range\n"
          "    z:low-high    : match messages in size range\n"
