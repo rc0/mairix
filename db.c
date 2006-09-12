@@ -455,7 +455,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   }
 
   for (i=0; i<n; i++) {
-    switch (input->msg_type[i]) {
+    switch (rd_msg_type(input, i)) {
       case DB_MSG_DEAD:
         result->type[i] = MTY_DEAD;
         break;

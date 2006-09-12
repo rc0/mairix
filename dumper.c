@@ -76,7 +76,7 @@ void dump_database(char *filename)
   printf("%d messages\n", db->n_msgs);
   for (i=0; i<db->n_msgs; i++) {
     printf("%6d: ", i);
-    switch (db->msg_type[i]) {
+    switch (rd_msg_type(db, i)) {
       case DB_MSG_DEAD:
         printf("DEAD");
         break;

@@ -154,7 +154,7 @@ struct read_db *open_db(char *filename)/*{{{*/
 
   /* Now build tables of where things are in the file */
   result->n_msgs = uidata[UI_N_MSGS];
-  result->msg_type    = ucdata + uidata[UI_MSG_TYPE];
+  result->msg_type_and_flags = ucdata + uidata[UI_MSG_TYPE_AND_FLAGS];
   result->path_offsets = uidata + uidata[UI_MSG_CDATA];
   result->mtime_table = uidata + uidata[UI_MSG_MTIME];
   result->size_table = uidata + uidata[UI_MSG_SIZE];

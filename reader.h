@@ -34,7 +34,7 @@
 #define UI_N_MSGS          2
 
 /* Offset to byte-per-message table encoding message types */
-#define UI_MSG_TYPE        3
+#define UI_MSG_TYPE_AND_FLAGS 3
 
 /* Header positions containing offsets to the per-message tables. */
 /* Character data:
@@ -138,7 +138,7 @@ struct read_db {/*{{{*/
 
   /* Pathname information */
   int n_msgs;
-  unsigned char *msg_type;
+  unsigned char *msg_type_and_flags;
   unsigned int *path_offsets; /* or (mbox index, msg index) */
   unsigned int *mtime_table; /* or offset into mbox */
   unsigned int *size_table;  /* either file size or span inside mbox */
@@ -167,6 +167,10 @@ struct read_db {/*{{{*/
 
 struct read_db *open_db(char *filename);
 void close_db(struct read_db *x);
+
+static inline int rd_msg_type(struct read_db *db, int i) {
+  return db->msg_type_and_flags[i] & 0x7;
+}
 
 /* Common to search and db reader. */
 int read_increment(unsigned char **encpos);

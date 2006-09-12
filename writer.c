@@ -323,7 +323,7 @@ static char *write_type_table(struct database *db, unsigned int *uidata, char *d
         break;
     }
   }
-  uidata[UI_MSG_TYPE] = cdata - data;
+  uidata[UI_MSG_TYPE_AND_FLAGS] = cdata - data;
   return cdata + db->n_msgs;
 }
 /*}}}*/

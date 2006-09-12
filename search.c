@@ -353,7 +353,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
   for (i=0; i<db->n_msgs; i++) {
     char *token = NULL;
     unsigned int mbix, msgix;
-    switch (db->msg_type[i]) {
+    switch (rd_msg_type(db, i)) {
       case DB_MSG_FILE:
         token = db->data + db->path_offsets[i];
         break;
@@ -976,7 +976,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_MAILDIR:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *target_path;
@@ -1017,7 +1017,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_MH:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *target_path = mk_mh_path(i, output_path);
@@ -1052,7 +1052,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 
         for (i=0; i<db->n_msgs; i++) {
           if (hit3[i]) {
-            switch (db->msg_type[i]) {
+            switch (rd_msg_type(db, i)) {
               case DB_MSG_FILE:
                 {
                   append_file_to_mbox(db->data + db->path_offsets[i], out);
@@ -1078,7 +1078,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_RAW:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 ++n_hits;
@@ -1108,7 +1108,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
           struct rfc822 *parsed = NULL;
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *filename;
