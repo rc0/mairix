@@ -118,6 +118,10 @@
 #define DB_MSG_MBOX 2
 /*}}}*/
 
+#define FLAG_SEEN    (1<<3)
+#define FLAG_REPLIED (1<<4)
+#define FLAG_FLAGGED (1<<5)
+
 struct toktable_db {/*{{{*/
   unsigned int n; /* number of entries in this table */
   unsigned int *tok_offsets; /* offset to table of token offsets */

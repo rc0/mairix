@@ -945,6 +945,9 @@ int add_mbox_messages(struct database *db)/*{{{*/
             printf("Scanning %s[%d] at [%d,%d)\n", mb->path, j, (int)start, (int)(start + len));
           }
           db->msgs[n].date = r8->hdrs.date;
+          db->msgs[n].seen = 0;
+          db->msgs[n].replied = 0;
+          db->msgs[n].flagged = 0;
           tokenise_message(n, db, r8);
           free_rfc822(r8);
         } else {

@@ -307,10 +307,11 @@ static void write_header(char *data, unsigned int *uidata, struct database *db, 
   return;
 }
 /*}}}*/
-static char *write_type_table(struct database *db, unsigned int *uidata, char *data, char *cdata)/*{{{*/
+static char *write_type_and_flag_table(struct database *db, unsigned int *uidata, char *data, char *cdata)/*{{{*/
 {
   int i;
   for (i=0; i<db->n_msgs; i++) {
+    struct msgpath *msgdata = db->msgs + i;
     switch (db->type[i]) {
       case MTY_FILE:
         cdata[i] = DB_MSG_FILE;
@@ -322,6 +323,10 @@ static char *write_type_table(struct database *db, unsigned int *uidata, char *d
         cdata[i] = DB_MSG_DEAD;
         break;
     }
+
+    if (msgdata->seen)    cdata[i] |= FLAG_SEEN;
+    if (msgdata->replied) cdata[i] |= FLAG_REPLIED;
+    if (msgdata->flagged) cdata[i] |= FLAG_FLAGGED;
   }
   uidata[UI_MSG_TYPE_AND_FLAGS] = cdata - data;
   return cdata + db->n_msgs;
@@ -579,7 +584,7 @@ void write_database(struct database *db, char *filename, int do_integrity_checks
   cdata = data + (4 * map.beyond_last_ui_offset);
 
   write_header(data, uidata, db, &map);
-  cdata = write_type_table(db, uidata, data, cdata);
+  cdata = write_type_and_flag_table(db, uidata, data, cdata);
   cdata = write_messages(db, &map, uidata, data, cdata);
   cdata = write_mbox_headers(db, &map, uidata, data, cdata);
   cdata = write_mbox_checksums(db, &map, uidata, data, cdata);

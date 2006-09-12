@@ -51,6 +51,12 @@ struct msgpath {/*{{{*/
   /* Now fields that are common to both types of message. */
   time_t date;  /* representation of Date: header in message */
   int tid;      /* thread-id */
+
+  /* Message flags. */
+  unsigned int seen:1;
+  unsigned int replied:1;
+  unsigned int flagged:1;
+    
   /* + other stuff eventually */
 };
 /*}}}*/

@@ -484,6 +484,9 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
 
         break;
     }
+    result->msgs[i].seen    = (input->msg_type_and_flags[i] & FLAG_SEEN)    ? 1:0;
+    result->msgs[i].replied = (input->msg_type_and_flags[i] & FLAG_REPLIED) ? 1:0;
+    result->msgs[i].flagged = (input->msg_type_and_flags[i] & FLAG_FLAGGED) ? 1:0;
     result->msgs[i].date  = input->date_table[i];
     result->msgs[i].tid   = input->tid_table[i];
   }
@@ -700,6 +703,9 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
     if(msg)
     {
       db->msgs[i].date = msg->hdrs.date;
+      db->msgs[i].seen = 0;
+      db->msgs[i].replied = 0;
+      db->msgs[i].flagged = 0;
       tokenise_message(i, db, msg);
       free_rfc822(msg);
     }
