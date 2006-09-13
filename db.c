@@ -683,6 +683,32 @@ void tokenise_message(int file_index, struct database *db, struct rfc822 *msg)/*
   add_angled_terms(file_index, db->hash_key, db->msg_ids, 0, msg->hdrs.references);
 }
 /*}}}*/
+
+static void scan_maildir_flags(struct msgpath *m)/*{{{*/
+{
+  const char *p, *start;
+  start = m->src.mpf.path;
+  m->seen = 0;
+  m->replied = 0;
+  m->flagged = 0;
+  for (p=start; *p; p++) {}
+  for (p--; (p >= start) && ((*p) != ':'); p--) {}
+  if (p >= start) {
+    if (!strncmp(p, ":2,", 3)) {
+      p += 3;
+      while (*p) {
+        switch (*p) {
+          case 'F': m->flagged = 1; break;
+          case 'R': m->replied = 1; break;
+          case 'S': m->seen = 1; break;
+          default: break;
+        }
+        p++;
+      }
+    }
+  }
+}
+/*}}}*/
 static void scan_new_messages(struct database *db, int start_at)/*{{{*/
 {
   int i;
@@ -703,9 +729,7 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
     if(msg)
     {
       db->msgs[i].date = msg->hdrs.date;
-      db->msgs[i].seen = 0;
-      db->msgs[i].replied = 0;
-      db->msgs[i].flagged = 0;
+      scan_maildir_flags(&db->msgs[i]);
       tokenise_message(i, db, msg);
       free_rfc822(msg);
     }
