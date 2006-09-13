@@ -94,6 +94,9 @@ void dump_database(char *filename)
         }
         break;
     }
+    if (db->msg_type_and_flags[i] & FLAG_SEEN) printf(" seen");
+    if (db->msg_type_and_flags[i] & FLAG_REPLIED) printf(" replied");
+    if (db->msg_type_and_flags[i] & FLAG_FLAGGED) printf(" flagged");
     printf("\n");
   }
   printf("\n");
