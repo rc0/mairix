@@ -542,6 +542,63 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   }
 }
 /*}}}*/
+static void find_flag_matches_in_table(struct read_db *db, char *flag_expr, char *hits)/*{{{*/
+{
+  int pos_seen, neg_seen;
+  int pos_replied, neg_replied;
+  int pos_flagged, neg_flagged;
+  int negate;
+  char *p;
+  int i;
+
+  negate = 0;
+  pos_seen = neg_seen = 0;
+  pos_replied = neg_replied = 0;
+  pos_flagged = neg_flagged = 0;
+  for (p=flag_expr; *p; p++) {
+    switch (*p) {
+      case '-':
+        negate = 1;
+        break;
+      case 's':
+      case 'S':
+        if (negate) neg_seen = 1;
+        else pos_seen = 1;
+        negate = 0;
+        break;
+      case 'r':
+      case 'R':
+        if (negate) neg_replied = 1;
+        else pos_replied = 1;
+        negate = 0;
+        break;
+      case 'f':
+      case 'F':
+        if (negate) neg_flagged = 1;
+        else pos_flagged = 1;
+        negate = 0;
+        break;
+      default:
+        fprintf(stderr, "Did not understand the character '%c' (0x%02x) in the flags argument F:%s\n",
+            isprint(*p) ? *p : '.',
+            (int) *(unsigned char *) p,
+            flag_expr);
+        break;
+    }
+  }
+
+  for (i=0; i<db->n_msgs; i++) {
+    if ((!pos_seen || (db->msg_type_and_flags[i] & FLAG_SEEN)) &&
+        (!neg_seen || !(db->msg_type_and_flags[i] & FLAG_SEEN)) &&
+        (!pos_replied || (db->msg_type_and_flags[i] & FLAG_REPLIED)) &&
+        (!neg_replied || !(db->msg_type_and_flags[i] & FLAG_REPLIED)) &&
+        (!pos_flagged || (db->msg_type_and_flags[i] & FLAG_FLAGGED)) &&
+        (!neg_flagged || !(db->msg_type_and_flags[i] & FLAG_FLAGGED))) {
+      hits[i] = 1;
+    }
+  }
+}
+/*}}}*/
 
 static char *mk_maildir_path(int token, char *output_dir, int is_in_new, const char *flags)/*{{{*/
 {
@@ -731,6 +788,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
   int do_att_name;
+  int do_flags;
   int do_path, do_msgid;
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
@@ -778,6 +836,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     do_path = 0;
     do_msgid = 0;
     do_att_name = 0;
+    do_flags = 0;
 
     colon = strchr(key, ':');
 
@@ -797,6 +856,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           case 'p': do_path = 1; break;
           case 'm': do_msgid = 1; break;
           case 'n': do_att_name = 1; break;
+          case 'F': do_flags = 1; break;
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
@@ -806,13 +866,16 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       start_words = key;
     }
 
-    if (do_date || do_size) {
+    if (do_date || do_size || do_flags) {
       memset(hit0, 0, db->n_msgs);
       if (do_date) {
         find_date_matches_in_table(db, start_words, hit0);
       } else if (do_size) {
         find_size_matches_in_table(db, start_words, hit0);
+      } else if (do_flags) {
+        find_flag_matches_in_table(db, start_words, hit0);
       }
+
       /* AND-combine match vectors */
       for (i=0; i<db->n_msgs; i++) {
         hit1[i] &= hit0[i];
