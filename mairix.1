@@ -308,6 +308,29 @@ substring
 The attachment name is determined from the name=xxx or filename=xxx qualifiers
 on the Content-Type: and Content-Disposition: headers respectively.
 
+.TP
+.BI F: flags
+.br
+Match messages with particular flag settings.  The available flags are 's'
+meaning seen, 'r' meaning replied, and 'f' meaning flagged.  The flags are
+case-insensitive.  A flag letter may be prefixed by a '-' to negate its sense.  Thus
+
+.Sy 1
+mairix F:-s d:1w-
+.Ey
+
+would match any unread message less than a week old, and
+
+.Sy 1
+mairix F:f-r d:-1m
+.Ey
+
+would match any flagged message older than a month which you haven't replied to yet.
+
+Note that the flag characters and their meanings agree with those used as the
+suffix letters on message filenames in maildir folders.
+
+.SS Searching for a match amongst more than one part of a message
 .PP
 Multiple body parts may be grouped together, if a match in any of them is
 sought.  Common examples follow.
