@@ -942,6 +942,24 @@ tough_cheese:
   return (time_t) -1; /* default value */
 }
 /*}}}*/
+
+static void scan_status_flags(const char *s, struct headers *hdrs)/*{{{*/
+{
+  const char *p;
+  hdrs->flags.seen = 0;
+  hdrs->flags.replied = 0;
+  hdrs->flags.flagged = 0;
+  for (p=s; *p; p++) {
+    switch (*p) {
+      case 'R': hdrs->flags.seen = 1; break;
+      case 'A': hdrs->flags.replied = 1; break;
+      case 'F': hdrs->flags.flagged = 1; break;
+      default: break;
+    }
+  }
+}
+/*}}}*/
+
 /*{{{ data_to_rfc822() */
 struct rfc822 *data_to_rfc822(struct msg_src *src,
     char *data, int length,
@@ -988,6 +1006,10 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
     } else if (match_string("message-id", x->text)) result->hdrs.message_id = copy_header_value(x->text);
     else if (match_string("in-reply-to", x->text)) result->hdrs.in_reply_to = copy_header_value(x->text);
     else if (match_string("references", x->text)) result->hdrs.references = copy_header_value(x->text);
+    else if (match_string("status", x->text))
+      scan_status_flags(x->text + sizeof("status:"), &result->hdrs);
+    else if (match_string("x-status", x->text))
+      scan_status_flags(x->text + sizeof("x-status:"), &result->hdrs);
   }
 /*}}}*/
 

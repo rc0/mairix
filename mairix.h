@@ -149,6 +149,12 @@ struct headers {/*{{{*/
   char *in_reply_to;
   char *references;
 
+  struct {
+    unsigned int seen:1;
+    unsigned int replied:1;
+    unsigned int flagged:1;
+  } flags;
+
   time_t date;
 };
 /*}}}*/
