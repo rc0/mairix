@@ -93,6 +93,9 @@ static void init_headers(struct headers *hdrs)/*{{{*/
   hdrs->message_id = NULL;
   hdrs->in_reply_to = NULL;
   hdrs->references = NULL;
+  hdrs->flags.seen = 0;
+  hdrs->flags.replied = 0;
+  hdrs->flags.flagged = 0;
 };
 /*}}}*/
 static void splice_header_lines(struct line *header)/*{{{*/
@@ -946,9 +949,6 @@ tough_cheese:
 static void scan_status_flags(const char *s, struct headers *hdrs)/*{{{*/
 {
   const char *p;
-  hdrs->flags.seen = 0;
-  hdrs->flags.replied = 0;
-  hdrs->flags.flagged = 0;
   for (p=s; *p; p++) {
     switch (*p) {
       case 'R': hdrs->flags.seen = 1; break;
