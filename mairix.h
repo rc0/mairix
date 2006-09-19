@@ -51,6 +51,12 @@ struct msgpath {/*{{{*/
   /* Now fields that are common to both types of message. */
   time_t date;  /* representation of Date: header in message */
   int tid;      /* thread-id */
+
+  /* Message flags. */
+  unsigned int seen:1;
+  unsigned int replied:1;
+  unsigned int flagged:1;
+    
   /* + other stuff eventually */
 };
 /*}}}*/
@@ -122,6 +128,7 @@ struct attachment {/*{{{*/
   struct attachment *next;
   struct attachment *prev;
   enum content_type ct;
+  char *filename;
   union attachment_body {
     struct normal_attachment_body {
       int len;
@@ -141,6 +148,12 @@ struct headers {/*{{{*/
   char *message_id;
   char *in_reply_to;
   char *references;
+
+  struct {
+    unsigned int seen:1;
+    unsigned int replied:1;
+    unsigned int flagged:1;
+  } flags;
 
   time_t date;
 };
@@ -220,6 +233,7 @@ struct database {/*{{{*/
   struct toktable *from;
   struct toktable *subject;
   struct toktable *body;
+  struct toktable *attachment_name;
 
   /* Encoding chain 0 stores all msgids appearing in the following message headers:
    * Message-Id, In-Reply-To, References.  Used for thread reconciliation.

@@ -49,7 +49,8 @@ docdir=$(DESTDIR)@docdir@
 
 OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
       reader.o search.o stats.o dates.o datescan.o mbox.o md5.o \
-  	  fromcheck.o glob.o dumper.o expandstr.o dotlock.o
+  	  fromcheck.o glob.o dumper.o expandstr.o dotlock.o \
+			nvp.o nvpscan.o
 
 all : mairix
 
@@ -65,10 +66,12 @@ datescan.c datescan.h : datescan.nfa ./dfasyn/dfasyn
 fromcheck.c fromcheck.h : fromcheck.nfa ./dfasyn/dfasyn
 	./dfasyn/dfasyn -o fromcheck.c -ho fromcheck.h -r fromcheck.report -v -u fromcheck.nfa
 
+nvpscan.c nvpscan.h : nvp.nfa ./dfasyn/dfasyn
+	./dfasyn/dfasyn -o nvpscan.c -ho nvpscan.h -r nvpscan.report -v -u nvp.nfa
+
 dates.o : datescan.h
 mbox.o : fromcheck.h
-
-mbox.o : fromcheck.h
+nvp.o : nvpscan.h
 
 version.h:
 	./mkversion
@@ -79,7 +82,8 @@ dfasyn/dfasyn:
 clean:
 	-rm -f *~ *.o mairix *.s core
 	-rm -f mairix.cp mairix.fn mairix.aux mairix.log mairix.ky mairix.pg mairix.toc mairix.tp mairix.vr
-	-rm -f fromcheck.c datescan.c
+	-rm -f fromcheck.[ch] datescan.[ch]
+	-rm -f nvpscan.[ch]
 	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
 
 distclean: clean

@@ -353,7 +353,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
   for (i=0; i<db->n_msgs; i++) {
     char *token = NULL;
     unsigned int mbix, msgix;
-    switch (db->msg_type[i]) {
+    switch (rd_msg_type(db, i)) {
       case DB_MSG_FILE:
         token = db->data + db->path_offsets[i];
         break;
@@ -542,24 +542,83 @@ static void find_date_matches_in_table(struct read_db *db, char *date_expr, char
   }
 }
 /*}}}*/
+static void find_flag_matches_in_table(struct read_db *db, char *flag_expr, char *hits)/*{{{*/
+{
+  int pos_seen, neg_seen;
+  int pos_replied, neg_replied;
+  int pos_flagged, neg_flagged;
+  int negate;
+  char *p;
+  int i;
 
-static char *mk_maildir_path(int token, char *output_dir, int is_in_new, const char *flags)/*{{{*/
+  negate = 0;
+  pos_seen = neg_seen = 0;
+  pos_replied = neg_replied = 0;
+  pos_flagged = neg_flagged = 0;
+  for (p=flag_expr; *p; p++) {
+    switch (*p) {
+      case '-':
+        negate = 1;
+        break;
+      case 's':
+      case 'S':
+        if (negate) neg_seen = 1;
+        else pos_seen = 1;
+        negate = 0;
+        break;
+      case 'r':
+      case 'R':
+        if (negate) neg_replied = 1;
+        else pos_replied = 1;
+        negate = 0;
+        break;
+      case 'f':
+      case 'F':
+        if (negate) neg_flagged = 1;
+        else pos_flagged = 1;
+        negate = 0;
+        break;
+      default:
+        fprintf(stderr, "Did not understand the character '%c' (0x%02x) in the flags argument F:%s\n",
+            isprint(*p) ? *p : '.',
+            (int) *(unsigned char *) p,
+            flag_expr);
+        break;
+    }
+  }
+
+  for (i=0; i<db->n_msgs; i++) {
+    if ((!pos_seen || (db->msg_type_and_flags[i] & FLAG_SEEN)) &&
+        (!neg_seen || !(db->msg_type_and_flags[i] & FLAG_SEEN)) &&
+        (!pos_replied || (db->msg_type_and_flags[i] & FLAG_REPLIED)) &&
+        (!neg_replied || !(db->msg_type_and_flags[i] & FLAG_REPLIED)) &&
+        (!pos_flagged || (db->msg_type_and_flags[i] & FLAG_FLAGGED)) &&
+        (!neg_flagged || !(db->msg_type_and_flags[i] & FLAG_FLAGGED))) {
+      hits[i] = 1;
+    }
+  }
+}
+/*}}}*/
+
+static char *mk_maildir_path(int token, char *output_dir, int is_in_new,
+    int is_seen, int is_replied, int is_flagged)/*{{{*/
 {
   char *result;
   char uniq_buf[48];
   int len;
-  int flag_len;
 
   len = strlen(output_dir) + 64; /* oversize */
-  flag_len = flags ? strlen(flags) : 0;
-  result = new_array(char, len + flag_len);
+  result = new_array(char, len + 1 + sizeof(":2,FRS"));
   strcpy(result, output_dir);
   strcat(result, is_in_new ? "/new/" : "/cur/");
   sprintf(uniq_buf, "123456789.%d.mairix", token);
   strcat(result, uniq_buf);
-  if (flags) {
-    strcat(result, flags);
+  if (is_seen || is_replied || is_flagged) {
+    strcat(result, ":2,");
   }
+  if (is_flagged) strcat(result, "F");
+  if (is_replied) strcat(result, "R");
+  if (is_seen) strcat(result, "S");
   return result;
 }
 /*}}}*/
@@ -593,23 +652,6 @@ static int looks_like_maildir_new_p(const char *p)/*{{{*/
   } else {
     return 0;
   }
-}
-/*}}}*/
-static char *get_maildir_flags(char *p)/*{{{*/
-{
-  char *x;
-  x = p + strlen(p);
-  for (x--; x>p; x--) {
-    switch (*x) {
-      case ':':
-        return x;
-      case '/':
-        return NULL;
-      default:
-        break;
-    }
-  }
-  return NULL;
 }
 /*}}}*/
 static void create_symlink(char *link_target, char *new_link)/*{{{*/
@@ -726,10 +768,20 @@ static struct msg_src *setup_mbox_msg_src(char *filename, off_t start, size_t le
   return &result;
 }
 /*}}}*/
+
+static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *is_replied, int *is_flagged)
+{
+  *is_seen = (db->msg_type_and_flags[idx] & FLAG_SEEN) ? 1 : 0;
+  *is_replied = (db->msg_type_and_flags[idx] & FLAG_REPLIED) ? 1 : 0;
+  *is_flagged = (db->msg_type_and_flags[idx] & FLAG_FLAGGED) ? 1 : 0;
+}
+
 static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
+  int do_att_name;
+  int do_flags;
   int do_path, do_msgid;
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
@@ -776,6 +828,8 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     do_size = 0;
     do_path = 0;
     do_msgid = 0;
+    do_att_name = 0;
+    do_flags = 0;
 
     colon = strchr(key, ':');
 
@@ -794,6 +848,8 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           case 'z': do_size = 1; break;
           case 'p': do_path = 1; break;
           case 'm': do_msgid = 1; break;
+          case 'n': do_att_name = 1; break;
+          case 'F': do_flags = 1; break;
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
@@ -803,13 +859,16 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       start_words = key;
     }
 
-    if (do_date || do_size) {
+    if (do_date || do_size || do_flags) {
       memset(hit0, 0, db->n_msgs);
       if (do_date) {
         find_date_matches_in_table(db, start_words, hit0);
       } else if (do_size) {
         find_size_matches_in_table(db, start_words, hit0);
+      } else if (do_flags) {
+        find_flag_matches_in_table(db, start_words, hit0);
       }
+
       /* AND-combine match vectors */
       for (i=0; i<db->n_msgs; i++) {
         hit1[i] &= hit0[i];
@@ -899,6 +958,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_from) match_substring_in_table(db, &db->from, lower_word, max_errors, left_anchor, hit0);
         if (do_subject) match_substring_in_table(db, &db->subject, lower_word, max_errors, left_anchor, hit0);
         if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, left_anchor, hit0);
+        if (do_att_name) match_substring_in_table(db, &db->attachment_name, lower_word, max_errors, left_anchor, hit0);
         if (do_path) match_substring_in_paths(db, word, max_errors, left_anchor, hit0);
         if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, left_anchor, hit0);
       } else {
@@ -907,6 +967,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_from) match_string_in_table(db, &db->from, lower_word, hit0);
         if (do_subject) match_string_in_table(db, &db->subject, lower_word, hit0);
         if (do_body) match_string_in_table(db, &db->body, lower_word, hit0);
+        if (do_att_name) match_string_in_table(db, &db->attachment_name, lower_word, hit0);
         /* FIXME */
         if (do_path) match_substring_in_paths(db, word, 0, left_anchor, hit0);
         if (do_msgid) match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
@@ -971,17 +1032,17 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_MAILDIR:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          int is_seen, is_replied, is_flagged;
+          get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *target_path;
                 char *message_path;
-                char *start_flags;
                 int is_in_new;
                 message_path = db->data + db->path_offsets[i];
                 is_in_new = looks_like_maildir_new_p(message_path);
-                start_flags = get_maildir_flags(message_path);
-                target_path = mk_maildir_path(i, output_path, is_in_new, start_flags);
+                target_path = mk_maildir_path(i, output_path, is_in_new, is_seen, is_replied, is_flagged);
                 create_symlink(message_path, target_path);
                 free(target_path);
                 ++n_hits;
@@ -989,14 +1050,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               break;
             case DB_MSG_MBOX:
               {
-                /* For messages stored in a MBOX, we have no idea what the
-                 * flags are, since we don't parse those headers.  However, if
-                 * we're creating a maildir mfolder, it's most likely that the
-                 * mboxen are being used for archiving old stuff, so we guess
-                 * :2,S as the required suffix.   In any case, messages in
-                 * /cur/ are required to have some kind of flags suffix, so we
-                 * have to put something there.  */
-                char *target_path = mk_maildir_path(i, output_path, 0, ":2,S");
+                char *target_path = mk_maildir_path(i, output_path, !is_seen, is_seen, is_replied, is_flagged);
                 try_copy_to_path(db, i, target_path);
                 free(target_path);
                 ++n_hits;
@@ -1012,7 +1066,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_MH:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *target_path = mk_mh_path(i, output_path);
@@ -1047,7 +1101,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 
         for (i=0; i<db->n_msgs; i++) {
           if (hit3[i]) {
-            switch (db->msg_type[i]) {
+            switch (rd_msg_type(db, i)) {
               case DB_MSG_FILE:
                 {
                   append_file_to_mbox(db->data + db->path_offsets[i], out);
@@ -1073,7 +1127,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     case FT_RAW:/*{{{*/
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 ++n_hits;
@@ -1103,7 +1157,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       for (i=0; i<db->n_msgs; i++) {
         if (hit3[i]) {
           struct rfc822 *parsed = NULL;
-          switch (db->msg_type[i]) {
+          switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
                 char *filename;
