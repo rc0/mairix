@@ -134,6 +134,8 @@ struct nvp *make_nvp(char *s)/*{{{*/
       case COPY_TO_VALUE:
         *vv++ = *q;
         break;
+      case COPY_NOWHERE:
+        break;
     }
 
     current_action = nvp_action[current_state];
@@ -165,6 +167,8 @@ struct nvp *make_nvp(char *s)/*{{{*/
         nn = name;
         mm = minor;
         vv = value;
+        break;
+      case GOT_NOTHING:
         break;
     }
 
