@@ -68,8 +68,6 @@ fromcheck.c fromcheck.h : fromcheck.nfa ./dfasyn/dfasyn
 dates.o : datescan.h
 mbox.o : fromcheck.h
 
-mbox.o : fromcheck.h
-
 version.h:
 	./mkversion
 
@@ -79,7 +77,7 @@ dfasyn/dfasyn:
 clean:
 	-rm -f *~ *.o mairix *.s core
 	-rm -f mairix.cp mairix.fn mairix.aux mairix.log mairix.ky mairix.pg mairix.toc mairix.tp mairix.vr
-	-rm -f fromcheck.c datescan.c
+	-rm -f fromcheck.[ch] datescan.[ch]
 	if [ -d dfasyn ]; then cd dfasyn ; make clean ; fi
 
 distclean: clean
