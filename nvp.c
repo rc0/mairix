@@ -22,6 +22,7 @@
 
 /* Parse name/value pairs from mail headers into a lookup table. */
 #include <stdio.h>
+#include <ctype.h>
 #include "mairix.h"
 #include "nvptypes.h"
 #include "nvpscan.h"
