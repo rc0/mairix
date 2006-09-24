@@ -288,7 +288,7 @@ if [ $use_gzip_mbox = "yes" ]; then
   fi
 fi
 
-if [ $use_bzip_mbox == "yes" ]; then
+if [ $use_bzip_mbox = "yes" ]; then
   printf "Checking for bzlib : "
   if [ `test_for_bzlib` -eq 0 ]; then
     printf "Yes\n";
