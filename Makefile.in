@@ -73,7 +73,7 @@ mbox.o : fromcheck.h
 version.h:
 	./mkversion
 
-dfasyn/dfasyn:
+./dfasyn/dfasyn:
 	if [ -d dfasyn ]; then cd dfasyn ; make CC="$(CC)" CFLAGS="$(CFLAGS)" ; else echo "No dfasyn subdirectory?" ; exit 1 ; fi
 
 clean:
