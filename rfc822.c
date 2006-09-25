@@ -1057,7 +1057,7 @@ struct zFile {/*{{{*/
     BZFILE *bzf;
 #endif
     void *zptr;
-  };
+  } foo;
   int type;
 };
 /*}}}*/
@@ -1069,20 +1069,20 @@ static struct zFile * xx_zopen(const char *filename, const char *mode) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
-      zf->gzf = gzopen(filename, "rb");
+      zf->foo.gzf = gzopen(filename, "rb");
       break;
 #endif
 #ifdef USE_BZIP_MBOX
     case COMPRESSION_BZIP:
-      zf->bzf = BZ2_bzopen(filename, "rb");
+      zf->foo.bzf = BZ2_bzopen(filename, "rb");
       break;
 #endif
     default:
-      zf->zptr = NULL;
+      zf->foo.zptr = NULL;
       break;
   }
 
-  if (!zf->zptr) {
+  if (!zf->foo.zptr) {
     free(zf);
     return 0;
   }
@@ -1094,16 +1094,16 @@ static void xx_zclose(struct zFile *zf) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
-      gzclose(zf->gzf);
+      gzclose(zf->foo.gzf);
       break;
 #endif
 #ifdef USE_BZIP_MBOX
     case COMPRESSION_BZIP:
-      BZ2_bzclose(zf->bzf);
+      BZ2_bzclose(zf->foo.bzf);
       break;
 #endif
     default:
-      zf->zptr = NULL;
+      zf->foo.zptr = NULL;
       break;
   }
   free(zf);
@@ -1113,12 +1113,12 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
-      return gzread(zf->gzf, buf, len);
+      return gzread(zf->foo.gzf, buf, len);
       break;
 #endif
 #ifdef USE_BZIP_MBOX
     case COMPRESSION_BZIP:
-      return BZ2_bzread(zf->bzf, buf, len);
+      return BZ2_bzread(zf->foo.bzf, buf, len);
       break;
 #endif
     default:
