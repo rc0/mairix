@@ -249,7 +249,7 @@ void build_transmap(Block *b)/*{{{*/
 {
   int N = b->nstates;
   int Nt = ntokens + n_charclasses;
-  int i, j, k, m;
+  int i, j, k, m, dest;
 
   transmap = new_array(unsigned long **, N);
   anytrans = new_array(unsigned long *, N);
@@ -277,7 +277,7 @@ void build_transmap(Block *b)/*{{{*/
         case TT_TOKEN:
           {
             assert(tl->x.token >= 0);
-            int dest = tl->ds_ref->index;
+            dest = tl->ds_ref->index;
             for (m=0; m<round_up(N); m++) {
               unsigned long x = b->eclo[dest][m];
               transmap[i][tl->x.token][m] |= x;
