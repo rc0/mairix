@@ -182,6 +182,8 @@ void check_database_integrity(struct database *db)/*{{{*/
   check_toktable_enc_integrity(db->n_msgs, db->subject);
   if (verbose) fprintf(stderr, "Checking body\n");
   check_toktable_enc_integrity(db->n_msgs, db->body);
+  if (verbose) fprintf(stderr, "Checking attachment_name\n");
+  check_toktable_enc_integrity(db->n_msgs, db->attachment_name);
 }
 /*}}}*/
 struct database *new_database(void)/*{{{*/
@@ -195,6 +197,7 @@ struct database *new_database(void)/*{{{*/
   result->from = new_toktable();
   result->subject = new_toktable();
   result->body = new_toktable();
+  result->attachment_name = new_toktable();
 
   result->msg_ids = new_toktable2();
 
@@ -223,6 +226,7 @@ void free_database(struct database *db)/*{{{*/
   free_toktable(db->from);
   free_toktable(db->subject);
   free_toktable(db->body);
+  free_toktable(db->attachment_name);
   free_toktable2(db->msg_ids);
 
   if (db->msgs) {
@@ -451,7 +455,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   }
 
   for (i=0; i<n; i++) {
-    switch (input->msg_type[i]) {
+    switch (rd_msg_type(input, i)) {
       case DB_MSG_DEAD:
         result->type[i] = MTY_DEAD;
         break;
@@ -480,6 +484,9 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
 
         break;
     }
+    result->msgs[i].seen    = (input->msg_type_and_flags[i] & FLAG_SEEN)    ? 1:0;
+    result->msgs[i].replied = (input->msg_type_and_flags[i] & FLAG_REPLIED) ? 1:0;
+    result->msgs[i].flagged = (input->msg_type_and_flags[i] & FLAG_FLAGGED) ? 1:0;
     result->msgs[i].date  = input->date_table[i];
     result->msgs[i].tid   = input->tid_table[i];
   }
@@ -489,6 +496,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->from, result->from);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->subject, result->subject);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->body, result->body);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->attachment_name, result->body);
   import_toktable2(input->data, input->hash_key, result->n_msgs, &input->msg_ids, result->msg_ids);
 
   close_db(input);
@@ -663,12 +671,42 @@ void tokenise_message(int file_index, struct database *db, struct rfc822 *msg)/*
         break;
     }
 
+    if (a->filename) {
+      add_token_in_file(file_index, db->hash_key, a->filename, db->attachment_name);
+    }
+
   }
 
   /* Deal with threading information */
   add_angled_terms(file_index, db->hash_key, db->msg_ids, 1, msg->hdrs.message_id);
   add_angled_terms(file_index, db->hash_key, db->msg_ids, 0, msg->hdrs.in_reply_to);
   add_angled_terms(file_index, db->hash_key, db->msg_ids, 0, msg->hdrs.references);
+}
+/*}}}*/
+
+static void scan_maildir_flags(struct msgpath *m)/*{{{*/
+{
+  const char *p, *start;
+  start = m->src.mpf.path;
+  m->seen = 0;
+  m->replied = 0;
+  m->flagged = 0;
+  for (p=start; *p; p++) {}
+  for (p--; (p >= start) && ((*p) != ':'); p--) {}
+  if (p >= start) {
+    if (!strncmp(p, ":2,", 3)) {
+      p += 3;
+      while (*p) {
+        switch (*p) {
+          case 'F': m->flagged = 1; break;
+          case 'R': m->replied = 1; break;
+          case 'S': m->seen = 1; break;
+          default: break;
+        }
+        p++;
+      }
+    }
+  }
 }
 /*}}}*/
 static void scan_new_messages(struct database *db, int start_at)/*{{{*/
@@ -691,6 +729,7 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
     if(msg)
     {
       db->msgs[i].date = msg->hdrs.date;
+      scan_maildir_flags(&db->msgs[i]);
       tokenise_message(i, db, msg);
       free_rfc822(msg);
     }
@@ -838,7 +877,23 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
   ++db->n_msgs;
 }
 /*}}}*/
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs)/*{{{*/
+
+static int do_stat(struct msgpath *mp)/*{{{*/
+{
+  struct stat sb;
+  int status;
+  status = stat(mp->src.mpf.path, &sb);
+  if ((status < 0) ||
+      !S_ISREG(sb.st_mode)) {
+    return 0;
+  } else {
+    mp->src.mpf.mtime = sb.st_mtime;
+    mp->src.mpf.size = sb.st_size;
+    return 1;
+  }
+}
+/*}}}*/
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
    * possible.  We search for each existing path in the incoming sorted array.
@@ -853,6 +908,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   int matched_index;
   int i, new_entries_start_at;
   int any_new, n_newly_pruned, n_already_dead;
+  int status;
 
   file_in_db = new_array(char, n_msgs);
   file_in_new_list = new_array(char, db->n_msgs);
@@ -866,11 +922,27 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
     switch (db->type[i]) {
       case MTY_FILE:
         matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
-        if ((matched_index >= 0) &&
-            (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime)) {
-        /* Treat stale files as though the path has changed. */
-          file_in_db[matched_index] = 1;
-          file_in_new_list[i] = 1;
+        if (matched_index >= 0) {
+          if (do_fast_index) {
+            /* Assume the presence of a matching path is good enough without
+             * even bothering to stat the file that's there now. */
+            file_in_db[matched_index] = 1;
+            file_in_new_list[i] = 1;
+          } else {
+            status = do_stat(sorted_paths + matched_index);
+            if (status) {
+              if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
+                /* Treat stale files as though the path has changed. */
+                file_in_db[matched_index] = 1;
+                file_in_new_list[i] = 1;
+              } else {
+                fprintf(stderr, "mtime failed for '%s'\n", sorted_paths[matched_index].src.mpf.path);
+              }
+            } else {
+              /* This path will get treated as dead, and be re-stated below.
+               * When that stat fails, the path won't get added to the db. */
+            }
+          }
         }
         break;
       case MTY_MBOX:
@@ -924,9 +996,17 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   any_new = 0;
   for (i=0; i<n_msgs; i++) {
     if (!file_in_db[i]) {
+      int status;
       any_new = 1;
       /* The 'sorted_paths' array is only used for file-per-message folders. */
-      add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
+      status = do_stat(sorted_paths + i);
+      if (status) {
+        /* We only add files that could be successfully stat()'d as regular
+         * files. */
+        add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
+      } else {
+        fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+      }
     }
   }
 
@@ -1180,6 +1260,7 @@ int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
   recode_toktable(db->from, new_idx);
   recode_toktable(db->subject, new_idx);
   recode_toktable(db->body, new_idx);
+  recode_toktable(db->attachment_name, new_idx);
   recode_toktable2(db->msg_ids, new_idx);
 
   /* And crunch down the filename table */

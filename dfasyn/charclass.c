@@ -342,7 +342,11 @@ void print_charclass_mapping(FILE *out, FILE *header_out, const char *prefix_und
   for (i=0; i<256; i++) {
     if (i > 0) fputs(", ", out);
     if ((i & 15) == 0) fputs("\n  ", out);
-    fprintf(out, "%3d", mapping[i]);
+    if (mapping[i] >= 0) {
+      fprintf(out, "%3d", mapping[i] + ntokens);
+    } else {
+      fprintf(out, "%3d", mapping[i]);
+    }
   }
   fputs("\n};\n", out);
   if (header_out) {

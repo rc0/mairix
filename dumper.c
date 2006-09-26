@@ -76,7 +76,7 @@ void dump_database(char *filename)
   printf("%d messages\n", db->n_msgs);
   for (i=0; i<db->n_msgs; i++) {
     printf("%6d: ", i);
-    switch (db->msg_type[i]) {
+    switch (rd_msg_type(db, i)) {
       case DB_MSG_DEAD:
         printf("DEAD");
         break;
@@ -94,6 +94,9 @@ void dump_database(char *filename)
         }
         break;
     }
+    if (db->msg_type_and_flags[i] & FLAG_SEEN) printf(" seen");
+    if (db->msg_type_and_flags[i] & FLAG_REPLIED) printf(" replied");
+    if (db->msg_type_and_flags[i] & FLAG_FLAGGED) printf(" flagged");
     printf("\n");
   }
   printf("\n");
@@ -121,6 +124,8 @@ void dump_database(char *filename)
   dump_toktable(db, &db->subject, "Subject");
   printf("--------------------------------\n");
   dump_toktable(db, &db->body, "Body");
+  printf("--------------------------------\n");
+  dump_toktable(db, &db->attachment_name, "Attachment names");
   printf("--------------------------------\n");
 
   close_db(db);

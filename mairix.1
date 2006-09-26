@@ -37,6 +37,8 @@ mairix \- index and search mail folders
 ] [
 .BR \-f | \-\-rcfile
 .I mairixrc
+] [
+.BR \-F | \-\-fast-index
 ]
 
 .SS Searching
@@ -175,6 +177,24 @@ Cause stale (dead) messages to be purged from the database during an indexing
 run.  (Normally, stale messages are left in the database because of the
 additional const of compacting away the storage that they take up.)
 
+.TP
+.B -F, --fast-index
+.br
+When processing maildir and MH folders,
+.I mairix
+normally compares the mtime and size of each message against the values stored
+in the database.  If they have changed, the message will be rescanned.  This
+check requires each message file to be stat'ed.  For large numbers of messages
+in these folder types, this can be a sizeable overhead.
+
+This option tells
+.I mairix
+to assume that when a message currently on-disc has a name matching one already
+in the database, it should assume the message is unchanged.
+
+A later indexing run without using this option will fix up any rescans that
+were missed due to its use.
+
 .SS Search options
 .TP
 .B -a, --augment
@@ -290,6 +310,47 @@ mairix z:10k-20k
 The suffix 'k' on a number means multiply by 1024, and the suffix 'M' on a
 number means multiply by 1024*1024.
 
+.TP
+.BI n: word
+.br
+Match
+.I word
+occurring as the name of an attachment in the message.  Since attachment names
+are usually long, this option would usually be used in the substring form.  So
+.Sy 1
+mairix n:mairix=
+.Ey
+
+would match all messages which have attachments whose names contain the
+substring
+.IR mairix .
+
+The attachment name is determined from the name=xxx or filename=xxx qualifiers
+on the Content-Type: and Content-Disposition: headers respectively.
+
+.TP
+.BI F: flags
+.br
+Match messages with particular flag settings.  The available flags are 's'
+meaning seen, 'r' meaning replied, and 'f' meaning flagged.  The flags are
+case-insensitive.  A flag letter may be prefixed by a '-' to negate its sense.  Thus
+
+.Sy 1
+mairix F:-s d:1w-
+.Ey
+
+would match any unread message less than a week old, and
+
+.Sy 1
+mairix F:f-r d:-1m
+.Ey
+
+would match any flagged message older than a month which you haven't replied to yet.
+
+Note that the flag characters and their meanings agree with those used as the
+suffix letters on message filenames in maildir folders.
+
+.SS Searching for a match amongst more than one part of a message
 .PP
 Multiple body parts may be grouped together, if a match in any of them is
 sought.  Common examples follow.

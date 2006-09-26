@@ -391,7 +391,7 @@ static void usage(void)/*{{{*/
   print_copyright();
 
   printf("mairix [-h]                                    : Show help\n"
-         "mairix [-f <rcfile>] [-v] [-p]                 : Build index\n"
+         "mairix [-f <rcfile>] [-v] [-p] [-F]            : Build index\n"
          "mairix [-f <rcfile>] [-a] [-t] expr1 ... exprN : Run search\n"
          "mairix [-f <rcfile>] -d                        : Dump database to stdout\n"
          "-h           : show this help\n"
@@ -399,6 +399,7 @@ static void usage(void)/*{{{*/
          "-V           : show version\n"
          "-v           : be verbose\n"
          "-p           : purge messages that no longer exist\n"
+         "-F           : fast scan for maildir and MH folders (no mtime or size checks)\n"
          "-a           : add new matches to match folder (default : clear it first)\n"
          "-t           : include all messages in same threads as matching messages\n"
          "-o <mfolder> : override setting of mfolder from mairixrc file\n"
@@ -412,6 +413,8 @@ static void usage(void)/*{{{*/
          "    s:word        : match word in Subject: header\n"
          "    b:word        : match word in message body\n"
          "    m:word        : match word in Message-ID: header\n"
+         "    n:word        : match name of attachment within message\n"
+         "    F:flags       : match on message flags (s=seen,r=replied,f=flagged,-=negate)\n"
          "    p:substring   : match substring of path\n"
          "    d:start-end   : match date range\n"
          "    z:low-high    : match messages in size range\n"
@@ -473,6 +476,7 @@ int main (int argc, char **argv)/*{{{*/
   int do_dump = 0;
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
+  int do_fast_index = 0;
 
   struct globber_array *omit_globs;
 
@@ -507,6 +511,9 @@ int main (int argc, char **argv)/*{{{*/
       do_integrity_checks = 0;
     } else if (!strcmp(*argv, "--unlock")) {
       do_forced_unlock = 1;
+    } else if (!strcmp(*argv, "-F") ||
+               !strcmp(*argv, "--fast-index")) {
+      do_fast_index = 1;
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-V") || !strcmp(*argv, "--version")) {
@@ -701,7 +708,7 @@ int main (int argc, char **argv)/*{{{*/
 
     build_mbox_lists(db, folder_base, mboxen, omit_globs);
 
-    any_updates = update_database(db, msgs->paths, msgs->n);
+    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index);
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
     }

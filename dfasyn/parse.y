@@ -242,6 +242,7 @@ attr_decl_seq : /* empty */
                 ;
 
 tag_decl : TAG STRING EQUAL expr { define_tag($2, $4); }
+         ;
 
 entrystruct_decl :
               ENTRYSTRUCT STRING STRING   { define_entrystruct($2, $3); }

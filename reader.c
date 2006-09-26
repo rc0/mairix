@@ -154,7 +154,7 @@ struct read_db *open_db(char *filename)/*{{{*/
 
   /* Now build tables of where things are in the file */
   result->n_msgs = uidata[UI_N_MSGS];
-  result->msg_type    = ucdata + uidata[UI_MSG_TYPE];
+  result->msg_type_and_flags = ucdata + uidata[UI_MSG_TYPE_AND_FLAGS];
   result->path_offsets = uidata + uidata[UI_MSG_CDATA];
   result->mtime_table = uidata + uidata[UI_MSG_MTIME];
   result->size_table = uidata + uidata[UI_MSG_SIZE];
@@ -175,6 +175,7 @@ struct read_db *open_db(char *filename)/*{{{*/
   read_toktable_db(data, &result->from, UI_FROM_BASE, uidata);
   read_toktable_db(data, &result->subject, UI_SUBJECT_BASE, uidata);
   read_toktable_db(data, &result->body, UI_BODY_BASE, uidata);
+  read_toktable_db(data, &result->attachment_name, UI_ATTACHMENT_NAME_BASE, uidata);
   read_toktable2_db(data, &result->msg_ids, UI_MSGID_BASE, uidata);
 
   return result;
@@ -197,6 +198,7 @@ void close_db(struct read_db *x)/*{{{*/
   free_toktable_db(&x->from);
   free_toktable_db(&x->subject);
   free_toktable_db(&x->body);
+  free_toktable_db(&x->attachment_name);
   free_toktable2_db(&x->msg_ids);
 
   if (munmap(x->data, x->len) < 0) {

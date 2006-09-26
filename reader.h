@@ -27,14 +27,14 @@
 #define HEADER_MAGIC0 'M'
 #define HEADER_MAGIC1 'X'
 #define HEADER_MAGIC2 0xA5
-#define HEADER_MAGIC3 0x02
+#define HEADER_MAGIC3 0x03
 
 /*{{{ Constants for file data positions */
 #define UI_ENDIAN          1
 #define UI_N_MSGS          2
 
 /* Offset to byte-per-message table encoding message types */
-#define UI_MSG_TYPE        3
+#define UI_MSG_TYPE_AND_FLAGS 3
 
 /* Header positions containing offsets to the per-message tables. */
 /* Character data:
@@ -74,7 +74,8 @@
 #define UI_FROM_BASE      22
 #define UI_SUBJECT_BASE   25
 #define UI_BODY_BASE      28
-#define UI_MSGID_BASE     31
+#define UI_ATTACHMENT_NAME_BASE 31
+#define UI_MSGID_BASE     34
 
 /* Larger than the last table offset. */
 #define UI_HEADER_LEN     40
@@ -99,6 +100,9 @@
 #define UI_BODY_N         (UI_BODY_BASE + UI_N_OFFSET)
 #define UI_BODY_TOK       (UI_BODY_BASE + UI_TOK_OFFSET)
 #define UI_BODY_ENC       (UI_BODY_BASE + UI_ENC_OFFSET)
+#define UI_ATTACHMENT_NAME_N    (UI_ATTACHMENT_NAME_BASE + UI_N_OFFSET)
+#define UI_ATTACHMENT_NAME_TOK  (UI_ATTACHMENT_NAME_BASE + UI_TOK_OFFSET)
+#define UI_ATTACHMENT_NAME_ENC  (UI_ATTACHMENT_NAME_BASE + UI_ENC_OFFSET)
 #define UI_MSGID_N        (UI_MSGID_BASE + UI_N_OFFSET)
 #define UI_MSGID_TOK      (UI_MSGID_BASE + UI_TOK_OFFSET)
 #define UI_MSGID_ENC0     (UI_MSGID_BASE + UI_ENC_OFFSET)
@@ -113,6 +117,10 @@
 /* mbox : multiple files per message */
 #define DB_MSG_MBOX 2
 /*}}}*/
+
+#define FLAG_SEEN    (1<<3)
+#define FLAG_REPLIED (1<<4)
+#define FLAG_FLAGGED (1<<5)
 
 struct toktable_db {/*{{{*/
   unsigned int n; /* number of entries in this table */
@@ -134,7 +142,7 @@ struct read_db {/*{{{*/
 
   /* Pathname information */
   int n_msgs;
-  unsigned char *msg_type;
+  unsigned char *msg_type_and_flags;
   unsigned int *path_offsets; /* or (mbox index, msg index) */
   unsigned int *mtime_table; /* or offset into mbox */
   unsigned int *size_table;  /* either file size or span inside mbox */
@@ -155,6 +163,7 @@ struct read_db {/*{{{*/
   struct toktable_db from;
   struct toktable_db subject;
   struct toktable_db body;
+  struct toktable_db attachment_name;
   struct toktable2_db msg_ids;
 
 };
@@ -162,6 +171,10 @@ struct read_db {/*{{{*/
 
 struct read_db *open_db(char *filename);
 void close_db(struct read_db *x);
+
+static inline int rd_msg_type(struct read_db *db, int i) {
+  return db->msg_type_and_flags[i] & 0x7;
+}
 
 /* Common to search and db reader. */
 int read_increment(unsigned char **encpos);

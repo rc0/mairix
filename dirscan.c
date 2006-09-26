@@ -62,7 +62,7 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
   free(x);
 }
 /*}}}*/
-static void add_file_to_list(char *x, unsigned long mtime, size_t message_size, struct msgpath_array *arr) {/*{{{*/
+static void add_file_to_list(char *x, struct msgpath_array *arr) {/*{{{*/
   char *y = new_string(x);
   if (arr->n == arr->max) {
     arr->max += 1024;
@@ -71,8 +71,6 @@ static void add_file_to_list(char *x, unsigned long mtime, size_t message_size, 
   }
   arr->type[arr->n] = MTY_FILE;
   arr->paths[arr->n].src.mpf.path = y;
-  arr->paths[arr->n].src.mpf.mtime = mtime;
-  arr->paths[arr->n].src.mpf.size = message_size;
   ++arr->n;
   return;
 }
@@ -84,7 +82,6 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
   static char *subdirs[] = {"new", "cur"};
   DIR *d;
   struct dirent *de;
-  struct stat sb;
   int folder_len = strlen(folder);
 
   /* FIXME : just store mdir-rooted paths in array and have common prefix elsewhere. */
@@ -100,14 +97,14 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
       while ((de = readdir(d))) {
         /* TODO : Perhaps we ought to do some validation on the path here?
            i.e. check that the filename looks valid for a maildir message. */
+        if (!strcmp(de->d_name, ".") ||
+            !strcmp(de->d_name, "..")) {
+          continue;
+        }
         strcpy(fname, subdir);
         strcat(fname, "/");
         strcat(fname, de->d_name);
-        if (stat(fname, &sb) >= 0) {
-          if (S_ISREG(sb.st_mode)) {
-            add_file_to_list(fname, sb.st_mtime, sb.st_size, arr);
-          }
-        }
+        add_file_to_list(fname, arr);
       }
       closedir(d);
     }
@@ -140,7 +137,6 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
   char *fname;
   DIR *d;
   struct dirent *de;
-  struct stat sb;
   int folder_len = strlen(folder);
 
   fname = new_array(char, folder_len + 8 + NAME_MAX);
@@ -150,12 +146,8 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
       strcpy(fname, folder);
       strcat(fname, "/");
       strcat(fname, de->d_name);
-      if (stat(fname, &sb) >= 0) {
-        if (S_ISREG(sb.st_mode)) {
-          if (valid_mh_filename_p(de->d_name)) {
-            add_file_to_list(fname, sb.st_mtime, sb.st_size, arr);
-          }
-        }
+      if (valid_mh_filename_p(de->d_name)) {
+        add_file_to_list(fname, arr);
       }
     }
     closedir(d);
