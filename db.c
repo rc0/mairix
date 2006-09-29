@@ -496,7 +496,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->from, result->from);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->subject, result->subject);
   import_toktable(input->data, input->hash_key, result->n_msgs, &input->body, result->body);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->attachment_name, result->body);
+  import_toktable(input->data, input->hash_key, result->n_msgs, &input->attachment_name, result->attachment_name);
   import_toktable2(input->data, input->hash_key, result->n_msgs, &input->msg_ids, result->msg_ids);
 
   close_db(input);
