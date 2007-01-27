@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <locale.h>
+#include <signal.h>
 
 #ifdef TEST_OOM
 int total_bytes=0;
@@ -386,6 +387,11 @@ static void print_version(void)/*{{{*/
           PROGRAM_VERSION);
 }
 /*}}}*/
+static void handlesig(int signo)/*{{{*/
+{
+  unlock_and_exit(7);
+}
+/*}}}*/
 static void usage(void)/*{{{*/
 {
   print_copyright();
@@ -607,6 +613,10 @@ int main (int argc, char **argv)/*{{{*/
    * Prevent concurrent updates due to parallel indexing (e.g. due to stuck
    * cron jobs).
    * Prevent concurrent searching and indexing. */
+
+  signal(SIGHUP, handlesig);
+  signal(SIGINT, handlesig);
+  signal(SIGQUIT, handlesig);
 
   lock_database(database_path, do_forced_unlock);
 
