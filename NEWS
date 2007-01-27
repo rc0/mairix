@@ -1,3 +1,18 @@
+NEW IN VERSION 0.20
+===================
+
+* Cache uncompressed mbox data (Chris Mason, further work by me)
+* Fix gaps in date ranges for search
+* Unlock database if mairix is interrupted (Paul Fox)
+* Add fast index option (-F)
+* Fix conditional compilation errors for compressed mbox
+* Reimplement MIME header parsing
+* Add capability to search on names of attachments
+* Add capability to search on state of message flags
+* Create maildir-format mfolder filenames correctly with regard to flags
+* Various bug fixes (Oliver Braun, Matthias Teege)
+
+
 NEW IN VERSION 0.19
 ===================
 * mairix.spec fixes (André Costa)
