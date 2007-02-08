@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007
  * Copyright (C) Sanjoy Mahajan 2005
  * - mfolder validation code
  *
@@ -373,7 +373,7 @@ void report_error(const char *str, const char *filename)/*{{{*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
-          "mairix %s, Copyright (C) 2002-2005 Richard P. Curnow\n"
+          "mairix %s, Copyright (C) 2002-2007 Richard P. Curnow\n"
           "mairix comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see the GNU General Public License for details.\n\n",
