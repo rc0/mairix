@@ -60,5 +60,5 @@ scan.o : scan.c parse.h dfasyn.h
 $(OBJ) : dfasyn.h
 
 clean:
-	rm dfasyn *.o scan.c parse.c parse.h parse.output
+	rm -f dfasyn *.o scan.c parse.c parse.h parse.output
 
