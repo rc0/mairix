@@ -2,7 +2,8 @@
 #define NVP_H
 
 struct nvp;
-extern struct nvp *make_nvp(char *);
+struct msg_src;
+extern struct nvp *make_nvp(struct msg_src *, char *);
 extern void free_nvp(struct nvp *);
 extern void nvp_dump(struct nvp *nvp, FILE *out);
 extern const char *nvp_major(struct nvp *n);

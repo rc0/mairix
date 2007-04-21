@@ -105,7 +105,7 @@ static void release_nvp(struct nvp *nvp)/*{{{*/
   free(nvp);
 }
 /*}}}*/
-struct nvp *make_nvp(char *s)/*{{{*/
+struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
 {
   int current_state;
   unsigned int tok;
@@ -138,6 +138,8 @@ struct nvp *make_nvp(char *s)/*{{{*/
     current_state = nvp_next_state(current_state, tok);
 
     if (current_state < 0) {
+      fprintf(stderr, "Header '%s' in %s could not be parsed\n",
+          s, format_msg_src(src));
       release_nvp(result);
       return NULL;
     }

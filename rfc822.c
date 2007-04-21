@@ -726,11 +726,11 @@ static void do_attachment(struct msg_src *src,
   ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if (match_string("content-type:", x->text)) {
-      ct_nvp = make_nvp(x->text + sizeof("content-type:"));
+      ct_nvp = make_nvp(src, x->text + sizeof("content-type:"));
     } else if (match_string("content-transfer-encoding:", x->text)) {
-      cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
+      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:"));
     } else if (match_string("content-disposition:", x->text)) {
-      cd_nvp = make_nvp(x->text + sizeof("content-disposition:"));
+      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:"));
     }
   }
 
@@ -973,11 +973,11 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
     else if (match_string("from", x->text)) result->hdrs.from = copy_header_value(x->text);
     else if (match_string("subject", x->text)) result->hdrs.subject = copy_header_value(x->text);
     else if (match_string("content-type", x->text))
-      ct_nvp = make_nvp(x->text + sizeof("content-type:"));
+      ct_nvp = make_nvp(src, x->text + sizeof("content-type:"));
     else if (match_string("content-transfer-encoding", x->text))
-      cte_nvp = make_nvp(x->text + sizeof("content-transfer-encoding:"));
+      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:"));
     else if (match_string("content-disposition", x->text))
-      cd_nvp = make_nvp(x->text + sizeof("content-disposition:"));
+      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:"));
     else if (match_string("date", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);
