@@ -85,6 +85,26 @@ static void append_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
   append(nvp, ne);
 }
 /*}}}*/
+static void release_nvp(struct nvp *nvp)/*{{{*/
+{
+  struct nvp_entry *e, *ne;
+  for (e=nvp->first; e; e=ne) {
+    ne = e->next;
+    switch (e->type) {
+      case NVP_NAME:
+        free(e->lhs);
+        break;
+      case NVP_MAJORMINOR:
+      case NVP_NAMEVALUE:
+        free(e->lhs);
+        free(e->rhs);
+        break;
+    }
+    free(e);
+  }
+  free(nvp);
+}
+/*}}}*/
 struct nvp *make_nvp(char *s)/*{{{*/
 {
   int current_state;
@@ -116,14 +136,11 @@ struct nvp *make_nvp(char *s)/*{{{*/
       tok = nvp_EOS;
     }
     current_state = nvp_next_state(current_state, tok);
-#if 0
-    printf("char %02x '%c' meta=%2d state'=%2d ",
-        *q,
-        (*q >= 32 && *q <= 126) ? *q : '.',
-        tok,
-        current_state
-        );
-#endif
+
+    if (current_state < 0) {
+      release_nvp(result);
+      return NULL;
+    }
 
     switch (nvp_copier[current_state]) {
       case COPY_TO_NAME:
