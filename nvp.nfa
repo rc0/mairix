@@ -90,15 +90,29 @@ Block qvalue {
         ["] -> out
 }
 
+Block digits {
+    State in
+        [0-9] -> out
+        [0-9] -> in
+}
+
 Block namevalue {
     State in
-        OWS ; <name:in->out> ; OWS ; [=] -> rhs
+        OWS ; <name:in->out> ; OWS ; [=] -> rhs_normal
+        OWS ; <name:in->out> ; [*] ; <digits:in->out> ; OWS ; [=] -> rhs_continue
 
-    State rhs
-        OWS ; <qvalue:in->out> ; OWS -> out
-        OWS ; <value:in->out> ; OWS -> out
+    State rhs_normal
+        OWS ; <qvalue:in->out> ; OWS -> out_normal
+        OWS ; <value:in->out> ; OWS -> out_normal
 
-    State out = GOT_NAMEVALUE
+    State rhs_continue
+        OWS ; <qvalue:in->out> ; OWS -> out_continue
+        OWS ; <value:in->out> ; OWS -> out_continue
+
+    State out_normal = GOT_NAMEVALUE
+        -> out
+    State out_continue = GOT_NAMEVALUE_CONT
+        -> out
 }
 
 Block major {
@@ -159,6 +173,7 @@ Prefix nvp
 
 Group action {
     Attr GOT_NAMEVALUE
+    Attr GOT_NAMEVALUE_CONT
     Attr GOT_NAME
     Attr GOT_NAME_TRAILING_SPACE
     Attr GOT_MAJORMINOR

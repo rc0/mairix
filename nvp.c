@@ -85,6 +85,26 @@ static void append_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
   append(nvp, ne);
 }
 /*}}}*/
+static void combine_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
+{
+  struct nvp_entry *n;
+  for (n=nvp->first; n; n=n->next) {
+    if (n->type == NVP_NAMEVALUE) {
+      if (!strcmp(n->lhs, name)) {
+        char *new_rhs;
+        new_rhs = new_array(char, strlen(n->rhs) + strlen(value) + 1);
+        strcpy(new_rhs, n->rhs);
+        strcat(new_rhs, value);
+        free(n->rhs);
+        n->rhs = new_rhs;
+        return;
+      }
+    }
+  }
+  /* No match : it's the first one */
+  append_namevalue(nvp, name, value);
+}
+/*}}}*/
 static void release_nvp(struct nvp *nvp)/*{{{*/
 {
   struct nvp_entry *e, *ne;
@@ -110,6 +130,7 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
   int current_state;
   unsigned int tok;
   char *q;
+  unsigned char qq;
   char name[256];
   char minor[256];
   char value[256];
@@ -129,29 +150,47 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
   vv = value;
   last_action = GOT_NOTHING;
   do {
-    tok = *(unsigned char *) q;
-    if (tok) {
-      tok = nvp_char2tok[tok];
+    qq = *(unsigned char *) q;
+    if (qq) {
+      tok = nvp_char2tok[qq];
     } else {
       tok = nvp_EOS;
     }
     current_state = nvp_next_state(current_state, tok);
+#ifdef VERBOSE_TEST
+    fprintf(stderr, "Char %02x (%c) tok=%d new_current_state=%d\n",
+        qq, ((qq>=32) && (qq<=126)) ? qq : '.',
+        tok, current_state);
+#endif
 
     if (current_state < 0) {
+#ifdef TEST
+      fprintf(stderr, "'%s' could not be parsed\n", s);
+#else
       fprintf(stderr, "Header '%s' in %s could not be parsed\n",
           s, format_msg_src(src));
+#endif
       release_nvp(result);
       return NULL;
     }
 
     switch (nvp_copier[current_state]) {
       case COPY_TO_NAME:
+#ifdef VERBOSE_TEST
+        fprintf(stderr, "  COPY_TO_NAME\n");
+#endif
         *nn++ = *q;
         break;
       case COPY_TO_MINOR:
+#ifdef VERBOSE_TEST
+        fprintf(stderr, "  COPY_TO_MINOR\n");
+#endif
         *mm++ = *q;
         break;
       case COPY_TO_VALUE:
+#ifdef VERBOSE_TEST
+        fprintf(stderr, "  COPY_TO_VALUE\n");
+#endif
         *vv++ = *q;
         break;
       case COPY_NOWHERE:
@@ -164,9 +203,16 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
       case GOT_NAME_TRAILING_SPACE:
       case GOT_MAJORMINOR:
       case GOT_NAMEVALUE:
+      case GOT_NAMEVALUE_CONT:
+#ifdef VERBOSE_TEST
+        fprintf(stderr, "   Setting last action to %d\n", current_action);
+#endif
         last_action = current_action;
         break;
       case GOT_TERMINATOR:
+#ifdef VERBOSE_TEST
+        fprintf(stderr, "   Hit terminator; last_action=%d\n", last_action);
+#endif
         switch (last_action) {
           case GOT_NAME:
             *nn = 0;
@@ -186,6 +232,11 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
             *nn = 0;
             *vv = 0;
             append_namevalue(result, name, value);
+            break;
+          case GOT_NAMEVALUE_CONT:
+            *nn = 0;
+            *vv = 0;
+            combine_namevalue(result, name, value);
             break;
           default:
             break;
@@ -253,6 +304,7 @@ const char *nvp_lookupcase(struct nvp *nvp, const char *name)/*{{{*/
 void nvp_dump(struct nvp *nvp, FILE *out)/*{{{*/
 {
   struct nvp_entry *ne;
+  fprintf(out, "----\n");
   for (ne = nvp->first; ne; ne=ne->next) {
     switch (ne->type) {
       case NVP_NAME:
@@ -319,24 +371,30 @@ const char *nvp_first(struct nvp *nvp)/*{{{*/
 #ifdef TEST
 int main (int argc, char **argv) {
   struct nvp *n;
-  n = make_nvp("attachment; filename=\"foo.c\"; prot=ro");
+  n = make_nvp(NULL, "attachment; filename=\"foo.c\"; prot=ro");
   nvp_dump(n, stderr);
   free_nvp(n);
-  n = make_nvp("attachment; filename= \"foo bar.c\" ;prot=ro");
+  n = make_nvp(NULL, "attachment; filename= \"foo bar.c\" ;prot=ro");
   nvp_dump(n, stderr);
   free_nvp(n);
-  n = make_nvp("attachment ; filename= \"foo bar.c\" ;prot= ro");
+  n = make_nvp(NULL, "attachment ; filename= \"foo bar.c\" ;prot= ro");
   nvp_dump(n, stderr);
   free_nvp(n);
-  n = make_nvp("attachment ; filename= \"foo bar.c\" ;prot= ro");
+  n = make_nvp(NULL, "attachment ; filename= \"foo bar.c\" ;prot= ro");
   nvp_dump(n, stderr);
   free_nvp(n);
-  n = make_nvp("attachment ; filename= \"foo ;  bar.c\" ;prot= ro");
+  n = make_nvp(NULL, "attachment ; filename= \"foo ;  bar.c\" ;prot= ro");
   nvp_dump(n, stderr);
   free_nvp(n);
-  n = make_nvp(" text/plain ; name= \"foo bar.c\" ;prot= ro/rw; read/write; read= foo bar");
+  n = make_nvp(NULL, "attachment ; x*0=\"hi \"; x*1=\"there\"");
   nvp_dump(n, stderr);
   free_nvp(n);
+  n = make_nvp(NULL, " text/plain ; name= \"foo bar.c\" ;prot= ro/rw; read/write; read= foo bar");
+  if (n) {
+    /* Not expected to parse. */
+    nvp_dump(n, stderr);
+    free_nvp(n);
+  }
   return 0;
 }
 #endif
