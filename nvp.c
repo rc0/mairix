@@ -20,6 +20,10 @@
  **********************************************************************
  */
 
+#ifdef VERBOSE_TEST
+#define TEST 1
+#endif
+
 /* Parse name/value pairs from mail headers into a lookup table. */
 #include <stdio.h>
 #include <ctype.h>
@@ -369,32 +373,34 @@ const char *nvp_first(struct nvp *nvp)/*{{{*/
 /*}}}*/
 
 #ifdef TEST
-int main (int argc, char **argv) {
+
+static void do_test(char *s)
+{
   struct nvp *n;
-  n = make_nvp(NULL, "attachment; filename=\"foo.c\"; prot=ro");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, "attachment; filename= \"foo bar.c\" ;prot=ro");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, "attachment ; filename= \"foo bar.c\" ;prot= ro");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, "attachment ; filename= \"foo bar.c\" ;prot= ro");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, "attachment ; filename= \"foo ;  bar.c\" ;prot= ro");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, "attachment ; x*0=\"hi \"; x*1=\"there\"");
-  nvp_dump(n, stderr);
-  free_nvp(n);
-  n = make_nvp(NULL, " text/plain ; name= \"foo bar.c\" ;prot= ro/rw; read/write; read= foo bar");
+  n = make_nvp(NULL, s);
   if (n) {
-    /* Not expected to parse. */
     nvp_dump(n, stderr);
     free_nvp(n);
   }
+}
+
+
+int main (int argc, char **argv) {
+  struct nvp *n;
+#if 0
+  do_test("attachment; filename=\"foo.c\"; prot=ro");
+  do_test("attachment; filename= \"foo bar.c\" ;prot=ro");
+  do_test("attachment ; filename= \"foo bar.c\" ;prot= ro");
+  do_test("attachment ; filename= \"foo bar.c\" ;prot= ro");
+  do_test("attachment ; filename= \"foo ;  bar.c\" ;prot= ro");
+  do_test("attachment ; x*0=\"hi \"; x*1=\"there\"");
+#endif
+
+  do_test("application/vnd.ms-excel;       name=\"thequiz.xls\"");
+#if 0
+  do_test("inline; filename*0=\"aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj\t kkkkllll\"");
+  do_test(" text/plain ; name= \"foo bar.c\" ;prot= ro/rw; read/write; read= foo bar");
+#endif
   return 0;
 }
 #endif
