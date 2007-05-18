@@ -23,6 +23,7 @@ Tokens EOS
 Abbrev VALUE = [\041-~]~[\\";]
 Abbrev QVALUE = VALUE | [\011\040;] | <escape:in->out>
 Abbrev NAME1 = [0-9a-zA-Z_\-]
+Abbrev MINOR = NAME1 | [\.\-]
 Abbrev OWS = <optwhite:in->out>
 
 %{
@@ -126,11 +127,11 @@ Block major {
 
 Block minor {
     State in
-        NAME1 -> name1
+        MINOR -> minor1
 
-    State name1
+    State minor1
         = COPY_TO_MINOR
-        NAME1 -> name1
+        MINOR -> minor1
         -> out
 }
 
