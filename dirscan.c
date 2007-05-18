@@ -143,6 +143,10 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
   d = opendir(folder);
   if (d) {
     while ((de = readdir(d))) {
+      if (!strcmp(de->d_name, ".") ||
+          !strcmp(de->d_name, "..")) {
+        continue;
+      }
       strcpy(fname, folder);
       strcat(fname, "/");
       strcat(fname, de->d_name);
