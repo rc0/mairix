@@ -857,7 +857,7 @@ static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*
 void maybe_grow_message_arrays(struct database *db)/*{{{*/
 {
   if (db->n_msgs == db->max_msgs) {
-    if (db->max_msgs == 0) {
+    if (db->max_msgs <= 128) {
       db->max_msgs = 256;
     } else {
       db->max_msgs += (db->max_msgs >> 1);
