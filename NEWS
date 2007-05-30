@@ -1,3 +1,14 @@
+NEW IN VERSION 0.21
+===================
+
+* Fix make clean target in dfasyn/ (Benj. Mako Hill)
+* Limit number of messages that are examined when an end boundary is missing in
+  an mbox (Chung-chieh Shan)
+* Avoid examining . and .. when traversing MH folder hierarchy (Steven Lumos)
+* Fix various bugs in the name/value parser
+* Add some RFC2231 support to the name/value parser (continuations)
+* Fix indexing when existing database only contains 1 message
+
 NEW IN VERSION 0.20
 ===================
 
