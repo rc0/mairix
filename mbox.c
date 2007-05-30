@@ -866,6 +866,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
       va = NULL; /* lazy mmap */
       for (j=mb->n_old_msgs_valid, here=mb->new_msgs; here; j++, here=next) {
         int n;
+        int trials = 0;
         off_t start;
         size_t len;
         struct rfc822 *r8;
@@ -903,14 +904,15 @@ int add_mbox_messages(struct database *db)/*{{{*/
             if (r8) free_rfc822(r8);
             r8 = NULL;
             last = last->next; /* Try with another chunk on the end */
+            ++trials;
           } else {
             /* Treat as success */
             next = last->next;
             break;
           }
-        } while (last);
+        } while (last && trials < 100);
 
-        if (last) {
+        if (last && trials < 100) {
           start = mb->start[j] = here->start;
           mb->len[j] = len;
           compute_checksum((char *) va + here->start, len, &mb->check_all[j]);
