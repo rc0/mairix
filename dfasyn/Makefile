@@ -1,6 +1,6 @@
 # Makefile for NFA->DFA conversion utility
 #
-# Copyright (C) Richard P. Curnow  2000-2001,2003,2005,2006
+# Copyright (C) Richard P. Curnow  2000-2001,2003,2005,2006,2007
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
 # published by the Free Software Foundation.
