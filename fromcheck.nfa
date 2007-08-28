@@ -50,17 +50,25 @@ Abbrev EMAIL = LOWER | UPPER | DIGIT | PLUSMINUS | OTHER_EMAIL
 
 BLOCK email {
     STATE in
-        EMAIL -> in, before_at
+        -> after_langle
+        [<] -> after_langle
+
+    STATE after_langle
+        EMAIL -> after_langle, before_at
 
     STATE before_at
         EMAIL -> before_at
         # Local part only : >=1 characters will suffice, which we've already
-        # matched.
-        -> out
+        # matched
+        -> before_rangle
         AT -> after_at
 
     STATE after_at
-        EMAIL -> after_at, out
+        EMAIL -> after_at, before_rangle
+
+    STATE before_rangle
+        -> out
+        [>] -> out
 
 }
 
