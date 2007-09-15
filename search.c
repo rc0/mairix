@@ -1203,13 +1203,15 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           if (parsed) {
             char datebuf[64];
             struct tm *thetm;
-            if (parsed->hdrs.to)      printf("  To:      %s\n", parsed->hdrs.to);
-            if (parsed->hdrs.cc)      printf("  Cc:      %s\n", parsed->hdrs.cc);
-            if (parsed->hdrs.from)    printf("  From:    %s\n", parsed->hdrs.from);
-            if (parsed->hdrs.subject) printf("  Subject: %s\n", parsed->hdrs.subject);
+            if (parsed->hdrs.to)      printf("  To:         %s\n", parsed->hdrs.to);
+            if (parsed->hdrs.cc)      printf("  Cc:         %s\n", parsed->hdrs.cc);
+            if (parsed->hdrs.from)    printf("  From:       %s\n", parsed->hdrs.from);
+            if (parsed->hdrs.subject) printf("  Subject:    %s\n", parsed->hdrs.subject);
+            if (parsed->hdrs.message_id)
+                                      printf("  Message-ID: %s\n", parsed->hdrs.message_id);
             thetm = gmtime(&parsed->hdrs.date);
             strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y", thetm);
-            printf("  Date:     %s\n", datebuf);
+            printf("  Date:        %s\n", datebuf);
             free_rfc822(parsed);
           }
         }
