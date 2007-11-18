@@ -149,7 +149,7 @@ static int audit_header(struct line *header)/*{{{*/
     int is_blank;
     int has_word_colon=0;
 
-    if (first) {
+    if (1 || first) {
       /* Ignore any UUCP or mbox style From line at the start */
       if (!strncmp("From ", x->text, 5)) {
         continue;
