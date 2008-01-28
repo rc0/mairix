@@ -495,6 +495,10 @@ int main (int argc, char **argv)/*{{{*/
       break;
     } else if (!strcmp(*argv, "-f") || !strcmp(*argv, "--rcfile")) {
       ++argv, --argc;
+      if (!argc) {
+        fprintf(stderr, "No filename given after -f argument\n");
+        exit(1);
+      }
       arg_rc_file_path = *argv;
     } else if (!strcmp(*argv, "-t") || !strcmp(*argv, "--threads")) {
       do_search = 1;
@@ -504,6 +508,10 @@ int main (int argc, char **argv)/*{{{*/
       do_augment = 1;
     } else if (!strcmp(*argv, "-o") || !strcmp(*argv, "--mfolder")) {
       ++argv, --argc;
+      if (!argc) {
+        fprintf(stderr, "No folder name given after -o argument\n");
+        exit(1);
+      }
       arg_mfolder = *argv;
     } else if (!strcmp(*argv, "-p") || !strcmp(*argv, "--purge")) {
       do_purge = 1;
