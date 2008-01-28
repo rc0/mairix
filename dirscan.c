@@ -269,7 +269,9 @@ int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
         has_child_file(path, "cmeta") ||
         has_child_file(path, "summary") ||
         /* Mew */
-        has_child_file(path, ".mew-summary")
+        has_child_file(path, ".mew-summary") ||
+        /* ezmlm/archive */
+        has_child_file(path, "index")
         ) {
       result = 1;
     }
