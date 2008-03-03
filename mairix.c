@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007,2008
  * Copyright (C) Sanjoy Mahajan 2005
  * - mfolder validation code
  *
