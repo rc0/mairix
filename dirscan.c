@@ -262,6 +262,9 @@ int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
         /* Sylpheed */
         has_child_file(path, ".sylpheed_cache") ||
         has_child_file(path, ".sylpheed_mark") ||
+        /* claws-mail */
+        has_child_file(path, ".claws_cache") ||
+        has_child_file(path, ".claws_mark") ||
         /* NNML (Gnus) */
         has_child_file(path, ".marks") ||
         has_child_file(path, ".overview") ||
