@@ -840,16 +840,18 @@ static void do_multipart(struct msg_src *src,
 
       looking_at_end_boundary = (b1 == be);
       boundary_ok = 1;
-      if ((b1 > input) && (*(b1-1) != '\n')) boundary_ok = 0;
-      if (!looking_at_end_boundary && (*(b1 + boundary_len + 2) != '\n')) boundary_ok = 0;
+      if ((b1 > input) && (*(b1-1) != '\n'))
+        boundary_ok = 0;
+      if (!looking_at_end_boundary && (b1 + boundary_len + 2 < input + input_len) && (*(b1 + boundary_len + 2) != '\n'))
+        boundary_ok = 0;
       if (!boundary_ok) {
-          char *eol = strchr(b1, '\n');
-          if (!eol) {
-              fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
+        char *eol = strchr(b1, '\n');
+        if (!eol) {
+          fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
                   format_msg_src(src));
-              goto cleanup;
-          }
-          start_b1_search_from = 1 + eol;
+          goto cleanup;
+        }
+        start_b1_search_from = 1 + eol;
       }
     } while (!boundary_ok);
 
@@ -861,7 +863,11 @@ static void do_multipart(struct msg_src *src,
     }
 
     b0 = b1;
-    line_after_b0 = strchr(b0, '\n') + 1;
+    line_after_b0 = strchr(b0, '\n');
+    if (line_after_b0 == 0)
+      line_after_b0 = b0 + strlen(b0);
+    else
+      ++line_after_b0;
   } while (b1 != be);
 
 cleanup:
