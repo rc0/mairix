@@ -274,6 +274,7 @@ void free_nvp(struct nvp *nvp)/*{{{*/
         free(ne->rhs);
         break;
     }
+    free(ne);
   }
   free(nvp);
 }
