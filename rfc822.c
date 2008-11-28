@@ -93,6 +93,7 @@ static void init_headers(struct headers *hdrs)/*{{{*/
   hdrs->message_id = NULL;
   hdrs->in_reply_to = NULL;
   hdrs->references = NULL;
+  hdrs->date = 0;
   hdrs->flags.seen = 0;
   hdrs->flags.replied = 0;
   hdrs->flags.flagged = 0;
