@@ -315,8 +315,6 @@ void string_list_to_array(struct string_list *list, int *n, char ***arr);
 void split_on_colons(const char *str, int *n, char ***arr);
 void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs, struct globber_array *omit_globs);
-int filter_is_maildir(const char *path, const struct stat *sb);
-int filter_is_mh(const char *path, const struct stat *sb);
 
 /* In rfc822.c */
 struct rfc822 *make_rfc822(char *filename);

@@ -206,7 +206,7 @@ static int has_child_dir(const char *base, const char *child)/*{{{*/
   return result;
 }
 /*}}}*/
-enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name)/*{{{*/
+static enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *de_name)/*{{{*/
 {
   if (parent_is_maildir) {
     /* Process any subdirectory that's not part of this maildir itself. */
@@ -222,7 +222,7 @@ enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const char *
   }
 }
 /*}}}*/
-int filter_is_maildir(const char *path, const struct stat *sb)/*{{{*/
+static int filter_is_maildir(const char *path, const struct stat *sb)/*{{{*/
 {
   if (S_ISDIR(sb->st_mode)) {
     if (has_child_dir(path, "new") &&
@@ -239,7 +239,7 @@ struct traverse_methods maildir_traverse_methods = {/*{{{*/
   .scrutinize = scrutinize_maildir_entry
 };
 /*}}}*/
-enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*{{{*/
+static enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*{{{*/
 {
   /* Have to allow sub-folders within a folder until we think of a better
    * solution.  */
@@ -250,7 +250,7 @@ enum traverse_check scrutinize_mh_entry(int parent_is_mh, const char *de_name)/*
   }
 }
 /*}}}*/
-int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
+static int filter_is_mh(const char *path, const struct stat *sb)/*{{{*/
 {
   int result = 0;
   if (S_ISDIR(sb->st_mode)) {
