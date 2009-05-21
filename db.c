@@ -2,7 +2,7 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2007
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2007,2009
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -935,8 +935,6 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
                 /* Treat stale files as though the path has changed. */
                 file_in_db[matched_index] = 1;
                 file_in_new_list[i] = 1;
-              } else {
-                fprintf(stderr, "mtime failed for '%s'\n", sorted_paths[matched_index].src.mpf.path);
               }
             } else {
               /* This path will get treated as dead, and be re-stated below.
