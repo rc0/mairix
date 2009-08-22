@@ -161,7 +161,7 @@ directive in the rc file has the same effect.
 .br
 .I mairix
 locks its database file during any indexing or searching operation to prevent
-multiple indexing runs intefering with each other, or an indexing run
+multiple indexing runs interfering with each other, or an indexing run
 interfering with search runs.  The
 .B --unlock
 option removes the lockfile before doing the requested indexing or searching
@@ -175,7 +175,7 @@ earlier run crashed for some reason or was aborted.
 .br
 Cause stale (dead) messages to be purged from the database during an indexing
 run.  (Normally, stale messages are left in the database because of the
-additional const of compacting away the storage that they take up.)
+additional cost of compacting away the storage that they take up.)
 
 .TP
 .B -F, --fast-index
@@ -217,7 +217,7 @@ paths on stdout.
 .TP
 .B -x, --excerpt-output
 .br
-Intead of creating an mfolder containing the matched messages, display an
+Instead of creating an mfolder containing the matched messages, display an
 excerpt from their headers on stdout.  The excerpt shows To, Cc, From, Subject
 and Date.
 
@@ -301,7 +301,7 @@ argument is omitted it defaults to zero.  If the
 .I high-size
 argument is omitted it defaults to infinite size.
 
-For example, to match messages between 10kbytes and 20kbytes in size, the
+For example, to match messages between 10kilobytes and 20kilobytes in size, the
 following search term can be used:
 .Sy 1
 mairix z:10k-20k
