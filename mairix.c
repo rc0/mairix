@@ -407,6 +407,7 @@ static void usage(void)/*{{{*/
          "-p           : purge messages that no longer exist\n"
          "-F           : fast scan for maildir and MH folders (no mtime or size checks)\n"
          "-a           : add new matches to match folder (default : clear it first)\n"
+         "-x           : display excerpt of message headers (default : use match folder)\n" 
          "-t           : include all messages in same threads as matching messages\n"
          "-o <mfolder> : override setting of mfolder from mairixrc file\n"
          "-r           : force raw output regardless of mformat setting in mairixrc file\n"
