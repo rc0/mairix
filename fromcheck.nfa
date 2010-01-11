@@ -62,20 +62,20 @@ Abbrev RIGHTSQUARE = [\]]
 BLOCK email {
     STATE in
         EMAIL -> in, before_at
-	DQUOTE -> quoted_before_at
-	AT -> domain_route
+        DQUOTE -> quoted_before_at
+        AT -> domain_route
 
     STATE domain_route
         DOMAIN -> domain_route
-	COLON -> in
+        COLON -> in
 
     STATE quoted_before_at
-    	EMAIL | WHITE | OTHER_QUOTED -> quoted_before_at
+        EMAIL | WHITE | OTHER_QUOTED -> quoted_before_at
         DQUOTE -> before_at
 
     STATE before_at
         EMAIL -> before_at
-	DQUOTE -> quoted_before_at
+        DQUOTE -> quoted_before_at
         # Local part only : >=1 characters will suffice, which we've already
         # matched.
         -> out
@@ -83,11 +83,11 @@ BLOCK email {
 
     STATE start_of_domain
         LEFTSQUARE -> dotted_quad
-	DOMAIN -> after_at
+        DOMAIN -> after_at
 
     STATE dotted_quad
-    	DIGIT | PERIOD -> dotted_quad
-	RIGHTSQUARE -> out
+        DIGIT | PERIOD -> dotted_quad
+        RIGHTSQUARE -> out
 
     STATE after_at
         DOMAIN -> after_at, out
