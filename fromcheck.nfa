@@ -33,35 +33,76 @@
 # LOWER : [a-z]
 # UPPER : [A-Z]
 # PLUSMINUS : [+-]
-# OTHER_EMAIL : other stuff valid in an address, at least [_.]
+# OTHER_EMAIL : other stuff valid in the LHS of an address
+# DOMAIN : stuff valid in the RHS of an address
 
 Abbrev LF = [\n]
 Abbrev CR = [\r]
 Abbrev DIGIT = [0-9]
+Abbrev PERIOD = [.]
 Abbrev AT = [@]
 Abbrev LOWER = [a-z]
 Abbrev UPPER = [A-Z]
 Abbrev COLON = [:]
 Abbrev WHITE = [ \t]
 Abbrev PLUSMINUS = [+\-]
-Abbrev OTHER_EMAIL = [_.=]
+# Explained clearly at
+# http://en.wikipedia.org/wiki/E-mail_address#RFC_specification
+Abbrev OTHER_EMAIL = [.!#$%&'*/=?^_`{|}~]
+Abbrev LT = [<]
+Abbrev GT = [>]
 Abbrev EMAIL = LOWER | UPPER | DIGIT | PLUSMINUS | OTHER_EMAIL
-
+Abbrev OTHER_DOMAIN = [\-_.]
+Abbrev DOMAIN = LOWER | UPPER | DIGIT | OTHER_DOMAIN
+Abbrev DQUOTE = ["]
+Abbrev OTHER_QUOTED = [@:<>]
+Abbrev LEFTSQUARE = [[]
+Abbrev RIGHTSQUARE = [\]]
 
 BLOCK email {
     STATE in
         EMAIL -> in, before_at
+	DQUOTE -> quoted_before_at
+	AT -> domain_route
+
+    STATE domain_route
+        DOMAIN -> domain_route
+	COLON -> in
+
+    STATE quoted_before_at
+    	EMAIL | WHITE | OTHER_QUOTED -> quoted_before_at
+        DQUOTE -> before_at
 
     STATE before_at
         EMAIL -> before_at
+	DQUOTE -> quoted_before_at
         # Local part only : >=1 characters will suffice, which we've already
         # matched.
         -> out
-        AT -> after_at
+        AT -> start_of_domain
+
+    STATE start_of_domain
+        LEFTSQUARE -> dotted_quad
+	DOMAIN -> after_at
+
+    STATE dotted_quad
+    	DIGIT | PERIOD -> dotted_quad
+	RIGHTSQUARE -> out
 
     STATE after_at
-        EMAIL -> after_at, out
+        DOMAIN -> after_at, out
 
+}
+
+BLOCK angled_email {
+    STATE in
+        LT -> in_angles
+
+    STATE in_angles
+        <email:in->out> -> before_gt
+
+    STATE before_gt
+        GT -> out
 }
 
 BLOCK zone {
@@ -145,6 +186,7 @@ BLOCK main {
         # Real return address.
         WHITE -> in
         <email:in->out> -> before_date
+        <angled_email:in->out> -> before_date
 
         # Cope with Mozilla mbox folder format which just uses a '-' as
         # the return address field.
