@@ -45,7 +45,7 @@ static int home_dir_len(void)/*{{{*/
   lookup = getenv("HOME");
   if (lookup) {
     return strlen(lookup);
-  } 
+  }
   foo = getpwuid(getuid());
   return strlen(foo->pw_dir);
 }
