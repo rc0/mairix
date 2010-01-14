@@ -41,6 +41,11 @@ static int isenv(unsigned char x)/*{{{*/
 static int home_dir_len(void)/*{{{*/
 {
   struct passwd *foo;
+  char *lookup;
+  lookup = getenv("HOME");
+  if (lookup) {
+    return strlen(lookup);
+  } 
   foo = getpwuid(getuid());
   return strlen(foo->pw_dir);
 }
@@ -114,9 +119,16 @@ static char *append_home_dir(char *to)/*{{{*/
 {
   struct passwd *foo;
   int len;
-  foo = getpwuid(getuid());
-  len = strlen(foo->pw_dir);
-  strcpy(to, foo->pw_dir);
+  char *lookup;
+  lookup = getenv("HOME");
+  if (lookup) {
+    len = strlen(lookup);
+    strcpy(to, lookup);
+  } else {
+    foo = getpwuid(getuid());
+    len = strlen(foo->pw_dir);
+    strcpy(to, foo->pw_dir);
+  }
   return to + len;
 }
 /*}}}*/

@@ -184,13 +184,16 @@ static void parse_rc_file(char *name)/*{{{*/
     /* open default file */
     struct passwd *pw;
     char *home;
-    pw = getpwuid(getuid());
-    home = pw->pw_dir;
-    if (!pw) {
-      fprintf(stderr, "Cannot lookup passwd entry for this user\n");
-      exit(2);
+    home = getenv("HOME");
+    if (!home) {
+      pw = getpwuid(getuid());
+      home = pw->pw_dir;
+      if (!pw) {
+        fprintf(stderr, "Cannot lookup passwd entry for this user\n");
+        exit(2);
+      }
+      home = pw->pw_dir;
     }
-    home = pw->pw_dir;
     name = new_array(char, strlen(home) + 12);
     strcpy(name, home);
     strcat(name, "/.mairixrc");
