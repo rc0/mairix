@@ -188,7 +188,7 @@ static void parse_rc_file(char *name)/*{{{*/
     if (!home) {
       pw = getpwuid(getuid());
       if (!pw) {
-        fprintf(stderr, "Cannot lookup passwd entry for this user\n");
+        fprintf(stderr, "Cannot determine home directory\n");
         exit(2);
       }
       home = pw->pw_dir;
