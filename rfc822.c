@@ -2,11 +2,18 @@
   mairix - message index builder and finder for maildir folders.
 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007
- * rfc2047 decode Copyright (C) Mikael Ylikoski 2002
- * gzip mbox support Copyright (C) Ico Doornekamp 2005
- * gzip mbox support Copyright (C) Felipe Gustavo de Almeida 2005
- * bzip2 mbox support Copyright (C) Paramjit Oberoi 2005
+ * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007,2010
+ * rfc2047 decode:
+ * Copyright (C) Mikael Ylikoski 2002
+ * gzip mbox support:
+ * Copyright (C) Ico Doornekamp 2005
+ * Copyright (C) Felipe Gustavo de Almeida 2005
+ * bzip2 mbox support:
+ * Copyright (C) Paramjit Oberoi 2005
+ * caching uncompressed mbox data:
+ * Copyright (C) Chris Mason 2006
+ * memory leak fixes:
+ * Copyright (C) Samuel Tardieu 2008
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as

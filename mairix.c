@@ -5,6 +5,8 @@
  * Copyright (C) Richard P. Curnow  2002,2003,2004,2005,2006,2007,2008
  * Copyright (C) Sanjoy Mahajan 2005
  * - mfolder validation code
+ * Copyright (C) James Cameron 2005
+ * Copyright (C) Paul Fox 2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
