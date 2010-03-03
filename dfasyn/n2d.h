@@ -6,7 +6,7 @@
 
 /* 
  **********************************************************************
- * Copyright (C) Richard P. Curnow  2001-2003
+ * Copyright (C) Richard P. Curnow  2001-2003,2005
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
