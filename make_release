@@ -30,14 +30,14 @@ unless (-d "RELEASES") {
   mkdir "RELEASES", 0755;
 }
 
-system ("git-tag -s $version");
-die "git-tag failed" if ($? != 0);
+system ("git tag -s $version");
+die "git tag failed" if ($? != 0);
 if (-d "RELEASES/$subdir") {
   system ("rm -rf RELEASES/$subdir");
 }
 
-system ("git-tar-tree $version RELEASES/${subdir} | tar xf -");
-die "git-tar-tree failed" if ($? != 0);
+system ("git archive --format=tar $version RELEASES/${subdir} | tar xf -");
+die "git archive failed" if ($? != 0);
 
 chdir "RELEASES";
 $here = qx/pwd/;
