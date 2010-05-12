@@ -36,13 +36,13 @@ if (-d "RELEASES/$subdir") {
   system ("rm -rf RELEASES/$subdir");
 }
 
-system ("git archive --format=tar $version RELEASES/${subdir} | tar xf -");
+system ("git archive --format=tar --prefix=RELEASES/${subdir}/ ${version} | tar xf -");
 die "git archive failed" if ($? != 0);
 
-chdir "RELEASES";
+chdir "RELEASES" or die "Cannot get into RELEASES";
 $here = qx/pwd/;
 chomp $here;
-chdir $subdir;
+chdir $subdir or die "Cannot get into $subdir";
 
 open (OUT, ">version.txt");
 print OUT $version."\n";
