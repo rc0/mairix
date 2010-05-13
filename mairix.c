@@ -377,7 +377,7 @@ void report_error(const char *str, const char *filename)/*{{{*/
 static void print_copyright(void)/*{{{*/
 {
   fprintf(stderr,
-          "mairix %s, Copyright (C) 2002-2007 Richard P. Curnow\n"
+          "mairix %s, Copyright (C) 2002-2010 Richard P. Curnow\n"
           "mairix comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see the GNU General Public License for details.\n\n",
