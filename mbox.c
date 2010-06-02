@@ -773,13 +773,20 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
 
   for (i=0; i<n_paths; i++) {
     char *path = paths[i];
-    if (stat(path, &sb) < 0) {
+    if (lstat(path, &sb) < 0) {
       /* can't stat */
     } else {
-      extant_mboxen[n_extant].full_path = new_string(path);
-      extant_mboxen[n_extant].mtime = sb.st_mtime;
-      extant_mboxen[n_extant].size = sb.st_size;
-      n_extant++;
+      if (S_ISLNK(sb.st_mode)) {
+        /* Skip mbox if symlink */
+        if (verbose) {
+          printf("%s is a link - skipping\n", path);
+        }
+      } else {
+        extant_mboxen[n_extant].full_path = new_string(path);
+        extant_mboxen[n_extant].mtime = sb.st_mtime;
+        extant_mboxen[n_extant].size = sb.st_size;
+        n_extant++;
+      }
     }
     free(paths[i]);
   }
