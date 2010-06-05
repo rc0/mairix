@@ -1,3 +1,35 @@
+NEW IN VERSION 0.22
+===================
+
+* Skip symlinks when using mbox (R A Lichtensteiger)
+* Update copyright year info throughout
+* Update ACKNOWLEDGEMENTS and copyright headers where more credit was due
+* Update FSF address in file headers
+* Update COPYING to latest gpl-2.0.txt
+* Improve error message if home directory cannot be determined
+* Honour HOME environment variable (Andreas Amann)
+* MIME types are allowed to have "+" characters in them. (Jonathan Kamens)
+* Fix deficiencies in the parsing of mbox From lines (Jonathan Kamens)
+* Include the existing -x flag in the help message (Mark Hills)
+* Fix documentation nits (Tom Doherty)
+* Remove spurious message when the mtime of a message file has changed
+* Do not export functions already exported through a callback structure. (Samuel Tardieu)
+* Fix two manpages buglets. (Samuel Tardieu)
+* When freeing a struct nvp, do not forget to free the struct nvp_entry. (Samuel Tardieu)
+* Do not leak memory if duplicate fields are present. (Samuel Tardieu)
+* Initialize the date header with a known value. (Samuel Tardieu)
+* Merge two conflicting solutions for bad MIME encoding
+* Fix segfault when last char is not a newline (Mika Fischer)
+* fix for MIME-related crash (Paramjit Oberoi)
+* Add support claws-mail (Anand Kumria)
+* Add MH sub-type support for ezmlm-archives (Claus Alboege)
+* Detect a trailing -f or -o with no following argument
+* Allow lines starting "From" to occur part-way through the header.o
+* Display message-ID in search -x mode
+* Remove execute permission from source files
+* Handle mbox from separators where email address is in angle brackets
+* Fix a bug in rfc822.c: Some headers weren't correctly parsed. (Jaime Velasco Juan)
+
 NEW IN VERSION 0.21
 ===================
 
