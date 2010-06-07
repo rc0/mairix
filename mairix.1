@@ -53,6 +53,8 @@ mairix \- index and search mail folders
 ] [
 .BR \-x | \-\-excerpt-output
 ] [
+.BR \-H | \-\-force-hardlinks
+] [
 .BR \-o | \-\-mfolder
 .I mfolder
 ] [
@@ -220,6 +222,13 @@ paths on stdout.
 Instead of creating an mfolder containing the matched messages, display an
 excerpt from their headers on stdout.  The excerpt shows To, Cc, From, Subject
 and Date.
+
+.TP
+.B -H, --force-hardlinks
+.br
+Instead of creating symbolic links, force the use of hardlinks.  This helps
+mailers such as alpine to realize that there are new mails in the search
+folder.
 
 .TP
 .BI "-o " mfolder

@@ -284,6 +284,7 @@ extern struct traverse_methods mh_traverse_methods;
 extern struct traverse_methods mbox_traverse_methods;
 
 extern int verbose; /* cmd line -v switch */
+extern int do_hardlinks; /* cmd line -H switch */
 
 /* Lame fix for systems where NAME_MAX isn't defined after including the above
  * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but

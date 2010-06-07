@@ -40,6 +40,7 @@ int total_bytes=0;
 #endif
 
 int verbose = 0;
+int do_hardlinks = 0;
 
 static char *folder_base = NULL;
 static char *maildir_folders = NULL;
@@ -415,6 +416,7 @@ static void usage(void)/*{{{*/
          "-t           : include all messages in same threads as matching messages\n"
          "-o <mfolder> : override setting of mfolder from mairixrc file\n"
          "-r           : force raw output regardless of mformat setting in mairixrc file\n"
+         "-H           : force hard links rather than symbolic ones\n"
          "expr_i       : search expression (all expr's AND'ed together):\n"
          "    word          : match word in message body and major headers\n"
          "    t:word        : match word in To: header\n"
@@ -526,6 +528,8 @@ int main (int argc, char **argv)/*{{{*/
       do_raw_output = 1;
     } else if (!strcmp(*argv, "-x") || !strcmp(*argv, "--excerpt-output")) {
       do_excerpt_output = 1;
+    } else if (!strcmp(*argv, "-H") || !strcmp(*argv, "--force-hardlinks")) {
+      do_hardlinks = 1;
     } else if (!strcmp(*argv, "-Q") || !strcmp(*argv, "--no-integrity-checks")) {
       do_integrity_checks = 0;
     } else if (!strcmp(*argv, "--unlock")) {
