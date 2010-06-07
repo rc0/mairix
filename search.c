@@ -656,7 +656,7 @@ static int looks_like_maildir_new_p(const char *p)/*{{{*/
 /*}}}*/
 static void create_symlink(char *link_target, char *new_link)/*{{{*/
 {
-  if (symlink(link_target, new_link) < 0) {
+  if (symlink(link_target, new_link) < 0 || link(link_target, new_link)) {
     if (verbose) {
       perror("symlink");
       fprintf(stderr, "Failed path <%s> -> <%s>\n", link_target, new_link);
