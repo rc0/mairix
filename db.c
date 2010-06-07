@@ -714,6 +714,11 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
   int i;
   for (i=start_at; i<db->n_msgs; i++) {
     struct rfc822 *msg = NULL;
+    int len = strlen(db->msgs[i].src.mpf.path);
+
+    if (len > 10 && !strcmp(db->msgs[i].src.mpf.path + len - 11, "/.gitignore"))
+      continue;
+
     switch (db->type[i]) {
       case MTY_DEAD:
         assert(0);
