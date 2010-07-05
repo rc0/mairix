@@ -74,7 +74,8 @@ enum encoding_type {/*{{{*/
   ENC_7BIT,
   ENC_8BIT,
   ENC_QUOTED_PRINTABLE,
-  ENC_BASE64
+  ENC_BASE64,
+  ENC_UUENCODE
 };
 /*}}}*/
 struct content_type_header {/*{{{*/
@@ -404,6 +405,8 @@ static enum encoding_type decode_encoding_type(const char *e)/*{{{*/
       result = ENC_BASE64;
     } else if (match_string("binary", p)) {
       result = ENC_BINARY;
+    } else if (match_string("x-uuencode", p)) {
+      result = ENC_UUENCODE;
     } else {
       fprintf(stderr, "Warning: unknown encoding type: '%s'\n", e);
       result = ENC_UNKNOWN;
@@ -528,6 +531,41 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
           }
         }
       done_base_64:
+        end_result = p;
+      }
+      break;
+        /*}}}*/
+    case ENC_UUENCODE:/*{{{*/
+      {
+        char *p, *q;
+        /* Find 'begin ' */
+        for (q = input; q < end_input - 6 && memcmp(q, "begin ", 6); q++)
+          ;
+        q += 6;
+        /* skip to EOL */
+        while (q < end_input && *q != '\n')
+          q++;
+        p = result;
+        while (q < end_input) { /* process line */
+#define DEC(c) (((c) - ' ') & 077)
+          int len = DEC(*q++);
+          if (len == 0)
+            break;
+          for (; len > 0; q += 4, len -= 3) {
+            if (len >= 3) {
+              *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+              *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+              *p++ = DEC(q[2]) << 6 | DEC(q[3]);
+            } else {
+              if (len >= 1)
+                *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+              if (len >= 2)
+                *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+            }
+          }
+          while (q < end_input && *q != '\n')
+            q++;
+        }
         end_result = p;
       }
       break;
@@ -734,8 +772,8 @@ static void do_attachment(struct msg_src *src,
   char *body_start;
   int body_len;
 
-  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
-  
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
+
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
@@ -745,12 +783,12 @@ static void do_attachment(struct msg_src *src,
   /* Extract key headers */
   ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
-    if (match_string("content-type:", x->text)) {
-      ct_nvp = make_nvp(src, x->text + sizeof("content-type:") - 1);
-    } else if (match_string("content-transfer-encoding:", x->text)) {
-      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:") - 1);
-    } else if (match_string("content-disposition:", x->text)) {
-      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:") - 1);
+    if ((nvp = make_nvp(src, x->text, "content-type:"))) {
+      ct_nvp = nvp;
+    } else if ((nvp = make_nvp(src, x->text, "content-transfer-encoding:"))) {
+      cte_nvp = nvp;
+    } else if ((nvp = make_nvp(src, x->text, "content-disposition:"))) {
+      cd_nvp = nvp;
     }
   }
 
@@ -801,8 +839,7 @@ static void do_multipart(struct msg_src *src,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
-  char *normal_boundary, *end_boundary;
-  char *b0, *b1, *be;
+  char *b0, *b1, *be, *bx;
   char *line_after_b0, *start_b1_search_from;
   int boundary_len;
   int looking_at_end_boundary;
@@ -815,50 +852,32 @@ static void do_multipart(struct msg_src *src,
   }
 
   boundary_len = strlen(boundary);
-  normal_boundary = new_array(char, boundary_len + 3);
-  end_boundary = new_array(char, boundary_len + 5);
-
-  strcpy(normal_boundary, "--");
-  strcat(normal_boundary, boundary);
-
-  strcpy(end_boundary, "--");
-  strcat(end_boundary, boundary);
-  strcat(end_boundary, "--");
 
   b0 = NULL;
-  /* Scan input to look for boundary markers */
-  be = strstr(input, end_boundary);
-  if (!be) {
-    if (error) {
-      *error = DTR8_MISSING_END;
-      return;
-    } else {
-      /* soldier on as best we can */
-      be = strchr(input, 0);
-    }
-  }
-
   line_after_b0 = input;
+  be = input + input_len;
 
   do {
     int boundary_ok;
     start_b1_search_from = line_after_b0;
     do {
       /* reject boundaries that aren't a whole line */
-      b1 = strstr(start_b1_search_from, normal_boundary);
-
-      if (!b1) {
-        if (*be) {
-          fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
-              format_msg_src(src));
-          goto cleanup;
-        } else {
-          b1 = be; /* tolerate missing end boundary */
+      b1 = NULL;
+      for (bx = start_b1_search_from; bx < be - (boundary_len + 4); bx++) {
+        if (bx[0] == '-' && bx[1] == '-' &&
+            !strncmp(bx+2, boundary, boundary_len)) {
+          b1 = bx;
           break;
         }
       }
+      if (!b1) {
+        if (error)
+          *error = DTR8_MISSING_END;
+        return;
+      }
 
-      looking_at_end_boundary = (b1 == be);
+      looking_at_end_boundary = (b1[boundary_len+2] == '-' &&
+          b1[boundary_len+3] == '-');
       boundary_ok = 1;
       if ((b1 > input) && (*(b1-1) != '\n'))
         boundary_ok = 0;
@@ -868,8 +887,8 @@ static void do_multipart(struct msg_src *src,
         char *eol = strchr(b1, '\n');
         if (!eol) {
           fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
-                  format_msg_src(src));
-          goto cleanup;
+              format_msg_src(src));
+          return;
         }
         start_b1_search_from = 1 + eol;
       }
@@ -888,11 +907,7 @@ static void do_multipart(struct msg_src *src,
       line_after_b0 = b0 + strlen(b0);
     else
       ++line_after_b0;
-  } while (b1 != be);
-
-cleanup:
-  free(normal_boundary);
-  free(end_boundary);
+  } while (b1 < be && !looking_at_end_boundary);
 }
 /*}}}*/
 static time_t parse_rfc822_date(char *date_string)/*{{{*/
@@ -982,7 +997,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   char *body_start;
   struct line header;
   struct line *x, *nx;
-  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
   int body_len;
 
   if (error) *error = DTR8_OK; /* default */
@@ -1010,12 +1025,12 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
       result->hdrs.from = copy_header_value(x->text);
     else if (!result->hdrs.subject && match_string("subject", x->text))
       result->hdrs.subject = copy_header_value(x->text);
-    else if (!ct_nvp && match_string("content-type", x->text))
-      ct_nvp = make_nvp(src, x->text + sizeof("content-type:") - 1);
-    else if (!cte_nvp && match_string("content-transfer-encoding", x->text))
-      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:") - 1);
-    else if (!cd_nvp && match_string("content-disposition", x->text))
-      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:") - 1);
+    else if (!ct_nvp && (nvp = make_nvp(src, x->text, "content-type:")))
+      ct_nvp = nvp;
+    else if (!cte_nvp && (nvp = make_nvp(src, x->text, "content-transfer-encoding:")))
+      cte_nvp = nvp;
+    else if (!cd_nvp && (nvp = make_nvp(src, x->text, "content-disposition:")))
+      cd_nvp = nvp;
     else if (!result->hdrs.date && match_string("date", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);

@@ -105,6 +105,7 @@ Block namevalue {
     State rhs_normal
         OWS ; <qvalue:in->out> ; OWS -> out_normal
         OWS ; <value:in->out> ; OWS -> out_normal
+        OWS ; ; EOS -> out_normal
 
     State rhs_continue
         OWS ; <qvalue:in->out> ; OWS -> out_continue
@@ -158,6 +159,7 @@ Block component {
 Block main {
     State in Entry in
         OWS ; <component:in->out> ; OWS ; EOS -> out2
+        OWS ; <component:in->out> ; OWS ; [;] ; OWS ; EOS -> out2
         OWS ; <component:in->out> ; OWS ; [;] -> in2
         
     State in2

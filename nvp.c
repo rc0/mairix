@@ -129,7 +129,7 @@ static void release_nvp(struct nvp *nvp)/*{{{*/
   free(nvp);
 }
 /*}}}*/
-struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
+struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 {
   int current_state;
   unsigned int tok;
@@ -140,8 +140,13 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
   char value[256];
   enum nvp_action last_action, current_action;
   struct nvp *result;
-
+  size_t pfxlen;
   char *nn, *mm, *vv;
+
+  pfxlen = strlen(pfx);
+  if (strncasecmp(pfx, s, pfxlen))
+    return NULL;
+  s += pfxlen;
 
   result = new(struct nvp);
   result->first = result->last = NULL;
@@ -171,8 +176,8 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
 #ifdef TEST
       fprintf(stderr, "'%s' could not be parsed\n", s);
 #else
-      fprintf(stderr, "Header '%s' in %s could not be parsed\n",
-          s, format_msg_src(src));
+      fprintf(stderr, "Header '%s%s' in %s could not be parsed\n",
+          pfx, s, format_msg_src(src));
 #endif
       release_nvp(result);
       return NULL;
@@ -378,7 +383,7 @@ const char *nvp_first(struct nvp *nvp)/*{{{*/
 static void do_test(char *s)
 {
   struct nvp *n;
-  n = make_nvp(NULL, s);
+  n = make_nvp(NULL, s, "");
   if (n) {
     nvp_dump(n, stderr);
     free_nvp(n);
