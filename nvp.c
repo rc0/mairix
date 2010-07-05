@@ -177,7 +177,7 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
       fprintf(stderr, "'%s' could not be parsed\n", s);
 #else
       fprintf(stderr, "Header '%s%s' in %s could not be parsed\n",
-	  pfx, s, format_msg_src(src));
+          pfx, s, format_msg_src(src));
 #endif
       release_nvp(result);
       return NULL;

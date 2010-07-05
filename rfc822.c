@@ -538,35 +538,35 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
     case ENC_UUENCODE:/*{{{*/
       {
         char *p, *q;
-	/* Find 'begin ' */
-	for (q = input; q < end_input - 6 && memcmp(q, "begin ", 6); q++)
-	    ;
-	q += 6;
-	/* skip to EOL */
-	while (q < end_input && *q != '\n')
-	    q++;
-	p = result;
-	while (q < end_input) {		/* process line */
-#define	DEC(c)	(((c) - ' ') & 077)
-	    int len = DEC(*q++);
-	    if (len == 0)
-		break;
-	    for (; len > 0; q += 4, len -= 3) {
-		if (len >= 3) {
-		    *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
-		    *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
-		    *p++ = DEC(q[2]) << 6 | DEC(q[3]);
-		} else {
-		    if (len >= 1)
-			*p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
-		    if (len >= 2)
-			*p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
-		}
-	    }
-	    while (q < end_input && *q != '\n')
-		q++;
-	}
-	end_result = p;
+        /* Find 'begin ' */
+        for (q = input; q < end_input - 6 && memcmp(q, "begin ", 6); q++)
+          ;
+        q += 6;
+        /* skip to EOL */
+        while (q < end_input && *q != '\n')
+          q++;
+        p = result;
+        while (q < end_input) { /* process line */
+#define DEC(c) (((c) - ' ') & 077)
+          int len = DEC(*q++);
+          if (len == 0)
+            break;
+          for (; len > 0; q += 4, len -= 3) {
+            if (len >= 3) {
+              *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+              *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+              *p++ = DEC(q[2]) << 6 | DEC(q[3]);
+            } else {
+              if (len >= 1)
+                *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+              if (len >= 2)
+                *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+            }
+          }
+          while (q < end_input && *q != '\n')
+            q++;
+        }
+        end_result = p;
       }
       break;
         /*}}}*/
@@ -773,7 +773,7 @@ static void do_attachment(struct msg_src *src,
   int body_len;
 
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
-  
+
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
@@ -784,11 +784,11 @@ static void do_attachment(struct msg_src *src,
   ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if ((nvp = make_nvp(src, x->text, "content-type:"))) {
-	ct_nvp = nvp;
+      ct_nvp = nvp;
     } else if ((nvp = make_nvp(src, x->text, "content-transfer-encoding:"))) {
-	cte_nvp = nvp;
+      cte_nvp = nvp;
     } else if ((nvp = make_nvp(src, x->text, "content-disposition:"))) {
-	cd_nvp = nvp;
+      cd_nvp = nvp;
     }
   }
 
@@ -856,7 +856,7 @@ static void do_multipart(struct msg_src *src,
   b0 = NULL;
   line_after_b0 = input;
   be = input + input_len;
-  
+
   do {
     int boundary_ok;
     start_b1_search_from = line_after_b0;
@@ -864,20 +864,20 @@ static void do_multipart(struct msg_src *src,
       /* reject boundaries that aren't a whole line */
       b1 = NULL;
       for (bx = start_b1_search_from; bx < be - (boundary_len + 4); bx++) {
-	if (bx[0] == '-' && bx[1] == '-' &&
-	    !strncmp(bx+2, boundary, boundary_len)) {
-	  b1 = bx;
-	  break;
-	}
+        if (bx[0] == '-' && bx[1] == '-' &&
+            !strncmp(bx+2, boundary, boundary_len)) {
+          b1 = bx;
+          break;
+        }
       }
       if (!b1) {
-	if (error)
-	  *error = DTR8_MISSING_END;
-	return;
+        if (error)
+          *error = DTR8_MISSING_END;
+        return;
       }
 
       looking_at_end_boundary = (b1[boundary_len+2] == '-' &&
-				 b1[boundary_len+3] == '-');
+          b1[boundary_len+3] == '-');
       boundary_ok = 1;
       if ((b1 > input) && (*(b1-1) != '\n'))
         boundary_ok = 0;
@@ -887,7 +887,7 @@ static void do_multipart(struct msg_src *src,
         char *eol = strchr(b1, '\n');
         if (!eol) {
           fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
-                  format_msg_src(src));
+              format_msg_src(src));
           return;
         }
         start_b1_search_from = 1 + eol;
