@@ -74,7 +74,8 @@ enum encoding_type {/*{{{*/
   ENC_7BIT,
   ENC_8BIT,
   ENC_QUOTED_PRINTABLE,
-  ENC_BASE64
+  ENC_BASE64,
+  ENC_UUENCODE
 };
 /*}}}*/
 struct content_type_header {/*{{{*/
@@ -404,6 +405,8 @@ static enum encoding_type decode_encoding_type(const char *e)/*{{{*/
       result = ENC_BASE64;
     } else if (match_string("binary", p)) {
       result = ENC_BINARY;
+    } else if (match_string("x-uuencode", p)) {
+      result = ENC_UUENCODE;
     } else {
       fprintf(stderr, "Warning: unknown encoding type: '%s'\n", e);
       result = ENC_UNKNOWN;
@@ -529,6 +532,41 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
         }
       done_base_64:
         end_result = p;
+      }
+      break;
+        /*}}}*/
+    case ENC_UUENCODE:/*{{{*/
+      {
+        char *p, *q;
+	/* Find 'begin ' */
+	for (q = input; q < end_input - 6 && memcmp(q, "begin ", 6); q++)
+	    ;
+	q += 6;
+	/* skip to EOL */
+	while (q < end_input && *q != '\n')
+	    q++;
+	p = result;
+	while (q < end_input) {		/* process line */
+#define	DEC(c)	(((c) - ' ') & 077)
+	    int len = DEC(*q++);
+	    if (len == 0)
+		break;
+	    for (; len > 0; q += 4, len -= 3) {
+		if (len >= 3) {
+		    *p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+		    *p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+		    *p++ = DEC(q[2]) << 6 | DEC(q[3]);
+		} else {
+		    if (len >= 1)
+			*p++ = DEC(q[0]) << 2 | DEC(q[1]) >> 4;
+		    if (len >= 2)
+			*p++ = DEC(q[1]) << 4 | DEC(q[2]) >> 2;
+		}
+	    }
+	    while (q < end_input && *q != '\n')
+		q++;
+	}
+	end_result = p;
       }
       break;
         /*}}}*/
