@@ -839,8 +839,7 @@ static void do_multipart(struct msg_src *src,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
-  char *normal_boundary, *end_boundary;
-  char *b0, *b1, *be;
+  char *b0, *b1, *be, *bx;
   char *line_after_b0, *start_b1_search_from;
   int boundary_len;
   int looking_at_end_boundary;
@@ -853,50 +852,32 @@ static void do_multipart(struct msg_src *src,
   }
 
   boundary_len = strlen(boundary);
-  normal_boundary = new_array(char, boundary_len + 3);
-  end_boundary = new_array(char, boundary_len + 5);
-
-  strcpy(normal_boundary, "--");
-  strcat(normal_boundary, boundary);
-
-  strcpy(end_boundary, "--");
-  strcat(end_boundary, boundary);
-  strcat(end_boundary, "--");
 
   b0 = NULL;
-  /* Scan input to look for boundary markers */
-  be = strstr(input, end_boundary);
-  if (!be) {
-    if (error) {
-      *error = DTR8_MISSING_END;
-      return;
-    } else {
-      /* soldier on as best we can */
-      be = strchr(input, 0);
-    }
-  }
-
   line_after_b0 = input;
-
+  be = input + input_len;
+  
   do {
     int boundary_ok;
     start_b1_search_from = line_after_b0;
     do {
       /* reject boundaries that aren't a whole line */
-      b1 = strstr(start_b1_search_from, normal_boundary);
-
+      b1 = NULL;
+      for (bx = start_b1_search_from; bx < be - (boundary_len + 4); bx++) {
+	if (bx[0] == '-' && bx[1] == '-' &&
+	    !strncmp(bx+2, boundary, boundary_len)) {
+	  b1 = bx;
+	  break;
+	}
+      }
       if (!b1) {
-        if (*be) {
-          fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
-              format_msg_src(src));
-          goto cleanup;
-        } else {
-          b1 = be; /* tolerate missing end boundary */
-          break;
-        }
+	if (error)
+	  *error = DTR8_MISSING_END;
+	return;
       }
 
-      looking_at_end_boundary = (b1 == be);
+      looking_at_end_boundary = (b1[boundary_len+2] == '-' &&
+				 b1[boundary_len+3] == '-');
       boundary_ok = 1;
       if ((b1 > input) && (*(b1-1) != '\n'))
         boundary_ok = 0;
@@ -907,7 +888,7 @@ static void do_multipart(struct msg_src *src,
         if (!eol) {
           fprintf(stderr, "Oops, didn't find another normal boundary in %s\n",
                   format_msg_src(src));
-          goto cleanup;
+          return;
         }
         start_b1_search_from = 1 + eol;
       }
@@ -926,11 +907,7 @@ static void do_multipart(struct msg_src *src,
       line_after_b0 = b0 + strlen(b0);
     else
       ++line_after_b0;
-  } while (b1 != be);
-
-cleanup:
-  free(normal_boundary);
-  free(end_boundary);
+  } while (b1 < be && !looking_at_end_boundary);
 }
 /*}}}*/
 static time_t parse_rfc822_date(char *date_string)/*{{{*/
