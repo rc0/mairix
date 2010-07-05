@@ -210,13 +210,13 @@ static enum traverse_check scrutinize_maildir_entry(int parent_is_maildir, const
 {
   if (parent_is_maildir) {
     /* Process any subdirectory that's not part of this maildir itself. */
-		if (!strcmp(de_name, "new") ||
-				!strcmp(de_name, "cur") ||
-				!strcmp(de_name, "tmp")) {
-			return TRAV_IGNORE;
-		} else {
-			return TRAV_PROCESS;
-		}
+    if (!strcmp(de_name, "new") ||
+        !strcmp(de_name, "cur") ||
+        !strcmp(de_name, "tmp")) {
+      return TRAV_IGNORE;
+    } else {
+      return TRAV_PROCESS;
+    }
   } else {
     return TRAV_PROCESS;
   }

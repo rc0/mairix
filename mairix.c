@@ -98,7 +98,7 @@ int member_of (const char *complete_mfolder,
     case FT_MBOX:
       glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
       break;
-    case FT_RAW:			/* cannot happen but to keep compiler happy */
+    case FT_RAW: /* cannot happen but to keep compiler happy */
     case FT_EXCERPT:
       break;
   }
