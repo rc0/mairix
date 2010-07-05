@@ -734,7 +734,7 @@ static void do_attachment(struct msg_src *src,
   char *body_start;
   int body_len;
 
-  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
   
   if (split_and_splice_header(src, start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
@@ -745,12 +745,12 @@ static void do_attachment(struct msg_src *src,
   /* Extract key headers */
   ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
-    if (match_string("content-type:", x->text)) {
-      ct_nvp = make_nvp(src, x->text + sizeof("content-type:") - 1);
-    } else if (match_string("content-transfer-encoding:", x->text)) {
-      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:") - 1);
-    } else if (match_string("content-disposition:", x->text)) {
-      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:") - 1);
+    if ((nvp = make_nvp(src, x->text, "content-type:"))) {
+	ct_nvp = nvp;
+    } else if ((nvp = make_nvp(src, x->text, "content-transfer-encoding:"))) {
+	cte_nvp = nvp;
+    } else if ((nvp = make_nvp(src, x->text, "content-disposition:"))) {
+	cd_nvp = nvp;
     }
   }
 
@@ -982,7 +982,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   char *body_start;
   struct line header;
   struct line *x, *nx;
-  struct nvp *ct_nvp, *cte_nvp, *cd_nvp;
+  struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
   int body_len;
 
   if (error) *error = DTR8_OK; /* default */
@@ -1010,12 +1010,12 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
       result->hdrs.from = copy_header_value(x->text);
     else if (!result->hdrs.subject && match_string("subject", x->text))
       result->hdrs.subject = copy_header_value(x->text);
-    else if (!ct_nvp && match_string("content-type", x->text))
-      ct_nvp = make_nvp(src, x->text + sizeof("content-type:") - 1);
-    else if (!cte_nvp && match_string("content-transfer-encoding", x->text))
-      cte_nvp = make_nvp(src, x->text + sizeof("content-transfer-encoding:") - 1);
-    else if (!cd_nvp && match_string("content-disposition", x->text))
-      cd_nvp = make_nvp(src, x->text + sizeof("content-disposition:") - 1);
+    else if (!ct_nvp && (nvp = make_nvp(src, x->text, "content-type:")))
+      ct_nvp = nvp;
+    else if (!cte_nvp && (nvp = make_nvp(src, x->text, "content-transfer-encoding:")))
+      cte_nvp = nvp;
+    else if (!cd_nvp && (nvp = make_nvp(src, x->text, "content-disposition:")))
+      cd_nvp = nvp;
     else if (!result->hdrs.date && match_string("date", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);
