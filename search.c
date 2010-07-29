@@ -664,6 +664,20 @@ static void create_symlink(char *link_target, char *new_link)/*{{{*/
   }
 }
 /*}}}*/
+static void mbox_terminate(const unsigned char *data, int len, FILE *out)/*{{{*/
+{
+  if (len == 0)
+    fputs("\n", out);
+  else if (len == 1) {
+    if (data[0] != '\n')
+      fputs("\n", out);
+  }
+  else if (data[len-1] != '\n')
+    fputs("\n\n", out);
+  else if (data[len-2] != '\n')
+    fputs("\n", out);
+}
+/*}}}*/
 static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
 {
   unsigned char *data;
@@ -673,6 +687,7 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
     fprintf(out, "X-source-folder: %s\n", path);
     fwrite (data, sizeof(unsigned char), len, out);
+    mbox_terminate(data, len, out);
     free_ro_mapping(data, len);
   }
   return;
@@ -726,6 +741,7 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
     fprintf(out, "X-source-folder: %s\n",
             db->data + db->mbox_paths_table[mbox_index]);
     fwrite(msg_start, sizeof(unsigned char), msg_len, out);
+    mbox_terminate(msg_start, msg_len, out);
   }
   if (mbox_start) {
     free_ro_mapping(mbox_start, mbox_len);
