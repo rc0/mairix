@@ -46,9 +46,7 @@ dfasyn : $(OBJ)
 	$(CC) $(CFLAGS) -o dfasyn $(OBJ)
 
 parse.c parse.h : parse.y
-	bison -v -d parse.y
-	mv parse.tab.c parse.c
-	mv parse.tab.h parse.h
+	bison -v -d -o parse.c parse.y
 
 parse.o : parse.c dfasyn.h
 
