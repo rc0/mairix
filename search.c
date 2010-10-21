@@ -716,7 +716,15 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
   if (!*mbox_data) return;
 
   start = *mbox_data + db->mtime_table[msg_index];
-  *msg_len = db->size_table[msg_index];
+
+  /* Ensure that we don't run off the end of the mmap'd file */
+  if (db->mtime_table[msg_index] >= *mbox_len)
+    *msg_len = 0;
+  else if (db->mtime_table[msg_index] + db->size_table[msg_index] >= *mbox_len)
+    *msg_len = *mbox_len - db->mtime_table[msg_index];
+  else
+    *msg_len = db->size_table[msg_index];
+
   compute_checksum((char *)start, *msg_len, &csum);
   if (!memcmp((db->data + db->mbox_checksum_table[mbi] + (msgi * sizeof(checksum_t))), &csum, sizeof(checksum_t))) {
     *msg_data = start;
