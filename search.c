@@ -960,7 +960,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
 
       equal = strchr(word, '=');
-      if (equal) {
+      if (equal && !do_msgid) {
         *equal = 0;
         max_errors = atoi(equal + 1);
         /* Extend this to do anchoring etc */
