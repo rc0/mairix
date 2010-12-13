@@ -800,6 +800,14 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
   *is_flagged = (db->msg_type_and_flags[idx] & FLAG_FLAGGED) ? 1 : 0;
 }
 
+static void string_tolower(char *str)
+{
+  char *p;
+  for (p=str; *p; p++) {
+    *p = tolower(*(unsigned char *)p);
+  }
+}
+
 static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose)/*{{{*/
 {
   char *colon, *start_words;
@@ -877,6 +885,10 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           default: fprintf(stderr, "Unknown key type <%c>\n", *p); break;
         }
       }
+      if (do_msgid && (p-key) > 1) {
+        fprintf(stderr, "Message-ID key <m> can't be used with other keys\n");
+        unlock_and_exit(2);
+      }
       start_words = 1 + colon;
     } else {
       do_body = do_subject = do_to = do_cc = do_from = 1;
@@ -893,6 +905,16 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         find_flag_matches_in_table(db, start_words, hit0);
       }
 
+      /* AND-combine match vectors */
+      for (i=0; i<db->n_msgs; i++) {
+        hit1[i] &= hit0[i];
+      }
+    } else if (do_msgid) {
+      char *lower_word = new_string(start_words);
+      string_tolower(lower_word);
+      memset(hit0, 0, db->n_msgs);
+      match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
+      free(lower_word);
       /* AND-combine match vectors */
       for (i=0; i<db->n_msgs; i++) {
         hit1[i] &= hit0[i];
@@ -960,7 +982,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
 
       equal = strchr(word, '=');
-      if (equal && !do_msgid) {
+      if (equal) {
         *equal = 0;
         max_errors = atoi(equal + 1);
         /* Extend this to do anchoring etc */
@@ -971,9 +993,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       /* Canonicalise search string to lowercase, since the database has all
        * tokens handled that way.  But not for path search! */
       lower_word = new_string(word);
-      for (p=lower_word; *p; p++) {
-        *p = tolower(*(unsigned char *)p);
-      }
+      string_tolower(lower_word);
 
       memset(hit0, 0, db->n_msgs);
       if (equal) {
@@ -984,7 +1004,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_body) match_substring_in_table(db, &db->body, lower_word, max_errors, left_anchor, hit0);
         if (do_att_name) match_substring_in_table(db, &db->attachment_name, lower_word, max_errors, left_anchor, hit0);
         if (do_path) match_substring_in_paths(db, word, max_errors, left_anchor, hit0);
-        if (do_msgid) match_substring_in_table2(db, &db->msg_ids, lower_word, max_errors, left_anchor, hit0);
       } else {
         if (do_to) match_string_in_table(db, &db->to, lower_word, hit0);
         if (do_cc) match_string_in_table(db, &db->cc, lower_word, hit0);
@@ -994,7 +1013,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (do_att_name) match_string_in_table(db, &db->attachment_name, lower_word, hit0);
         /* FIXME */
         if (do_path) match_substring_in_paths(db, word, 0, left_anchor, hit0);
-        if (do_msgid) match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
       }
 
       free(lower_word);
