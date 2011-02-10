@@ -1,0 +1,28 @@
+From: file@hider
+To: file@master
+Subject: my files
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="lrZ03NoBR/3+SXJZ"
+Content-Disposition: inline
+Date: Tue, 11 Jan 2011 18:53:22 +0100
+
+
+--lrZ03NoBR/3+SXJZ
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Here are my files
+
+--lrZ03NoBR/3+SXJZ
+Content-Type: text/plain; charset=us-ascii
+Content-Description: file A
+Content-Disposition: attachment; filename="first_file.txt"
+
+
+--lrZ03NoBR/3+SXJZ
+Content-Type: text/plain; charset=us-ascii; name=one_other_file.txt
+Content-Description: file B
+Content-Disposition: attachment; filename="third_file.txt"
+
+
+--lrZ03NoBR/3+SXJZ--

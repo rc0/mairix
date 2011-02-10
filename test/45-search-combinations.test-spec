@@ -1,0 +1,22 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+
+assert_dump animals
+
+search_messages animals Hippopotamus F:s
+assert_match maildir animals/cur/1294156254.3884_3.spencer:2,S
+assert_no_more_matches
+
+search_messages animals f:someidC@some.server Elephant
+assert_match mh animals/2
+assert_no_more_matches
+
+search_messages animals f:someidC@some.server Ele=
+assert_match mh animals/2
+assert_match maildir animals/cur/1294156254.3884_3.spencer:2,S
+assert_no_more_matches
+
+search_messages animals f:someidC@some.server Ele= ~Hippo=
+assert_match mh animals/2
+assert_no_more_matches

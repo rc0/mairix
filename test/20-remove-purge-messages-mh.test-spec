@@ -1,0 +1,11 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+
+assert_dump animals
+
+remove_messages mh animals
+
+assert_dump animals-removed-mh
+
+purge_database animals-removed-mh-purged

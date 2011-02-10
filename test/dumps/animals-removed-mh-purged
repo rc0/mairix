@@ -1,0 +1,124 @@
+Dump of database
+5 messages
+     0: FILE messages/maildir/animals/cur/1294156254.3884_1.spencer:2,RS, size=1111, tid=0 seen replied
+     1: FILE messages/maildir/animals/cur/1294156254.3884_3.spencer:2,S, size=1258, tid=0 seen
+     2: FILE messages/maildir/animals/new/1294156254.3884_5.spencer, size=1366, tid=0
+     3: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
+     4: MBOX 0, msg 1, offset=1431, size=1378, tid=0 seen
+
+
+MBOX INFORMATION
+1 mboxen
+   0: 2 msgs in messages/mbox/animals
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+8 entries
+Word 0 : <someidcto>
+  1 
+Word 1 : <someidato>
+  0 3 
+Word 2 : <some>
+  0 1 2 3 4 
+Word 3 : <someidbto>
+  2 4 
+Word 4 : <server>
+  0 1 2 3 4 
+Word 5 : <someidato@some.server>
+  0 3 
+Word 6 : <someidcto@some.server>
+  1 
+Word 7 : <someidbto@some.server>
+  2 4 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+8 entries
+Word 0 : <someidc>
+  1 
+Word 1 : <someida>
+  0 3 
+Word 2 : <someidb>
+  2 4 
+Word 3 : <some>
+  0 1 2 3 4 
+Word 4 : <server>
+  0 1 2 3 4 
+Word 5 : <someida@some.server>
+  0 3 
+Word 6 : <someidb@some.server>
+  2 4 
+Word 7 : <someidc@some.server>
+  1 
+--------------------------------
+Contents of <Subject> table
+6 entries
+Word 0 : <to>
+  1 2 3 4 
+Word 1 : <message>
+  0 1 2 3 4 
+Word 2 : <second>
+  1 2 3 4 
+Word 3 : <relply>
+  2 3 4 
+Word 4 : <first>
+  0 1 2 3 4 
+Word 5 : <reply>
+  1 2 3 4 
+--------------------------------
+Contents of <Body> table
+8 entries
+Word 0 : <elevator>
+  1 
+Word 1 : <elephant>
+  0 
+Word 2 : <cat>
+  3 
+Word 3 : <mouse>
+  3 
+Word 4 : <goose>
+  4 
+Word 5 : <frog>
+  4 
+Word 6 : <caterpillar>
+  2 
+Word 7 : <hippopotamus>
+  1 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+6 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  4 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  2 3 4 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  0 1 2 3 4 
+Word 3 : <20110104154522.ga3572@some.unique.id>
+  2 
+Word 4 : <20110104153949.ga3257@someid.some.unique.id>
+  2 3 4 
+Word 5 : <20110104154108.gb3257@someid.some.unique.id>
+  1 
+Chain 1
+6 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  4 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  3 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  0 
+Word 3 : <20110104154522.ga3572@some.unique.id>
+  2 
+Word 4 : <20110104153949.ga3257@someid.some.unique.id>
+  
+Word 5 : <20110104154108.gb3257@someid.some.unique.id>
+  1 
+--------------------------------

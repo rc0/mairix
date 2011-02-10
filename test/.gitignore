@@ -1,0 +1,10 @@
+*.status
+*.data
+.split_mboxen_marker
+messages/mbox_split
+messages/mh/BigMessages/1
+messages/mh/BigMessages/2
+messages/mh/BigMessages/3
+messages/mh/BigMessages/4
+
+!Makefile

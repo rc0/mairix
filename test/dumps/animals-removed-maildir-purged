@@ -1,0 +1,143 @@
+Dump of database
+4 messages
+     0: FILE messages/mh/animals/1, size=1335, tid=0
+     1: FILE messages/mh/animals/2, size=1467, tid=0
+     2: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
+     3: MBOX 0, msg 1, offset=1431, size=1378, tid=0 seen
+
+
+MBOX INFORMATION
+1 mboxen
+   0: 2 msgs in messages/mbox/animals
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+8 entries
+Word 0 : <someidcto>
+  1 
+Word 1 : <someidato>
+  2 
+Word 2 : <some>
+  0 1 2 3 
+Word 3 : <someidbto>
+  0 3 
+Word 4 : <server>
+  0 1 2 3 
+Word 5 : <someidato@some.server>
+  2 
+Word 6 : <someidcto@some.server>
+  1 
+Word 7 : <someidbto@some.server>
+  0 3 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+8 entries
+Word 0 : <someidc>
+  1 
+Word 1 : <someida>
+  2 
+Word 2 : <someidb>
+  0 3 
+Word 3 : <some>
+  0 1 2 3 
+Word 4 : <server>
+  0 1 2 3 
+Word 5 : <someida@some.server>
+  2 
+Word 6 : <someidb@some.server>
+  0 3 
+Word 7 : <someidc@some.server>
+  1 
+--------------------------------
+Contents of <Subject> table
+6 entries
+Word 0 : <to>
+  0 1 2 3 
+Word 1 : <message>
+  0 1 2 3 
+Word 2 : <second>
+  2 3 
+Word 3 : <relply>
+  0 1 2 3 
+Word 4 : <first>
+  0 1 2 3 
+Word 5 : <reply>
+  1 2 3 
+--------------------------------
+Contents of <Body> table
+20 entries
+Word 0 : <04>
+  0 1 
+Word 1 : <38>
+  0 1 
+Word 2 : <2011>
+  0 1 
+Word 3 : <39>
+  1 
+Word 4 : <tue>
+  0 1 
+Word 5 : <on>
+  0 1 
+Word 6 : <jan>
+  0 1 
+Word 7 : <elephant>
+  0 1 
+Word 8 : <49pm>
+  1 
+Word 9 : <doe>
+  0 1 
+Word 10 : <wrote>
+  0 1 
+Word 11 : <cat>
+  2 
+Word 12 : <mouse>
+  1 2 
+Word 13 : <tiger>
+  0 1 
+Word 14 : <goose>
+  3 
+Word 15 : <john>
+  0 1 
+Word 16 : <frog>
+  3 
+Word 17 : <at>
+  0 1 
+Word 18 : <33pm>
+  0 1 
+Word 19 : <0100>
+  0 1 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+5 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  3 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  2 3 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  0 1 2 3 
+Word 3 : <20110104153949.ga3257@someid.some.unique.id>
+  0 1 2 3 
+Word 4 : <20110104154238.ga3382@someid.some.unique.id>
+  1 
+Chain 1
+5 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  3 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  2 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  
+Word 3 : <20110104153949.ga3257@someid.some.unique.id>
+  0 
+Word 4 : <20110104154238.ga3382@someid.some.unique.id>
+  1 
+--------------------------------

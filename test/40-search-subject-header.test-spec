@@ -1,0 +1,28 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+## Empty search result
+search_messages AliceBobEve s:nil
+assert_no_more_matches
+
+## exact search
+search_messages AliceBobEve s:longer
+assert_match mh AliceBobEve/1
+assert_no_more_matches
+
+## substring search without restriction
+search_messages AliceBobEve lo=
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/2
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/5
+assert_match mh AliceBobEve/6
+assert_no_more_matches
+
+## substring search with restriction to subject header
+search_messages AliceBobEve s:lo=
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/5
+assert_no_more_matches

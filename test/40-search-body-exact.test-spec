@@ -1,0 +1,17 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+add_messages mh AliceBobEve
+
+assert_dump animals-and-AliceBobEve
+
+search_messages animals-and-AliceBobEve Robert
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/6
+assert_no_more_matches
+
+search_messages animals-and-AliceBobEve b:Robert
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/6
+assert_no_more_matches

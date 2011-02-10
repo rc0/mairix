@@ -85,8 +85,10 @@ clean:
 	-rm -f fromcheck.[ch] datescan.[ch]
 	-rm -f nvpscan.[ch]
 	if [ -d dfasyn ]; then cd dfasyn ; $(MAKE) clean ; fi
+	if [ -d test ]; then cd test ; $(MAKE) clean ; fi
 
 distclean: clean
+	if [ -d test ]; then cd test ; $(MAKE) distclean ; fi
 	-rm -f Makefile config.log
 
 install:
@@ -102,7 +104,10 @@ install:
 	cp -f mairixrc.5 $(man5dir)
 	chmod 444 $(man5dir)/mairixrc.5
 
-.PHONY : all install clean distclean
+check: mairix
+	if [ -d test ]; then cd test ; $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" check ; else echo "No test subdirectory?" ; exit 1 ; fi
+
+.PHONY : all install clean distclean check
 
 mairix.o : version.h
 

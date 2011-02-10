@@ -1,0 +1,11 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+search_messages AliceBobEve c:nil
+assert_no_more_matches
+
+search_messages AliceBobEve c:naive@good.heart
+assert_match mh AliceBobEve/3
+assert_no_more_matches
+

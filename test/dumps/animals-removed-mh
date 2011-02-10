@@ -1,0 +1,160 @@
+Dump of database
+7 messages
+     0: FILE messages/maildir/animals/cur/1294156254.3884_1.spencer:2,RS, size=1111, tid=0 seen replied
+     1: FILE messages/maildir/animals/cur/1294156254.3884_3.spencer:2,S, size=1258, tid=0 seen
+     2: FILE messages/maildir/animals/new/1294156254.3884_5.spencer, size=1366, tid=0
+     3: DEAD
+     4: DEAD
+     5: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
+     6: MBOX 0, msg 1, offset=1431, size=1378, tid=0 seen
+
+
+MBOX INFORMATION
+1 mboxen
+   0: 2 msgs in messages/mbox/animals
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+8 entries
+Word 0 : <someidcto>
+  1 4 
+Word 1 : <someidato>
+  0 5 
+Word 2 : <some>
+  0 1 2 3 4 5 6 
+Word 3 : <someidbto>
+  2 3 6 
+Word 4 : <server>
+  0 1 2 3 4 5 6 
+Word 5 : <someidato@some.server>
+  0 5 
+Word 6 : <someidcto@some.server>
+  1 4 
+Word 7 : <someidbto@some.server>
+  2 3 6 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+8 entries
+Word 0 : <someidc>
+  1 4 
+Word 1 : <someida>
+  0 5 
+Word 2 : <someidb>
+  2 3 6 
+Word 3 : <some>
+  0 1 2 3 4 5 6 
+Word 4 : <server>
+  0 1 2 3 4 5 6 
+Word 5 : <someida@some.server>
+  0 5 
+Word 6 : <someidb@some.server>
+  2 3 6 
+Word 7 : <someidc@some.server>
+  1 4 
+--------------------------------
+Contents of <Subject> table
+6 entries
+Word 0 : <to>
+  1 2 3 4 5 6 
+Word 1 : <message>
+  0 1 2 3 4 5 6 
+Word 2 : <second>
+  1 2 5 6 
+Word 3 : <relply>
+  2 3 4 5 6 
+Word 4 : <first>
+  0 1 2 3 4 5 6 
+Word 5 : <reply>
+  1 2 4 5 6 
+--------------------------------
+Contents of <Body> table
+23 entries
+Word 0 : <0100>
+  3 4 
+Word 1 : <elevator>
+  1 
+Word 2 : <38>
+  3 4 
+Word 3 : <2011>
+  3 4 
+Word 4 : <39>
+  4 
+Word 5 : <tue>
+  3 4 
+Word 6 : <on>
+  3 4 
+Word 7 : <jan>
+  3 4 
+Word 8 : <elephant>
+  0 3 4 
+Word 9 : <49pm>
+  4 
+Word 10 : <doe>
+  3 4 
+Word 11 : <wrote>
+  3 4 
+Word 12 : <cat>
+  5 
+Word 13 : <mouse>
+  4 5 
+Word 14 : <tiger>
+  3 4 
+Word 15 : <goose>
+  6 
+Word 16 : <john>
+  3 4 
+Word 17 : <frog>
+  6 
+Word 18 : <caterpillar>
+  2 
+Word 19 : <hippopotamus>
+  1 
+Word 20 : <at>
+  3 4 
+Word 21 : <33pm>
+  3 4 
+Word 22 : <04>
+  3 4 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+7 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  6 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  2 5 6 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  0 1 2 3 4 5 6 
+Word 3 : <20110104154522.ga3572@some.unique.id>
+  2 
+Word 4 : <20110104153949.ga3257@someid.some.unique.id>
+  2 3 4 5 6 
+Word 5 : <20110104154238.ga3382@someid.some.unique.id>
+  4 
+Word 6 : <20110104154108.gb3257@someid.some.unique.id>
+  1 
+Chain 1
+7 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  6 
+Word 1 : <20110104154404.gb3382@someid.some.unique.id>
+  5 
+Word 2 : <20110104153833.ga3126@someid.some.unique.id>
+  0 
+Word 3 : <20110104154522.ga3572@some.unique.id>
+  2 
+Word 4 : <20110104153949.ga3257@someid.some.unique.id>
+  3 
+Word 5 : <20110104154238.ga3382@someid.some.unique.id>
+  4 
+Word 6 : <20110104154108.gb3257@someid.some.unique.id>
+  1 
+--------------------------------

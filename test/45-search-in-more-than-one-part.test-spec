@@ -1,0 +1,26 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+search_messages AliceBobEve ft:eve@ils.lair
+assert_match mh AliceBobEve/2
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/5
+assert_no_more_matches
+
+search_messages AliceBobEve tc:naive@good=
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/2
+assert_match mh AliceBobEve/3
+assert_no_more_matches
+
+search_messages AliceBobEve a:amorous.bob@heart.breaker
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/5
+assert_match mh AliceBobEve/6
+assert_no_more_matches
+
+

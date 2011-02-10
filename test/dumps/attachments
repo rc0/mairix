@@ -1,0 +1,111 @@
+Dump of database
+3 messages
+     0: FILE messages/mh/attachments/1, size=869, tid=0
+     1: FILE messages/mh/attachments/2, size=654, tid=1
+     2: FILE messages/mh/attachments/3, size=233, tid=2
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+5 entries
+Word 0 : <file>
+  0 1 2 
+Word 1 : <receiver>
+  0 
+Word 2 : <file@master>
+  1 2 
+Word 3 : <master>
+  1 2 
+Word 4 : <file@receiver>
+  0 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+7 entries
+Word 0 : <file>
+  0 1 2 
+Word 1 : <file@less>
+  2 
+Word 2 : <less>
+  2 
+Word 3 : <owner>
+  0 
+Word 4 : <file@owner>
+  0 
+Word 5 : <file@hider>
+  1 
+Word 6 : <hider>
+  1 
+--------------------------------
+Contents of <Subject> table
+8 entries
+Word 0 : <my>
+  1 
+Word 1 : <have>
+  2 
+Word 2 : <do>
+  2 
+Word 3 : <i>
+  2 
+Word 4 : <not>
+  2 
+Word 5 : <three>
+  0 
+Word 6 : <files>
+  0 1 
+Word 7 : <any>
+  2 
+--------------------------------
+Contents of <Body> table
+16 entries
+Word 0 : <my>
+  1 
+Word 1 : <have>
+  2 
+Word 2 : <you>
+  0 
+Word 3 : <find>
+  0 
+Word 4 : <sorry>
+  2 
+Word 5 : <do>
+  2 
+Word 6 : <i>
+  2 
+Word 7 : <attached>
+  0 
+Word 8 : <not>
+  2 
+Word 9 : <here>
+  1 
+Word 10 : <three>
+  0 
+Word 11 : <weep>
+  2 
+Word 12 : <but>
+  2 
+Word 13 : <are>
+  1 
+Word 14 : <files>
+  0 1 2 
+Word 15 : <any>
+  2 
+--------------------------------
+Contents of <Attachment names> table
+3 entries
+Word 0 : <second_file.txt>
+  0 
+Word 1 : <first_file.txt>
+  0 1 
+Word 2 : <third_file.txt>
+  0 1 
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+0 entries
+Chain 1
+0 entries
+--------------------------------

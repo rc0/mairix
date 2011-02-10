@@ -37,17 +37,15 @@
 #include "reader.h"
 #include "memmac.h"
 
-static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const char *title)
+static void dump_token_chain(struct read_db *db, unsigned int n, unsigned int *tok_offsets, unsigned int *enc_offsets)
 {
-  int i, n, j, incr;
+  int i, j, incr;
   int on_line;
   unsigned char *foo;
-  printf("Contents of <%s> table\n", title);
-  n = tbl->n;
   printf("%d entries\n", n);
   for (i=0; i<n; i++) {
-    printf("Word %d : <%s>\n", i, db->data + tbl->tok_offsets[i]);
-    foo = (unsigned char *) db->data + tbl->enc_offsets[i];
+    printf("Word %d : <%s>\n", i, db->data + tok_offsets[i]);
+    foo = (unsigned char *) db->data + enc_offsets[i];
     j = 0;
     on_line = 0;
     printf("  ");
@@ -63,6 +61,23 @@ static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const cha
     }
     printf("\n");
   }
+}
+
+static void dump_toktable(struct read_db *db, struct toktable_db *tbl, const char *title)
+{
+  printf("Contents of <%s> table\n", title);
+  dump_token_chain( db, tbl->n, tbl->tok_offsets, tbl->enc_offsets);
+}
+
+static void dump_toktable2(struct read_db *db, struct toktable2_db *tbl, const char *title)
+{
+  unsigned int n;
+  n = tbl->n;
+  printf("Contents of <%s> table\n", title);
+  printf("Chain 0\n");
+  dump_token_chain( db, n, tbl->tok_offsets, tbl->enc0_offsets);
+  printf("Chain 1\n");
+  dump_token_chain( db, n, tbl->tok_offsets, tbl->enc1_offsets);
 }
 
 void dump_database(char *filename)
@@ -126,6 +141,8 @@ void dump_database(char *filename)
   dump_toktable(db, &db->body, "Body");
   printf("--------------------------------\n");
   dump_toktable(db, &db->attachment_name, "Attachment names");
+  printf("--------------------------------\n");
+  dump_toktable2(db, &db->msg_ids, "Message Ids");
   printf("--------------------------------\n");
 
   close_db(db);

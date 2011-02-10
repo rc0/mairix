@@ -1,0 +1,228 @@
+This file describes the format of a test specification.
+
+This document is divided into the following parts:
+  * Overview
+  * Commands for managing the configuration file
+  * Commands for managing the database
+  * Commands for message matching
+  * Examples
+
+
+
+
+* Overview ================================================================
+
+A test-specification file is built of commands, which are run sequentially in the order they appear in the test-specification file.
+Each command is on a separate line. But lines may be empty.
+
+# Servers as comment character: For each line, the first # and anything after the first # is omitted.
+
+Valid commands are (listed alphabetically):
+  add_messages
+  assert_dump
+  assert_match
+  assert_no_more_matches
+  conf_set_mformat
+  dump_database
+  log_remaining_matched_unasserted_messages
+  purge_database
+  remove_messages
+  search_messages
+
+Sorted by functions's purpose, we may break above list down into:
+  - Commands for managing the configuration file
+       conf_set_mformat
+
+  - Commands for managing the database
+       add_messages
+       assert_dump
+       dump_database
+       purge_database
+       remove_messages
+
+  - Commands for message matching
+       search_messages
+       assert_match
+       assert_no_more_matches
+       log_remaining_matched_unasserted_messages
+
+
+
+
+* Commands for managing the configuration file ============================
+
++--------------------------------------------------------------------------
+| conf_set_mformat FORMAT
++--------------------------------------------------------------------------
+| Sets the mformat parameter (i.e.: The format in which the matched
+| messages shall be presented) of the mairix configuration file to FORMAT.
+| FORMAT can be either maildir, mh, or box. This parameter does not affect
+| the previously conducted search, but only the upcoming searches.
++--------------------------------------------------------------------------
+
+
+
+
+* Commands for managing the database ======================================
+
++--------------------------------------------------------------------------
+| add_messages FORMAT MESSAGE
++--------------------------------------------------------------------------
+| adds a message to the database. FORMAT has to be either maildir, mh, or
+| mbox. Depending on FORMAT, MESSAGE refers to a maildir, mh folder, or
+| mbox in the corresponding subdirectory of the base directory.
+|
+| E.g.:
+|   add_message maildir animals
+| adds all messages in the maildir messages/maildir/animals to the
+| database. Accordingly,
+|   add_message mbox animals
+| adds all messages in the mbox messages/mbox/animals to the database.
++--------------------------------------------------------------------------
+
+
++--------------------------------------------------------------------------
+| assert_dump DUMPFILE
++--------------------------------------------------------------------------
+| asserts that the dump stored in DUMPFILE reflects the current state of
+| the database. DUMPFILE has to be relative to the dumps subdirectory in
+| the base directory.
+|
+| A dump of the current database gets stored in database.dump in the
+| test's data directory.
+|
+| If the dump stored in DUMPFILE does not reflect the current state of the
+| database, the test is aborted.
+|
+| Note: To see why the dump stored in DUMPFILE does not match the state of
+| the current database, you may diff the DUMPFILE and the database.dump
+| file in the test's data directory.
++--------------------------------------------------------------------------
+
+
++--------------------------------------------------------------------------
+| dump_database DUMPFILE
++--------------------------------------------------------------------------
+| dumps the current database to DUMPFILE, which has to be either absolute
+| or relative to the base directory.
+|
+| This function is mainly useful when developing new tests.
++--------------------------------------------------------------------------
+
+
++--------------------------------------------------------------------------
+| purge_database DUMPFILE
++--------------------------------------------------------------------------
+| purges the database and asserts that DUMPFILE respresents the state of
+| the database after the purging. DUMPFILE has to be relative to the dumps
+| subdirectory in the base directory.
+|
+| If the dump stored in DUMPFILE does not reflect the state of the
+| database after purging, the test is aborted.
++--------------------------------------------------------------------------
+
++--------------------------------------------------------------------------
+| remove_messages FORMAT MESSAGE1 MESSAGE2 MESSAGE3 ...
++--------------------------------------------------------------------------
+| removes the given messages from the database. FORMAT has to be either
+| maildir, mh, or mbox. Depending on FORMAT, MESSAGE refers to a maildir,
+| mh folder, or mbox in the corresponding subdirectory of the base
+| directory.
+|
+| E.g.:
+|   remove_message maildir animals
+| removes all messages in the maildir messages/maildir/animals from the
+| database. Accordingly,
+|   remove_message mbox animals
+| removes all messages in the mbox messages/mbox/animals from the database.
++--------------------------------------------------------------------------
+
+
+
+
+* Commands for message matching ===========================================
+
++--------------------------------------------------------------------------
+| search_messages DUMPFILE EXPR1 EXPR2 EXPR3 ...
++--------------------------------------------------------------------------
+| Runs a mairix search using EXPR1 EXPR2 EXPR3 on the database and asserts
+| that DUMPFILE represents the database /after/ searching. DUMPFILE has to
+| be relative to the dumps subdirectory in the base directory
+|
+| After a search_message, specify all the found messages using the
+| assert_match function and close the search using the
+| assert_no_more_matches function.
++--------------------------------------------------------------------------
+
+
++--------------------------------------------------------------------------
+| assert_match FORMAT MESSAGE
++--------------------------------------------------------------------------
+| asserts that the previously conducted search matched the given message.
+| FORMAT can be either maildir, mh, or mbox and signifies the folder format
+| of the message to assert. MESSAGE is a /single/ message in
+|   messages/maildir/     if FORMAT is maildir,
+|   messages/mh/          if FORMAT is mh, or
+|   messages/mbox_split/  if FORMAT is mbox.
+|
+| If the given message has not been matched in the previous search, the
+| test is aborted.
+|
+| E.g.:
+|   assert_match maildir animals/new/1294156254.3884_5.spencer
+| asserts that messages/maildir/animals/new/1294156254.3884_5.spencer
+| has been matched by the previous search.
+|   assert_match mbox animals/part.0
+| asserts that messages/mbox_split/animals/part.0 (i.e.: the first message
+| within the mbox messages/mbox/animals) has been matched by the previous
+| search.
++--------------------------------------------------------------------------
+
++--------------------------------------------------------------------------
+| assert_no_more_matches
++--------------------------------------------------------------------------
+| asserts that all messages matched in the previous search have been
+| asserted using assert_match.
+|
+| If there are still matched, but unasserted messages left from the
+| previous search, the test is aborted.
++--------------------------------------------------------------------------
+
+
++--------------------------------------------------------------------------
+| log_remaining_matched_unasserted_messages
++--------------------------------------------------------------------------
+| This function lists pointers to the messages that have been matched in
+| the previous search, but have not yet been asserted using assert_match.
+|
+| This function is mainly useful when developing new tests.
++--------------------------------------------------------------------------
+
+
+* Examples ================================================================
+
+All files ending in .test-spec in this directory serve as simple examples.
+However, below we provide an annotated example of a test, that should
+succeed.
+
+--- example.test-spec --- BEGIN -------------------------------------------
+add_messages mh AliceBobEve        # adds the mh messages underneath
+                                   # messages/mh/AliceBobEve
+
+search_messages AliceBobEve t:amorous.bob@heart.breaker
+                                   # Asserts that the current database
+                                   # corresponds to dumps/AliceBobEve
+                                   # and conducts a search for messages
+                                   # where the To header contains
+                                   # amorous.bob@heart.breaker
+
+assert_match mh AliceBobEve/4      # asserts that messages/mh/AliceBobEve/4
+                                   # has been matched
+
+assert_match mh AliceBobEve/6      # asserts that messages/mh/AliceBobEve/7
+                                   # has been matched
+
+assert_no_more_matches             # asserts that the previous search did
+                                   # not yield any further matches
+--- example.test-spec --- END ---------------------------------------------
+

@@ -1,0 +1,276 @@
+Dump of database
+6 messages
+     0: FILE messages/mh/AliceBobEve/1, size=279, tid=0
+     1: FILE messages/mh/AliceBobEve/2, size=355, tid=1
+     2: FILE messages/mh/AliceBobEve/3, size=341, tid=2
+     3: FILE messages/mh/AliceBobEve/4, size=379, tid=3
+     4: FILE messages/mh/AliceBobEve/5, size=250, tid=4
+     5: FILE messages/mh/AliceBobEve/6, size=383, tid=5
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+13 entries
+Word 0 : <eve@ils.lair>
+  2 4 
+Word 1 : <amorous.bob@heart.breaker>
+  3 5 
+Word 2 : <breaker>
+  3 5 
+Word 3 : <naive@good.heart>
+  0 1 
+Word 4 : <amorous>
+  3 5 
+Word 5 : <ils>
+  2 4 
+Word 6 : <bob>
+  3 5 
+Word 7 : <naive>
+  0 1 
+Word 8 : <lair>
+  2 4 
+Word 9 : <alice>
+  0 1 
+Word 10 : <heart>
+  0 1 3 5 
+Word 11 : <eve>
+  2 4 
+Word 12 : <good>
+  0 1 
+--------------------------------
+Contents of <Cc> table
+4 entries
+Word 0 : <naive@good.heart>
+  2 
+Word 1 : <naive>
+  2 
+Word 2 : <heart>
+  2 
+Word 3 : <good>
+  2 
+--------------------------------
+Contents of <From> table
+21 entries
+Word 0 : <that>
+  5 
+Word 1 : <let>
+  5 
+Word 2 : <eve@ils.lair>
+  1 3 
+Word 3 : <amorous.bob@heart.breaker>
+  0 2 4 
+Word 4 : <you>
+  5 
+Word 5 : <breaker>
+  0 2 4 
+Word 6 : <no.longer.naive@good.heart.that.will.let.you.bleed>
+  5 
+Word 7 : <amorous>
+  0 2 4 
+Word 8 : <ils>
+  1 3 
+Word 9 : <bleed>
+  5 
+Word 10 : <robert>
+  0 
+Word 11 : <longer>
+  5 
+Word 12 : <bob>
+  0 2 4 
+Word 13 : <naive>
+  5 
+Word 14 : <lair>
+  1 3 
+Word 15 : <alice>
+  5 
+Word 16 : <no>
+  5 
+Word 17 : <heart>
+  0 2 4 5 
+Word 18 : <eve>
+  1 3 
+Word 19 : <good>
+  5 
+Word 20 : <will>
+  5 
+--------------------------------
+Contents of <Subject> table
+17 entries
+Word 0 : <secret>
+  0 
+Word 1 : <let>
+  1 
+Word 2 : <lost>
+  4 
+Word 3 : <so>
+  0 2 3 
+Word 4 : <track>
+  2 3 
+Word 5 : <off>
+  2 3 
+Word 6 : <go>
+  1 
+Word 7 : <totally>
+  2 3 
+Word 8 : <longer>
+  0 
+Word 9 : <not>
+  0 
+Word 10 : <the>
+  2 3 
+Word 11 : <alice>
+  5 
+Word 12 : <your>
+  2 3 
+Word 13 : <get>
+  4 
+Word 14 : <new>
+  5 
+Word 15 : <any>
+  0 
+Word 16 : <re>
+  3 
+--------------------------------
+Contents of <Body> table
+53 entries
+Word 0 : <stand>
+  1 
+Word 1 : <t>
+  5 
+Word 2 : <altogether>
+  5 
+Word 3 : <you>
+  0 1 2 3 5 
+Word 4 : <in>
+  1 
+Word 5 : <of>
+  5 
+Word 6 : <feel>
+  3 
+Word 7 : <he>
+  1 
+Word 8 : <why>
+  5 
+Word 9 : <just>
+  3 
+Word 10 : <someone>
+  2 
+Word 11 : <hi>
+  5 
+Word 12 : <to>
+  5 
+Word 13 : <over>
+  5 
+Word 14 : <don>
+  5 
+Word 15 : <with>
+  1 
+Word 16 : <stalk>
+  2 
+Word 17 : <do>
+  1 2 
+Word 18 : <cannot>
+  1 3 
+Word 19 : <leave>
+  1 2 
+Word 20 : <see>
+  4 
+Word 21 : <ll>
+  3 
+Word 22 : <i>
+  0 2 3 5 
+Word 23 : <else>
+  2 
+Word 24 : <once>
+  3 
+Word 25 : <go>
+  2 
+Word 26 : <robert>
+  3 5 
+Word 27 : <is>
+  1 
+Word 28 : <our>
+  1 
+Word 29 : <know>
+  3 
+Word 30 : <oh>
+  3 
+Word 31 : <got>
+  5 
+Word 32 : <bob>
+  1 
+Word 33 : <address>
+  5 
+Word 34 : <a>
+  5 
+Word 35 : <alone>
+  1 2 
+Word 36 : <way>
+  1 
+Word 37 : <not>
+  1 2 
+Word 38 : <come>
+  5 
+Word 39 : <alice>
+  5 
+Word 40 : <rid>
+  5 
+Word 41 : <subject>
+  4 
+Word 42 : <email>
+  5 
+Word 43 : <get>
+  1 5 
+Word 44 : <now>
+  3 
+Word 45 : <but>
+  3 
+Word 46 : <it>
+  3 
+Word 47 : <new>
+  5 
+Word 48 : <away>
+  2 
+Word 49 : <love>
+  0 1 2 3 
+Word 50 : <eve>
+  1 2 3 5 
+Word 51 : <me>
+  1 2 3 5 
+Word 52 : <will>
+  3 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+6 entries
+Word 0 : <first@message.center>
+  0 
+Word 1 : <fifth@message.center>
+  4 
+Word 2 : <fourth@message.center>
+  3 
+Word 3 : <third@message.center>
+  2 
+Word 4 : <sixth@message.center>
+  5 
+Word 5 : <second@message.center>
+  1 
+Chain 1
+6 entries
+Word 0 : <first@message.center>
+  0 
+Word 1 : <fifth@message.center>
+  4 
+Word 2 : <fourth@message.center>
+  3 
+Word 3 : <third@message.center>
+  2 
+Word 4 : <sixth@message.center>
+  5 
+Word 5 : <second@message.center>
+  1 
+--------------------------------

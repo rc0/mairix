@@ -1,0 +1,5 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+
+assert_dump animals

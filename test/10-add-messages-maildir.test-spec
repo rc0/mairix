@@ -1,0 +1,3 @@
+add_messages maildir animals
+
+assert_dump animals-maildir

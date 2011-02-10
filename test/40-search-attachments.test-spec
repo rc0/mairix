@@ -1,0 +1,15 @@
+add_messages mh attachments
+
+assert_dump attachments
+
+search_messages attachments n:first
+assert_no_more_matches
+
+search_messages attachments n:first=
+assert_match mh attachments/1
+assert_match mh attachments/2
+assert_no_more_matches
+
+search_messages attachments n:second_file.txt
+assert_match mh attachments/1
+assert_no_more_matches

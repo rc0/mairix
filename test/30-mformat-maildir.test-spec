@@ -1,0 +1,49 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+
+assert_dump animals
+
+conf_set_mformat maildir
+
+## from all different kinds of sources
+search_messages animals a:server
+assert_match maildir animals/cur/1294156254.3884_1.spencer:2,RS
+assert_match maildir animals/cur/1294156254.3884_3.spencer:2,S
+assert_match maildir animals/new/1294156254.3884_5.spencer
+assert_match mh animals/1
+assert_match mh animals/2
+assert_match mbox animals/part.0
+assert_match mbox animals/part.1
+assert_no_more_matches
+
+## from all different kinds of sources only a part of a mbox
+search_messages animals Elephant/Mouse
+assert_match maildir animals/cur/1294156254.3884_1.spencer:2,RS
+assert_match mh animals/1
+assert_match mh animals/2
+assert_match mbox animals/part.0
+assert_no_more_matches
+
+## match in only maildir
+search_messages animals Caterpillar/Elevator
+assert_match maildir animals/cur/1294156254.3884_3.spencer:2,S
+assert_match maildir animals/new/1294156254.3884_5.spencer
+assert_no_more_matches
+
+## match in only mh
+search_messages animals Tiger
+assert_match mh animals/1
+assert_match mh animals/2
+assert_no_more_matches
+
+## match in only mbox
+search_messages animals Frog/Cat
+assert_match mbox animals/part.0
+assert_match mbox animals/part.1
+assert_no_more_matches
+
+## match in only part of mbox
+search_messages animals Frog
+assert_match mbox animals/part.1
+assert_no_more_matches

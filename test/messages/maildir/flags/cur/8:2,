@@ -1,0 +1,9 @@
+From: sender@my.server
+To: receiver@other.server
+Subject: unflagged unreplied unseen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Date: Tue, 11 Jan 2011 18:55:47 +0100
+
+No interesting body

@@ -1,0 +1,19 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+search_messages AliceBobEve m:third@message.center
+assert_match mh AliceBobEve/3
+assert_no_more_matches
+
+
+search_messages AliceBobEve m:fifth@message.center
+assert_match mh AliceBobEve/5
+assert_no_more_matches
+
+search_messages AliceBobEve m:third@message.center/fifth@message.center
+# nor "or" part, when searching for messages
+#assert_match mh AliceBobEve/3
+#assert_match mh AliceBobEve/5
+assert_no_more_matches
+

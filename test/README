@@ -1,0 +1,97 @@
+This file describes the automated testing framework for mairix
+
+===============================================================================
+Most important commands
+===============================================================================
+
+The most important commands are:
+
+  make test   -- runs all tests but stops at the first test
+  make check  -- runs all tests but does not stop at failed tests
+
+===============================================================================
+How to write new tests:
+===============================================================================
+
+Simply create a new file ending in .test-spec in the directory of this README
+file. The required syntax of the test specification is documented in
+README.format. Upon "make test" or "make check" the new test is automatically
+included and executed in the test suite. To run the test specification
+FILE.test-spec individually, issue
+  make test-FILE
+.
+
+===============================================================================
+More detailed look at the test suite:
+===============================================================================
+
+Each of "make test" or "make check" looks for all available tests (all
+.test-spec files in this directory) an runs them.
+
+Each test is stored in a .test-spec file within this directory and to run
+the test of FILE.test-spec isolated, typically
+  make test-FILE
+is used. Thereby, the script scripts/test.sh interprets the test specification
+given in FILE.test-spec and outputs all logging, databases, etc in the
+directory FILE.data. Hence, if a test fails, FILE.data is the place to find
+more information.
+
+All relevant information about a test specification FILE.test-spec can be found
+in the following files:
+
+  FILE.data/log contains the detailed log of what happened and in which line
+                of FILE.test-spec, the test failed.
+
+  FILE.data/database is the current state of the database
+
+  FILE.data/database.dump is the most up-to-date dump of the database. Note
+                          that this dump is automatically updated whenever
+                          searching for a message.
+
+  FILE.data/mairixrc is the current configuration file used for mairix.
+
+  FILE.data/messages contains the messages added in the current test.
+
+  FILE.data/search_result may be a file or a directory and contains the most
+                          recent search result in the requested format
+                          (maildir, mh, mbox). Already asserted matches are
+                          not removed from this directory. Hence it allows to
+                          get a picture of the previous search, even if some,
+                          but not all matches have been asserted.
+
+  FILE.data/search_result_split is only used for searches conducted in mbox
+                                format. For such searches, this directory
+                                contains the individual messages of the
+                                FILE.data/search_result mbox. The 1st message
+                                of FILE.data/search_result is stored in
+                                FILE.data/search_result_split/part.0
+                                The 2nd in
+                                FILE.data/search_result_split/part.1
+                                and so on.
+
+  FILE.test-spec is the test specification itself
+  FILE.status contains the status of the most-recent invocation of this test.
+              Typically either "failed" or "passed".
+
+Of the above files, all (except for FILE.test-spec) are automatically
+generated upon need, when running
+  make test-FILE
+.
+
+Besides above test specific files, there are the following files and
+directories:
+
+  messages contains the messages used in the tests
+  dumps contains the databases' dumps used for checking the validity of the
+        databases.
+  scripts contains the relevant scripts used in the test suite.
+  scripts/generate_big_message.sh is used to generate big messages, which
+                                  would unnecessarily increase the released
+                                  tarball. Those messages are however useful
+                                  when searching messages by the file size.
+  scripts/print_test_statistics.sh summarizes all the .status files
+  scripts/split_mbox.sh splits an mbox into individual messages, to allow
+                        fine grained message assertion even for mboxen.
+  scripts/test.sh is the intepreter of a test specification
+  README is the file you are currently reading.
+  README.format gives the syntax of a test specification.

@@ -1,0 +1,35 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+## Empty search result
+search_messages AliceBobEve t:nil
+assert_no_more_matches
+
+## Search by To: address
+search_messages AliceBobEve t:amorous.bob@heart.breaker
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/6
+assert_no_more_matches
+
+## Search by name within To: address
+search_messages AliceBobEve t:Alice
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/2
+assert_no_more_matches
+
+## Search by substrng without restriction
+search_messages AliceBobEve eve=
+assert_match mh AliceBobEve/2
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/4
+assert_match mh AliceBobEve/5
+assert_match mh AliceBobEve/6
+assert_no_more_matches
+
+## Search by substrng without restriction to To headers
+search_messages AliceBobEve t:eve=
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/5
+assert_no_more_matches
+

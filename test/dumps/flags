@@ -1,0 +1,72 @@
+Dump of database
+8 messages
+     0: FILE messages/maildir/flags/cur/1:2,FRS, size=227, tid=0 seen replied flagged
+     1: FILE messages/maildir/flags/cur/2:2,RS, size=229, tid=1 seen replied
+     2: FILE messages/maildir/flags/cur/3:2,FS, size=231, tid=2 seen flagged
+     3: FILE messages/maildir/flags/cur/4:2,S, size=231, tid=3 seen
+     4: FILE messages/maildir/flags/cur/5:2,FR, size=229, tid=4 replied flagged
+     5: FILE messages/maildir/flags/cur/8:2,, size=233, tid=5
+     6: FILE messages/maildir/flags/new/6:2,R, size=231, tid=6 replied
+     7: FILE messages/maildir/flags/new/7:2,F, size=231, tid=7 flagged
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <other>
+  0 1 2 3 4 5 6 7 
+Word 1 : <server>
+  0 1 2 3 4 5 6 7 
+Word 2 : <receiver>
+  0 1 2 3 4 5 6 7 
+Word 3 : <receiver@other.server>
+  0 1 2 3 4 5 6 7 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+4 entries
+Word 0 : <my>
+  0 1 2 3 4 5 6 7 
+Word 1 : <sender@my.server>
+  0 1 2 3 4 5 6 7 
+Word 2 : <sender>
+  0 1 2 3 4 5 6 7 
+Word 3 : <server>
+  0 1 2 3 4 5 6 7 
+--------------------------------
+Contents of <Subject> table
+6 entries
+Word 0 : <unflagged>
+  1 3 5 6 
+Word 1 : <unseen>
+  2 4 5 6 7 
+Word 2 : <seen>
+  0 1 3 
+Word 3 : <flagged>
+  0 2 4 7 
+Word 4 : <unreplied>
+  2 3 5 7 
+Word 5 : <replied>
+  0 1 4 6 
+--------------------------------
+Contents of <Body> table
+3 entries
+Word 0 : <interesting>
+  0 1 2 3 4 5 6 7 
+Word 1 : <body>
+  0 1 2 3 4 5 6 7 
+Word 2 : <no>
+  0 1 2 3 4 5 6 7 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+0 entries
+Chain 1
+0 entries
+--------------------------------

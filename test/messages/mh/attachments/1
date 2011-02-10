@@ -1,0 +1,34 @@
+From: file@owner
+To: file@receiver
+Subject: three files
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="huq684BweRXVnRxX"
+Content-Disposition: inline
+Date: Tue, 11 Jan 2011 18:43:51 +0100
+
+
+--huq684BweRXVnRxX
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Attached, you find three files.
+
+--huq684BweRXVnRxX
+Content-Type: text/plain; charset=us-ascii; name=one.txt
+Content-Description: An empty file
+Content-Disposition: attachment; filename="first_file.txt"
+
+
+--huq684BweRXVnRxX
+Content-Type: text/plain; charset=us-ascii; name=two.txt
+Content-Description: A file without content
+Content-Disposition: attachment; filename="second_file.txt"
+
+
+--huq684BweRXVnRxX
+Content-Type: text/plain; charset=us-ascii; name=three.txt
+Content-Description: Not much
+Content-Disposition: attachment; filename="third_file.txt"
+
+
+--huq684BweRXVnRxX--

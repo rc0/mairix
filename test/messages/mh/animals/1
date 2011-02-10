@@ -1,0 +1,34 @@
+Return-Path: <someid@some.server>
+Delivered-To: PFX delivery to someid@some.server
+Received: from pop.pop.domain [212.227.17.169]
+	by spencer.some.domain with POP3 (fetchmail-6.3.16)
+	for <someid@localhost> (single-drop); Tue, 04 Jan 2011 16:41:27 +0100 (CET)
+Received: (qmail invoked by alias); 04 Jan 2011 15:39:51 -0000
+Received: from xk14-33.server.country (EHLO localhost) [5.5.28.33]
+  by mail.pop.domain (mp006) with SMTP; 04 Jan 2011 16:39:51 +0100
+X-Authenticated: #2854174
+X-Provags-ID: V01U2FsdGVkX18TPTFTEgkTeRcj+AyzI0Ca2mmuJVbezTFg5Ld3pf
+	PzraUHevJ/25n/
+Date: Tue, 4 Jan 2011 16:39:49 +0100
+From: someidB@some.server
+To: someidBto@some.server
+Subject: First Relply to first Message
+Message-ID: <20110104153949.GA3257@someid.some.unique.id>
+References: <20110104153833.GA3126@someid.some.unique.id>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110104153833.GA3126@someid.some.unique.id>
+X-PFX-Antivirus: 0 (no virus found)
+X-PFX-Antispam: 0 (Mail was not recognized as spam);
+ Detail=5D7Q89H36p5xOp9NadjzZ8pTpoDrhxfLb5d6X/hHsbQfQnPxfRi+HjywWomBJ/jWRTx3q
+ 0LntzDxYVXxB0UCed4ma1opj377N6Cgsyru6srOZNFLKM3CIi5mq5N1aibaPpQo56kHaW5h+camK
+ jQH5A==V1;
+Status: RO
+X-Status: A
+Content-Length: 76
+
+Tiger
+
+On Tue, Jan 04, 2011 at 04:38:33PM +0100, John Doe wrote:
+> Elephant

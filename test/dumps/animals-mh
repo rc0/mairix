@@ -1,0 +1,112 @@
+Dump of database
+2 messages
+     0: FILE messages/mh/animals/1, size=1335, tid=0
+     1: FILE messages/mh/animals/2, size=1467, tid=0
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+6 entries
+Word 0 : <some>
+  0 1 
+Word 1 : <someidcto>
+  1 
+Word 2 : <someidbto@some.server>
+  0 
+Word 3 : <someidbto>
+  0 
+Word 4 : <server>
+  0 1 
+Word 5 : <someidcto@some.server>
+  1 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+6 entries
+Word 0 : <some>
+  0 1 
+Word 1 : <someidb>
+  0 
+Word 2 : <someidc>
+  1 
+Word 3 : <someidb@some.server>
+  0 
+Word 4 : <server>
+  0 1 
+Word 5 : <someidc@some.server>
+  1 
+--------------------------------
+Contents of <Subject> table
+5 entries
+Word 0 : <to>
+  0 1 
+Word 1 : <relply>
+  0 1 
+Word 2 : <first>
+  0 1 
+Word 3 : <message>
+  0 1 
+Word 4 : <reply>
+  1 
+--------------------------------
+Contents of <Body> table
+17 entries
+Word 0 : <0100>
+  0 1 
+Word 1 : <wrote>
+  0 1 
+Word 2 : <tue>
+  0 1 
+Word 3 : <33pm>
+  0 1 
+Word 4 : <39>
+  1 
+Word 5 : <jan>
+  0 1 
+Word 6 : <tiger>
+  0 1 
+Word 7 : <04>
+  0 1 
+Word 8 : <49pm>
+  1 
+Word 9 : <2011>
+  0 1 
+Word 10 : <john>
+  0 1 
+Word 11 : <38>
+  0 1 
+Word 12 : <on>
+  0 1 
+Word 13 : <elephant>
+  0 1 
+Word 14 : <doe>
+  0 1 
+Word 15 : <at>
+  0 1 
+Word 16 : <mouse>
+  1 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+3 entries
+Word 0 : <20110104153833.ga3126@someid.some.unique.id>
+  0 1 
+Word 1 : <20110104154238.ga3382@someid.some.unique.id>
+  1 
+Word 2 : <20110104153949.ga3257@someid.some.unique.id>
+  0 1 
+Chain 1
+3 entries
+Word 0 : <20110104153833.ga3126@someid.some.unique.id>
+  
+Word 1 : <20110104154238.ga3382@someid.some.unique.id>
+  1 
+Word 2 : <20110104153949.ga3257@someid.some.unique.id>
+  0 
+--------------------------------

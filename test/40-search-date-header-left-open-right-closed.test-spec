@@ -1,0 +1,33 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+## Sweeping through by end date ####################
+search_messages AliceBobEve d:-20100101
+assert_no_more_matches
+
+search_messages AliceBobEve d:-20101231
+assert_match mh AliceBobEve/1    # i.e.:2010-12-30 17:57:41 +0100
+assert_match mh AliceBobEve/2    # i.e.:2010-12-31 17:58:41 +0100
+assert_no_more_matches
+
+search_messages AliceBobEve d:-20110101
+assert_match mh AliceBobEve/1    # i.e.:2010-12-30 17:57:41 +0100
+assert_match mh AliceBobEve/2    # i.e.:2010-12-31 17:58:41 +0100
+assert_match mh AliceBobEve/3    # i.e.:2011-01-01 17:59:41 +0100
+assert_no_more_matches
+
+search_messages AliceBobEve d:-20110401
+assert_match mh AliceBobEve/1    # i.e.:2010-12-30 17:57:41 +0100
+assert_match mh AliceBobEve/2    # i.e.:2010-12-31 17:58:41 +0100
+assert_match mh AliceBobEve/3    # i.e.:2011-01-01 17:59:41 +0100
+assert_no_more_matches
+
+search_messages AliceBobEve d:-20121031
+assert_match mh AliceBobEve/1    # i.e.:2010-12-30 17:57:41 +0100
+assert_match mh AliceBobEve/2    # i.e.:2010-12-31 17:58:41 +0100
+assert_match mh AliceBobEve/3    # i.e.:2011-01-01 17:59:41 +0100
+assert_match mh AliceBobEve/4    # i.e.:2011-05-19 18:00:41 +0100
+assert_match mh AliceBobEve/5    # i.e.:2011-10-02 18:01:41 +0100
+assert_match mh AliceBobEve/6    # i.e.:2011-12-31 18:02:41 +0100
+assert_no_more_matches

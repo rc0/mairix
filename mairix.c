@@ -491,6 +491,8 @@ int main (int argc, char **argv)/*{{{*/
   int do_forced_unlock = 0;
   int do_fast_index = 0;
 
+  unsigned int forced_hash_key = CREATE_RANDOM_DATABASE_HASH;
+
   struct globber_array *omit_globs;
 
   int result;
@@ -537,6 +539,17 @@ int main (int argc, char **argv)/*{{{*/
     } else if (!strcmp(*argv, "-F") ||
                !strcmp(*argv, "--fast-index")) {
       do_fast_index = 1;
+    } else if (!strcmp(*argv, "--force-hash-key-new-database")) {
+      ++argv, --argc;
+      if (!argc) {
+        fprintf(stderr, "No hash key given after --force-hash-key-new-database\n");
+        exit(1);
+      }
+      if ( 1 != sscanf(*argv, "%u", &forced_hash_key) )
+	{
+        fprintf(stderr, "Hash key given after --force-hash-key-new-database could not be parsed\n");
+        exit(1);
+	}
     } else if (!strcmp(*argv, "-v") || !strcmp(*argv, "--verbose")) {
       verbose = 1;
     } else if (!strcmp(*argv, "-V") || !strcmp(*argv, "--version")) {
@@ -727,7 +740,7 @@ int main (int argc, char **argv)/*{{{*/
       if (verbose) printf("Loaded %d existing messages\n", db->n_msgs);
     } else if (ftype == M_NONE) {
       if (verbose) printf("Starting new database\n");
-      db = new_database();
+      db = new_database( forced_hash_key );
     } else {
       fprintf(stderr, "database path %s is not a file; you can't put the database there\n", database_path);
       unlock_and_exit(2);

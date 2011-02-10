@@ -1,0 +1,92 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+search_messages AliceBobEve z:200-
+assert_match mh AliceBobEve/1    # i.e.:279
+assert_match mh AliceBobEve/2    # i.e.:355
+assert_match mh AliceBobEve/3    # i.e.:341
+assert_match mh AliceBobEve/4    # i.e.:379
+assert_match mh AliceBobEve/5    # i.e.:250
+assert_match mh AliceBobEve/6    # i.e.:383
+assert_no_more_matches
+
+search_messages AliceBobEve z:279-
+assert_match mh AliceBobEve/2    # i.e.:355
+assert_match mh AliceBobEve/3    # i.e.:341
+assert_match mh AliceBobEve/4    # i.e.:379
+assert_match mh AliceBobEve/6    # i.e.:383
+assert_no_more_matches
+
+search_messages AliceBobEve z:400-
+assert_no_more_matches
+
+search_messages AliceBobEve z:1k-
+assert_no_more_matches
+
+search_messages AliceBobEve z:400k-
+assert_no_more_matches
+
+search_messages AliceBobEve z:4M-
+assert_no_more_matches
+
+search_messages AliceBobEve z:6M-
+assert_no_more_matches
+
+########################################
+# Repeating tests with some bigger files
+add_messages mh BigMessages
+
+assert_dump AliceBobEve-and-BigMessages
+
+search_messages AliceBobEve-and-BigMessages z:200-
+assert_match mh AliceBobEve/1    # i.e.:279
+assert_match mh AliceBobEve/2    # i.e.:355
+assert_match mh AliceBobEve/3    # i.e.:341
+assert_match mh AliceBobEve/4    # i.e.:379
+assert_match mh AliceBobEve/5    # i.e.:250
+assert_match mh AliceBobEve/6    # i.e.:383
+assert_match mh BigMessages/1    # i.e.:300k
+assert_match mh BigMessages/2    # i.e.:530k
+assert_match mh BigMessages/3    # i.e.:2.4M
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:279-
+assert_match mh AliceBobEve/2    # i.e.:355
+assert_match mh AliceBobEve/3    # i.e.:341
+assert_match mh AliceBobEve/4    # i.e.:379
+assert_match mh AliceBobEve/6    # i.e.:383
+assert_match mh BigMessages/1    # i.e.:300k
+assert_match mh BigMessages/2    # i.e.:530k
+assert_match mh BigMessages/3    # i.e.:2.4M
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:400-
+assert_match mh BigMessages/1    # i.e.:300k
+assert_match mh BigMessages/2    # i.e.:530k
+assert_match mh BigMessages/3    # i.e.:2.4M
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:1k-
+assert_match mh BigMessages/1    # i.e.:300k
+assert_match mh BigMessages/2    # i.e.:530k
+assert_match mh BigMessages/3    # i.e.:2.4M
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:400k-
+assert_match mh BigMessages/2    # i.e.:530k
+assert_match mh BigMessages/3    # i.e.:2.4M
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:4M-
+assert_match mh BigMessages/4    # i.e.:5.0M
+assert_no_more_matches
+
+search_messages AliceBobEve-and-BigMessages z:6M-
+assert_no_more_matches
+

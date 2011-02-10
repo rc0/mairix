@@ -39,6 +39,9 @@ mairix \- index and search mail folders
 .I mairixrc
 ] [
 .BR \-F | \-\-fast-index
+] [
+.BR \-\-force-hash-key-new-database
+.I hash
 ]
 
 .SS Searching
@@ -196,6 +199,15 @@ in the database, it should assume the message is unchanged.
 
 A later indexing run without using this option will fix up any rescans that
 were missed due to its use.
+
+.TP
+.BI "--force-hash-key-new-database " hash
+.br
+This option should only be used for debugging.
+.br
+If a new database is created,
+.I hash
+is used as hash key, instead of a random hash.
 
 .SS Search options
 .TP

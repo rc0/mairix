@@ -1,0 +1,58 @@
+add_messages maildir flags
+
+assert_dump flags
+
+search_messages flags F:s
+assert_match maildir flags/cur/1:2,FRS
+assert_match maildir flags/cur/2:2,RS
+assert_match maildir flags/cur/3:2,FS
+assert_match maildir flags/cur/4:2,S
+assert_no_more_matches
+
+search_messages flags F:-s
+assert_match maildir flags/cur/5:2,FR
+assert_match maildir flags/new/6:2,R
+assert_match maildir flags/new/7:2,F
+assert_match maildir flags/cur/8:2,
+assert_no_more_matches
+
+search_messages flags F:f
+assert_match maildir flags/cur/1:2,FRS
+assert_match maildir flags/cur/3:2,FS
+assert_match maildir flags/cur/5:2,FR
+assert_match maildir flags/new/7:2,F
+assert_no_more_matches
+
+search_messages flags F:-f
+assert_match maildir flags/cur/2:2,RS
+assert_match maildir flags/cur/4:2,S
+assert_match maildir flags/new/6:2,R
+assert_match maildir flags/cur/8:2,
+assert_no_more_matches
+
+search_messages flags F:r
+assert_match maildir flags/cur/1:2,FRS
+assert_match maildir flags/cur/2:2,RS
+assert_match maildir flags/cur/5:2,FR
+assert_match maildir flags/new/6:2,R
+assert_no_more_matches
+
+search_messages flags F:-r
+assert_match maildir flags/cur/3:2,FS
+assert_match maildir flags/cur/4:2,S
+assert_match maildir flags/new/7:2,F
+assert_match maildir flags/cur/8:2,
+assert_no_more_matches
+
+search_messages flags F:r-f
+assert_match maildir flags/cur/2:2,RS
+assert_match maildir flags/new/6:2,R
+assert_no_more_matches
+
+search_messages flags F:sfr
+assert_match maildir flags/cur/1:2,FRS
+assert_no_more_matches
+
+search_messages flags F:rsf
+assert_match maildir flags/cur/1:2,FRS
+assert_no_more_matches

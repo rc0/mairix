@@ -1,0 +1,20 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+## Empty search
+search_messages AliceBobEve f:nil
+assert_no_more_matches
+
+## substring search in From:
+search_messages AliceBobEve f:ob=
+assert_match mh AliceBobEve/1
+assert_match mh AliceBobEve/3
+assert_match mh AliceBobEve/5
+assert_no_more_matches
+
+## exact search in From:
+search_messages AliceBobEve f:eve@ils.lair
+assert_match mh AliceBobEve/2
+assert_match mh AliceBobEve/4
+assert_no_more_matches

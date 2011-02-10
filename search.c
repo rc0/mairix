@@ -771,7 +771,7 @@ static void try_copy_to_path(struct read_db *db, int msg_index, char *target_pat
     if (out) {
       fprintf(out, "X-source-folder: %s\n",
               db->data + db->mbox_paths_table[mbi]);
-      fwrite(start, sizeof(char), msg_len, out);
+      fwrite(start, sizeof(char), msg_len?msg_len-1:0, out);
       fclose(out);
     }
   }

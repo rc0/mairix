@@ -1,0 +1,3 @@
+add_messages mbox animals
+
+assert_dump animals-mbox

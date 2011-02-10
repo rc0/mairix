@@ -1,0 +1,19 @@
+add_messages maildir animals
+add_messages mh animals
+add_messages mbox animals
+
+assert_dump animals
+
+search_messages animals ~Elephant
+assert_match mbox animals/part.0
+assert_match mbox animals/part.1
+assert_match maildir animals/cur/1294156254.3884_3.spencer:2,S
+assert_match maildir animals/new/1294156254.3884_5.spencer
+assert_no_more_matches
+
+search_messages animals ~Ele=
+assert_match mbox animals/part.0
+assert_match mbox animals/part.1
+assert_match maildir animals/new/1294156254.3884_5.spencer
+assert_no_more_matches
+

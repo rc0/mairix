@@ -186,7 +186,7 @@ void check_database_integrity(struct database *db)/*{{{*/
   check_toktable_enc_integrity(db->n_msgs, db->attachment_name);
 }
 /*}}}*/
-struct database *new_database(void)/*{{{*/
+struct database *new_database(unsigned int hash_key)/*{{{*/
 {
   struct database *result = new(struct database);
   struct timeval tv;
@@ -201,9 +201,13 @@ struct database *new_database(void)/*{{{*/
 
   result->msg_ids = new_toktable2();
 
-  gettimeofday(&tv, NULL);
-  pid = getpid();
-  result->hash_key = tv.tv_sec ^ (pid ^ (tv.tv_usec << 15));
+  if ( hash_key == CREATE_RANDOM_DATABASE_HASH )
+    {
+      gettimeofday(&tv, NULL);
+      pid = getpid();
+      hash_key = tv.tv_sec ^ (pid ^ (tv.tv_usec << 15));
+    }
+  result->hash_key = hash_key;
 
   result->msgs = NULL;
   result->type = NULL;
@@ -413,7 +417,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
   struct read_db *input;
   int i, n, N;
 
-  result = new_database();
+  result = new_database( CREATE_RANDOM_DATABASE_HASH );
   input = open_db(db_filename);
   if (!input) {
     /* Nothing to initialise */

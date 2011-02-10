@@ -345,7 +345,8 @@ void insert_index_on_encoding(struct matches *m, int idx);
 void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1);
 
 /* In db.c */
-struct database *new_database(void);
+#define CREATE_RANDOM_DATABASE_HASH 0
+struct database *new_database(unsigned int hash_key);
 struct database *new_database_from_file(char *db_filename, int do_integrity_checks);
 void free_database(struct database *db);
 void maybe_grow_message_arrays(struct database *db);
