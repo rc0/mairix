@@ -1014,11 +1014,12 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
 
       equal = strchr(word, '=');
-      if (equal) {
+      if (equal && (equal[1] == '\0' || isdigit(equal[1]))) {
         *equal = 0;
         max_errors = atoi(equal + 1);
         /* Extend this to do anchoring etc */
       } else {
+        equal = NULL;
         max_errors = 0; /* keep GCC quiet */
       }
 
