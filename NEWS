@@ -1,3 +1,18 @@
+NEW IN VERSION 0.23
+===================
+* Allow '=' in message-id search for RFC2822 conformance
+* Add the option -H to force hardlinks
+* Skip .gitignore files
+* Do not interpret special characters [~,/=^] in Message-ID queries
+* Fix faultly mbox message separators
+* Improve reporting of unparsed MIME headers & remove code duplication
+* Allow empty sections in MIME headers
+* Add support for uuencoded attachments
+* Improve the parsing of MIME boundaries
+* Fix SEGV if mbox shrinks
+* Add test suite
+* Fix building in parallel
+
 NEW IN VERSION 0.22
 ===================
 
