@@ -97,10 +97,21 @@ Block digits {
         [0-9] -> in
 }
 
+Block minor {
+    State in
+        MINOR -> minor1
+
+    State minor1
+        = COPY_TO_MINOR
+        MINOR -> minor1
+        -> out
+}
+
 Block namevalue {
     State in
         OWS ; <name:in->out> ; OWS ; [=] -> rhs_normal
         OWS ; <name:in->out> ; [*] ; <digits:in->out> ; OWS ; [=] -> rhs_continue
+        OWS ; <name:in->out> ; [*] ; OWS ; [=] -> rhs_charset
 
     State rhs_normal
         OWS ; <qvalue:in->out> ; OWS -> out_normal
@@ -111,9 +122,14 @@ Block namevalue {
         OWS ; <qvalue:in->out> ; OWS -> out_continue
         OWS ; <value:in->out> ; OWS -> out_continue
 
+    State rhs_charset
+        OWS ; <minor:in->out> ; ['] ; ['] ; <value:in->out> ; OWS -> out_charset
+
     State out_normal = GOT_NAMEVALUE
         -> out
     State out_continue = GOT_NAMEVALUE_CONT
+        -> out
+    State out_charset = GOT_NAMEVALUE_CSET
         -> out
 }
 
@@ -123,16 +139,6 @@ Block major {
 
     State name1
         NAME1 -> name1
-        -> out
-}
-
-Block minor {
-    State in
-        MINOR -> minor1
-
-    State minor1
-        = COPY_TO_MINOR
-        MINOR -> minor1
         -> out
 }
 
@@ -177,6 +183,7 @@ Prefix nvp
 Group action {
     Attr GOT_NAMEVALUE
     Attr GOT_NAMEVALUE_CONT
+    Attr GOT_NAMEVALUE_CSET
     Attr GOT_NAME
     Attr GOT_NAME_TRAILING_SPACE
     Attr GOT_MAJORMINOR
