@@ -351,13 +351,13 @@ void out_of_mem(char *file, int line, size_t size)/*{{{*/
   p = file;
   while (*p) p++;
   filelen = p - file;
-  write(2, msg1, sizeof(msg1));
+  write(2, msg1, sizeof(msg1)-1);
   write(2, file, filelen);
   write(2, ":", 1);
   emit_int(line);
   write(2, ", ", 2);
   emit_int(size);
-  write(2, msg2, sizeof(msg2));
+  write(2, msg2, sizeof(msg2)-1);
   exit(2);
 }
 /*}}}*/
