@@ -109,6 +109,17 @@ static void combine_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
   append_namevalue(nvp, name, value);
 }
 /*}}}*/
+static int hex_to_val(int ch)/*{{{*/
+{
+    if (isdigit(ch))
+	return (ch - '0');
+    if (ch >= 'a' && ch <= 'f')
+	return (10 + ch - 'a');
+    if (ch >= 'A' && ch <= 'F')
+	return (10 + ch - 'A');
+    return (-1);
+}
+/*}}}*/
 static void release_nvp(struct nvp *nvp)/*{{{*/
 {
   struct nvp_entry *e, *ne;
@@ -208,6 +219,7 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
       case GOT_MAJORMINOR:
       case GOT_NAMEVALUE:
       case GOT_NAMEVALUE_CONT:
+      case GOT_NAMEVALUE_CSET:
 #ifdef VERBOSE_TEST
         fprintf(stderr, "   Setting last action to %d\n", current_action);
 #endif
@@ -235,6 +247,31 @@ struct nvp *make_nvp(struct msg_src *src, char *s)/*{{{*/
           case GOT_NAMEVALUE:
             *nn = 0;
             *vv = 0;
+            append_namevalue(result, name, value);
+            break;
+          case GOT_NAMEVALUE_CSET:
+            *mm = 0;
+            *nn = 0;
+            *vv = 0;
+	    for(mm = vv = value; *vv; vv++) {
+		if (*vv == '%') {
+		    int val = hex_to_val(*++vv) << 4;
+		    val |= hex_to_val(*++vv);
+		    if (val < 0) {
+#ifdef TEST
+			fprintf(stderr, "'%s' could not be parsed (%%)\n", s);
+#else
+			fprintf(stderr, "Header '%s%s' in %s could not be parsed\n",
+				pfx, s, format_msg_src(src));
+#endif
+			release_nvp(result);
+			return NULL;
+		    }
+		    *mm++ = val;
+		} else
+		    *mm++ = *vv;
+	    }
+            *mm = 0;
             append_namevalue(result, name, value);
             break;
           case GOT_NAMEVALUE_CONT:
@@ -388,6 +425,13 @@ static void do_test(char *s)
 
 int main (int argc, char **argv) {
   struct nvp *n;
+
+  if (argc > 1) {
+      while (*++argv)
+	  do_test(*argv);
+      return 0;
+  }
+
 #if 0
   do_test("attachment; filename=\"foo.c\"; prot=ro");
   do_test("attachment; filename= \"foo bar.c\" ;prot=ro");
@@ -396,16 +440,12 @@ int main (int argc, char **argv) {
   do_test("attachment ; filename= \"foo ;  bar.c\" ;prot= ro");
   do_test("attachment ; x*0=\"hi \"; x*1=\"there\"");
 #endif
-
-  do_test("application/vnd.ms-excel;       name=\"thequiz.xls\"");
+  do_test("attachment; filename*=utf-8''Section%204-1%20%E2%80%93%20Response%20Matrix%20PartIIA%2Edoc");
 #if 0
+  do_test("application/vnd.ms-excel;       name=\"thequiz.xls\"");
   do_test("inline; filename*0=\"aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj\t kkkkllll\"");
   do_test(" text/plain ; name= \"foo bar.c\" ;prot= ro/rw; read/write; read= foo bar");
 #endif
   return 0;
 }
 #endif
-
-
-
-
