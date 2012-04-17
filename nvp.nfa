@@ -175,7 +175,7 @@ Block main {
         OWS ; <component:in->out> ; OWS ; EOS -> out2
         OWS ; <component:in->out> ; OWS ; [;] ; OWS ; EOS -> out2
         OWS ; <component:in->out> ; OWS ; [;] -> in2
-        
+
     State in2
         = GOT_TERMINATOR
         -> in
