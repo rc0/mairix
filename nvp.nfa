@@ -125,6 +125,7 @@ Block namevalue {
         OWS ; <value:in->out> ; OWS -> out_continue
 
     State rhs_charset
+        OWS ; ['] ; ['] ; <value:in->out> ; OWS -> out_charset
         OWS ; <minor:in->out> ; ['] ; ['] ; <value:in->out> ; OWS -> out_charset
 
     State rhs_charset_continue
