@@ -225,6 +225,7 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
       case GOT_NAMEVALUE:
       case GOT_NAMEVALUE_CONT:
       case GOT_NAMEVALUE_CSET:
+      case GOT_NAMEVALUE_CCONT:
 #ifdef VERBOSE_TEST
         fprintf(stderr, "   Setting last action to %d\n", current_action);
 #endif
@@ -255,6 +256,7 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
             append_namevalue(result, name, value);
             break;
           case GOT_NAMEVALUE_CSET:
+          case GOT_NAMEVALUE_CCONT:
             *mm = 0;
             *nn = 0;
             *vv = 0;
@@ -277,7 +279,10 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 		    *mm++ = *vv;
 	    }
             *mm = 0;
-            append_namevalue(result, name, value);
+            if (current_action == GOT_NAMEVALUE_CSET)
+              append_namevalue(result, name, value);
+            else
+              combine_namevalue(result, name, value);
             break;
           case GOT_NAMEVALUE_CONT:
             *nn = 0;

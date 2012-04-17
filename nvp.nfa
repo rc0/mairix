@@ -112,6 +112,8 @@ Block namevalue {
         OWS ; <name:in->out> ; OWS ; [=] -> rhs_normal
         OWS ; <name:in->out> ; [*] ; <digits:in->out> ; OWS ; [=] -> rhs_continue
         OWS ; <name:in->out> ; [*] ; OWS ; [=] -> rhs_charset
+        OWS ; <name:in->out> ; [*] ; [0] ; [*] ; OWS ; [=] -> rhs_charset
+        OWS ; <name:in->out> ; [*] ; [1-9A-Za-z] ; [*] ; OWS ; [=] -> rhs_charset_continue
 
     State rhs_normal
         OWS ; <qvalue:in->out> ; OWS -> out_normal
@@ -125,11 +127,16 @@ Block namevalue {
     State rhs_charset
         OWS ; <minor:in->out> ; ['] ; ['] ; <value:in->out> ; OWS -> out_charset
 
+    State rhs_charset_continue
+        OWS ; <value:in->out> ; OWS -> out_charset_continue
+
     State out_normal = GOT_NAMEVALUE
         -> out
     State out_continue = GOT_NAMEVALUE_CONT
         -> out
     State out_charset = GOT_NAMEVALUE_CSET
+        -> out
+    State out_charset_continue = GOT_NAMEVALUE_CCONT
         -> out
 }
 
@@ -184,6 +191,7 @@ Group action {
     Attr GOT_NAMEVALUE
     Attr GOT_NAMEVALUE_CONT
     Attr GOT_NAMEVALUE_CSET
+    Attr GOT_NAMEVALUE_CCONT
     Attr GOT_NAME
     Attr GOT_NAME_TRAILING_SPACE
     Attr GOT_MAJORMINOR
