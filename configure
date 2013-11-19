@@ -154,6 +154,33 @@ EOF
   echo $result
 }
 #}}}
+
+#{{{ test_for_bison
+test_for_bison () {
+  bison --help > /dev/null
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  echo $result
+}
+#}}}
+
+#{{{ test_for_flex
+test_for_flex () {
+  flex --help > /dev/null
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  echo $result
+}
+#}}}
+
 #{{{ usage
 usage () {
   cat <<EOF;
@@ -298,6 +325,22 @@ if [ $use_bzip_mbox = "yes" ]; then
   else
     printf "No (disabled bzip2ed mbox support)\n";
   fi
+fi
+
+printf "Checking for bison : "
+if [ `test_for_bison` -eq 0 ]; then
+  printf "Yes\n";
+else
+  printf "No\n";
+  exit 1;
+fi
+
+printf "Checking for flex : "
+if [ `test_for_flex` -eq 0 ]; then
+  printf "Yes\n";
+else
+  printf "No\n";
+  exit 1;
 fi
 
 #{{{ Determine version number of the program.
