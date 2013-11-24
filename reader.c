@@ -64,8 +64,7 @@ int read_increment(unsigned char **encpos) {/*{{{*/
 /*}}}*/
 static void read_toktable_db(char *data, struct toktable_db *toktable, int start, unsigned int *uidata)/*{{{*/
 {
-  int n;
-  n = toktable->n = uidata[start];
+  toktable->n = uidata[start];
   toktable->tok_offsets = uidata + uidata[start+1];
   toktable->enc_offsets = uidata + uidata[start+2];
   return;
@@ -73,8 +72,7 @@ static void read_toktable_db(char *data, struct toktable_db *toktable, int start
 /*}}}*/
 static void read_toktable2_db(char *data, struct toktable2_db *toktable, int start, unsigned int *uidata)/*{{{*/
 {
-  int n;
-  n = toktable->n = uidata[start];
+  toktable->n = uidata[start];
   toktable->tok_offsets = uidata + uidata[start+1];
   toktable->enc0_offsets = uidata + uidata[start+2];
   toktable->enc1_offsets = uidata + uidata[start+3];

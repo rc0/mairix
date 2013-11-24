@@ -929,7 +929,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       char *andsep;
       char *word, *orig_word, *lower_word;
       char *equal;
-      char *p;
       int negate;
       int had_orsep;
       int max_errors;

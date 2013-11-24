@@ -784,11 +784,10 @@ static void find_threading(struct database *db)/*{{{*/
    * must be in the same thread) */
   int *ix;
 
-  int i, m, np, nm, sm;
+  int i, m, np, sm;
   int next_tid;
 
   np = db->n_msgs;
-  nm = db->msg_ids->n;
   sm = db->msg_ids->size;
 
   ix = new_array(int, np);
