@@ -605,11 +605,14 @@ int main (int argc, char **argv)/*{{{*/
     } else if (!strcmp(*argv, "-h") ||
                !strcmp(*argv, "--help")) {
       do_help = 1;
-    } else if ((*argv)[0] == '-') {
-      fprintf(stderr, "Unrecognized option %s\n", *argv);
     } else if (!strcmp(*argv, "--")) {
       /* End of args */
+      argc--;
+      argv++;
       break;
+    } else if ((*argv)[0] == '-') {
+      fprintf(stderr, "Unrecognized option %s\n", *argv);
+      exit(3);
     } else {
       /* standard args start */
       break;
