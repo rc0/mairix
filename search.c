@@ -1322,6 +1322,8 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
             if (parsed->hdrs.subject) printf("  Subject:    %s\n", parsed->hdrs.subject);
             if (parsed->hdrs.message_id)
                                       printf("  Message-ID: %s\n", parsed->hdrs.message_id);
+            if (parsed->hdrs.in_reply_to)
+                                      printf("  In-Reply-To:%s\n", parsed->hdrs.in_reply_to);
             thetm = gmtime(&parsed->hdrs.date);
             strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y", thetm);
             printf("  Date:        %s\n", datebuf);
