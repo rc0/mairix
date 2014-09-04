@@ -286,7 +286,7 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
   n = msgs->n;
   sorted_paths = new_array(char *, n);
   for (i=0, nn=0; i<n; i++) {
-    switch (msgs->type[i]) {
+    switch (msgs->paths[i].type) {
       case MTY_MBOX:
         break;
       case MTY_DEAD:

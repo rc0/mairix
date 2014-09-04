@@ -844,7 +844,7 @@ static void find_threading(struct database *db)/*{{{*/
   return;
 }
 /*}}}*/
-static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*{{{*/
+static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key, enum message_type type)/*{{{*/
 {
   /* Implement bisection search */
  int l, h, m, r;
@@ -853,7 +853,13 @@ static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*
  while (h > l) {
    m = (h + l) >> 1;
    /* Should only get called on 'file' type messages - TBC */
-   r = strcmp(sorted_paths[m].src.mpf.path, key);
+   if (sorted_paths[m].type < type) {
+     r = -1;
+   } else if (sorted_paths[m].type > type) {
+     r = 1;
+   } else {
+     r = strcmp(sorted_paths[m].src.mpf.path, key);
+   }
    if (r == 0) break;
    if (l == m) return -1;
    if (r > 0) h = m;
@@ -929,7 +935,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   for (i=0; i<db->n_msgs; i++) {
     switch (db->type[i]) {
       case MTY_FILE:
-        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
+        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path, MTY_FILE);
         if (matched_index >= 0) {
           if (do_fast_index) {
             /* Assume the presence of a matching path is good enough without

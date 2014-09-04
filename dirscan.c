@@ -35,7 +35,6 @@ struct msgpath_array *new_msgpath_array(void)/*{{{*/
   struct msgpath_array *result;
   result = new(struct msgpath_array);
   result->paths = NULL;
-  result->type = NULL;
   result->n = 0;
   result->max = 0;
   return result;
@@ -46,7 +45,7 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
   int i;
   if (x->paths) {
     for (i=0; i<x->n; i++) {
-      switch (x->type[i]) {
+      switch (x->paths[i].type) {
         case MTY_FILE:
           free(x->paths[i].src.mpf.path);
           break;
@@ -56,7 +55,6 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
           break;
       }
     }
-    free(x->type);
     free(x->paths);
   }
   free(x);
@@ -67,9 +65,8 @@ static void add_file_to_list(char *x, struct msgpath_array *arr) {/*{{{*/
   if (arr->n == arr->max) {
     arr->max += 1024;
     arr->paths = grow_array(struct msgpath,    arr->max, arr->paths);
-    arr->type  = grow_array(enum message_type, arr->max, arr->type);
   }
-  arr->type[arr->n] = MTY_FILE;
+  arr->paths[arr->n].type = MTY_FILE;
   arr->paths[arr->n].src.mpf.path = y;
   ++arr->n;
   return;
@@ -356,7 +353,8 @@ static int message_compare(const void *a, const void *b)/*{{{*/
   /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
   struct msgpath *aa = (struct msgpath *) a;
   struct msgpath *bb = (struct msgpath *) b;
-  /* This should only get called on 'file' type messages - TBC! */
+  if (aa->type < bb->type) return -1;
+  if (aa->type > bb->type) return 1;
   return strcmp(aa->src.mpf.path, bb->src.mpf.path);
 }
 /*}}}*/

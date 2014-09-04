@@ -33,9 +33,16 @@
 
 #include "memmac.h"
 
+enum message_type {/*{{{*/
+  MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
+                   prune it on a '-p' run. */
+  MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
+  MTY_MBOX      /* multiple msgs per file : MBOX format file */
+};
+/*}}}*/
+
 struct msgpath {/*{{{*/
-  /* The 'selector' for this union is the corresponding entry of type 'enum
-   * message_type' */
+  enum message_type type; /* selector for union 'src' */
   union {
     struct {
       char *path;
@@ -61,15 +68,7 @@ struct msgpath {/*{{{*/
 };
 /*}}}*/
 
-enum message_type {/*{{{*/
-  MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
-                   prune it on a '-p' run. */
-  MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
-  MTY_MBOX      /* multiple msgs per file : MBOX format file */
-};
-/*}}}*/
 struct msgpath_array {/*{{{*/
-  enum message_type *type;
   struct msgpath *paths;
   int n;
   int max;
