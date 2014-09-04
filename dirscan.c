@@ -47,6 +47,7 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
     for (i=0; i<x->n; i++) {
       switch (x->paths[i].type) {
         case MTY_FILE:
+        case MTY_IMAP:
           free(x->paths[i].src.mpf.path);
           break;
         case MTY_MBOX:

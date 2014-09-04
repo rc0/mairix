@@ -37,7 +37,8 @@ enum message_type {/*{{{*/
   MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
                    prune it on a '-p' run. */
   MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
-  MTY_MBOX      /* multiple msgs per file : MBOX format file */
+  MTY_MBOX,     /* multiple msgs per file : MBOX format file */
+  MTY_IMAP	/* Message on IMAP server; syntax: uidvalidity:uid:folder */
 };
 /*}}}*/
 

@@ -179,6 +179,7 @@ static int char_length(struct database *db)/*{{{*/
       case MTY_MBOX:
         break;
       case MTY_FILE:
+      case MTY_IMAP:
         assert(db->msgs[i].src.mpf.path);
         result += (1 + strlen(db->msgs[i].src.mpf.path));
         break;
@@ -322,6 +323,9 @@ static char *write_type_and_flag_table(struct database *db, unsigned int *uidata
       case MTY_DEAD:
         cdata[i] = DB_MSG_DEAD;
         break;
+      case MTY_IMAP:
+        cdata[i] = DB_MSG_IMAP;
+        break;
     }
 
     if (msgdata->seen)    cdata[i] |= FLAG_SEEN;
@@ -345,6 +349,14 @@ static char *write_messages(struct database *db, struct write_map *map, unsigned
         uidata[map->path_offset + i] = cdata - data;
         uidata[map->mtime_offset + i] = db->msgs[i].src.mpf.mtime;
         uidata[map->size_offset + i] = db->msgs[i].src.mpf.size;
+        uidata[map->date_offset + i] = db->msgs[i].date;
+        uidata[map->tid_offset + i]  = db->msgs[i].tid;
+        memcpy(cdata, db->msgs[i].src.mpf.path, 1 + slen); /* include trailing null */
+        cdata += (1 + slen);
+        break;
+      case MTY_IMAP:
+        slen = strlen(db->msgs[i].src.mpf.path);
+        uidata[map->path_offset + i] = cdata - data;
         uidata[map->date_offset + i] = db->msgs[i].date;
         uidata[map->tid_offset + i]  = db->msgs[i].tid;
         memcpy(cdata, db->msgs[i].src.mpf.path, 1 + slen); /* include trailing null */

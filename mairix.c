@@ -296,13 +296,14 @@ static int compare_strings(const void *a, const void *b)/*{{{*/
 static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 {
   /* Caveat : only examines the file-per-message case */
-  char **sorted_paths;
-  int i, n, nn;
+  char **sorted_paths, **sorted_imap;
+  int i, n, nn, imap_nn;
   int result;
 
   n = msgs->n;
   sorted_paths = new_array(char *, n);
-  for (i=0, nn=0; i<n; i++) {
+  sorted_imap = new_array(char *, n);
+  for (i=0, nn=0, imap_nn=0; i<n; i++) {
     switch (msgs->paths[i].type) {
       case MTY_MBOX:
         break;
@@ -312,9 +313,13 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
       case MTY_FILE:
         sorted_paths[nn++] = msgs->paths[i].src.mpf.path;
         break;
+      case MTY_IMAP:
+        sorted_imap[imap_nn++] = msgs->paths[i].src.mpf.path;
+        break;
     }
   }
   qsort(sorted_paths, nn, sizeof(char *), compare_strings);
+  qsort(sorted_imap, imap_nn, sizeof(char *), compare_strings);
 
   result = 0;
   for (i=1; i<nn; i++) {
@@ -323,8 +328,15 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
       break;
     }
   }
+  for (i=1; i<imap_nn; i++) {
+    if (!strcmp(sorted_imap[i-1], sorted_imap[i])) {
+      result = 1;
+      break;
+    }
+  }
 
   free(sorted_paths);
+  free(sorted_imap);
   return result;
 }
 /*}}}*/
