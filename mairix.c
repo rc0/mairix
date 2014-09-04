@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <signal.h>
+#include "imapinterface.h"
 
 #ifdef TEST_OOM
 int total_bytes=0;
@@ -46,6 +47,11 @@ static char *folder_base = NULL;
 static char *maildir_folders = NULL;
 static char *mh_folders = NULL;
 static char *mboxen = NULL;
+static char *imap_folders = NULL;
+static char *imap_pipe = NULL;
+static char *imap_server = NULL;
+static char *imap_username = NULL;
+static char *imap_password = NULL;
 static char *mfolder = NULL;
 static char *omit = NULL;
 static char *database_path = NULL;
@@ -249,6 +255,11 @@ static void parse_rc_file(char *name)/*{{{*/
     }
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
+    else if (!strncasecmp(p, "imap=", 5)) add_folders(&imap_folders, copy_value(p));
+    else if (!strncasecmp(p, "imap_pipe=", 10)) imap_pipe = copy_value(p);
+    else if (!strncasecmp(p, "imap_server=", 12)) imap_server = copy_value(p);
+    else if (!strncasecmp(p, "imap_username=", 14)) imap_username = copy_value(p);
+    else if (!strncasecmp(p, "imap_password=", 14)) imap_password = copy_value(p);
     else if (!strncasecmp(p, "omit=", 5)) add_folders(&omit, copy_value(p));
 
     else if (!strncasecmp(p, "mformat=", 8)) {
@@ -519,6 +530,7 @@ int main (int argc, char **argv)/*{{{*/
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
   int do_fast_index = 0;
+  struct imap_ll *imapc = NULL;
 
   unsigned int forced_hash_key = CREATE_RANDOM_DATABASE_HASH;
 
@@ -741,13 +753,28 @@ int main (int argc, char **argv)/*{{{*/
   } else {
     enum filetype ftype;
 
-    if (!maildir_folders && !mh_folders && !mboxen) {
-      fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
+    if (imap_pipe && imap_server) {
+      fprintf(stderr, "specify one of imap_pipe or imap_server, not both\n");
+      unlock_and_exit(2);
+    }
+
+    if (imap_folders && (!(imap_pipe || imap_server))) {
+      fprintf(stderr, "If imap is given, imap_pipe OR imap_server is required\n");
+      imap_folders = NULL;
+    }
+
+    if (!maildir_folders && !mh_folders && !mboxen && !imap_folders) {
+      fprintf(stderr, "No [mh_]folders/mboxen/imap/MAIRIX_[MH_]FOLDERS set\n");
       unlock_and_exit(2);
     }
 
     if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
+    if (imap_folders) {
+      imapc = imap_start(imap_pipe, imap_server, imap_username, imap_password);
+      if (!imapc) unlock_and_exit(2);
+      build_imap_message_list(imap_folders, msgs, omit_globs, imapc);
+    }
     if (maildir_folders) {
       build_message_list(folder_base, maildir_folders, FT_MAILDIR, msgs, omit_globs);
     }
@@ -778,7 +805,7 @@ int main (int argc, char **argv)/*{{{*/
 
     build_mbox_lists(db, folder_base, mboxen, omit_globs);
 
-    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index);
+    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index, imapc);
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
     }

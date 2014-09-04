@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include "imapinterface.h"
 
 struct sortable_token {/*{{{*/
   char *text;
@@ -732,7 +733,7 @@ static void scan_maildir_flags(struct msgpath *m)/*{{{*/
   }
 }
 /*}}}*/
-static void scan_new_messages(struct database *db, int start_at)/*{{{*/
+static void scan_new_messages(struct database *db, int start_at, struct imap_ll *imapc)/*{{{*/
 {
   int i;
   for (i=start_at; i<db->n_msgs; i++) {
@@ -744,7 +745,6 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
 
     switch (db->type[i]) {
       case MTY_DEAD:
-      case MTY_IMAP:	/* Not yet implemented */
         assert(0);
         break;
       case MTY_MBOX:
@@ -753,6 +753,10 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
       case MTY_FILE:
         if (verbose) fprintf(stderr, "Scanning <%s>\n", db->msgs[i].src.mpf.path);
         msg = make_rfc822(db->msgs[i].src.mpf.path);
+        break;
+      case MTY_IMAP:
+        if (verbose) fprintf(stderr, "Scanning IMAP <%s>\n", db->msgs[i].src.mpf.path);
+        msg = make_rfc822_from_imap(db->msgs[i].src.mpf.path, imapc);
         break;
     }
     if(msg)
@@ -932,7 +936,7 @@ static int do_stat(struct msgpath *mp)/*{{{*/
   }
 }
 /*}}}*/
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index)/*{{{*/
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index, struct imap_ll *imapc)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
    * possible.  We search for each existing path in the incoming sorted array.
@@ -1056,7 +1060,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   }
 
   if (any_new) {
-    scan_new_messages(db, new_entries_start_at);
+    scan_new_messages(db, new_entries_start_at, imapc);
   }
 
   /* Add newly found mbox messages. */

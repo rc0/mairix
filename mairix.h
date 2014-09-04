@@ -351,7 +351,8 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
 void free_database(struct database *db);
 void maybe_grow_message_arrays(struct database *db);
 void tokenise_message(int file_index, struct database *db, struct rfc822 *msg);
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths, int do_fast_index);
+struct imap_ll;
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths, int do_fast_index, struct imap_ll *);
 void check_database_integrity(struct database *db);
 int cull_dead_messages(struct database *db, int do_integrity_checks);
 
