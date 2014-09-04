@@ -44,6 +44,7 @@
 #include "mairix.h"
 #include "reader.h"
 #include "memmac.h"
+#include "imapinterface.h"
 
 static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int hit_tok, char *hits)/*{{{*/
 {
@@ -693,6 +694,26 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
   return;
 }
 /*}}}*/
+static void append_data_to_mbox(const char *data, size_t len, void *arg)/*{{{*/
+{
+  FILE *out = (FILE *)arg;
+  fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
+  fwrite (data, sizeof(unsigned char), len, out);
+  fputc('\n', out);
+  return;
+}
+/*}}}*/
+static void write_to_file(const char *data, size_t len, void *arg)/*{{{*/
+{
+  FILE *fp;
+  if (!(fp = fopen((char *)arg, "w"))) {
+    fprintf(stderr, "Cannot write matched message to \"%s\": %s\n", (char *)arg, strerror(errno));
+    return;
+  }
+  fwrite(data, 1, len, fp);
+  fclose(fp);
+}
+/*}}}*/
 
 static int had_failed_checksum;
 
@@ -808,7 +829,7 @@ static void string_tolower(char *str)
   }
 }
 
-static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose)/*{{{*/
+static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
@@ -820,6 +841,18 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   int i;
   int n_hits;
   int left_anchor;
+  int imap_tried = 0;
+  struct imap_ll *imapc;
+
+#define GET_IMAP if (!imap_tried) {\
+        imap_tried = 1;\
+	if (imap_pipe || imap_server) {\
+		imapc = imap_start(imap_pipe, imap_server, imap_username, imap_password);\
+	} else {\
+		fprintf(stderr, "[No IMAP settings]\n");\
+		imapc = NULL;\
+	}\
+}
 
   had_failed_checksum = 0;
 
@@ -1089,6 +1122,16 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
                 ++n_hits;
               }
               break;
+            case DB_MSG_IMAP:
+              {
+                char *target_path;
+                target_path = mk_maildir_path(i, output_path, 0, is_seen, is_replied, is_flagged);
+                GET_IMAP;
+                if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
+                free(target_path);
+                ++n_hits;
+              }
+              break;
             case DB_MSG_MBOX:
               {
                 char *target_path = mk_maildir_path(i, output_path, !is_seen, is_seen, is_replied, is_flagged);
@@ -1112,6 +1155,15 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               {
                 char *target_path = mk_mh_path(i, output_path);
                 create_symlink(db->data + db->path_offsets[i], target_path);
+                free(target_path);
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_IMAP:
+              {
+                char *target_path = mk_mh_path(i, output_path);
+                GET_IMAP;
+                if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
                 free(target_path);
                 ++n_hits;
               }
@@ -1149,6 +1201,13 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
                   ++n_hits;
                 }
                 break;
+              case DB_MSG_IMAP:
+                {
+                  GET_IMAP;
+                  if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, append_data_to_mbox, out);
+                  ++n_hits;
+                }
+                break;
               case DB_MSG_MBOX:
                 {
                   append_mboxmsg_to_mbox(db, i, out);
@@ -1170,6 +1229,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         if (hit3[i]) {
           switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
+            case DB_MSG_IMAP:
               {
                 ++n_hits;
                 printf("%s\n", db->data + db->path_offsets[i]);
@@ -1207,6 +1267,17 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
                 filename = db->data + db->path_offsets[i];
                 printf("%s\n", filename);
                 parsed = make_rfc822(filename);
+              }
+              break;
+            case DB_MSG_IMAP:
+              {
+                char *filename;
+                ++n_hits;
+                printf("---------------------------------\n");
+                filename = db->data + db->path_offsets[i];
+                printf("%s\n", filename);
+                GET_IMAP;
+                parsed = imapc ? make_rfc822_from_imap(filename, imapc) : NULL;
               }
               break;
             case DB_MSG_MBOX:
@@ -1425,7 +1496,7 @@ static void clear_mbox_folder(char *path)/*{{{*/
 }
 /*}}}*/
 
-int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose)/*{{{*/
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password)/*{{{*/
 {
   struct read_db *db;
   int result;
@@ -1471,7 +1542,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
     }
   }
 
-  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose);
+  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose, imap_pipe, imap_server, imap_username, imap_password);
   free(complete_mfolder);
   close_db(db);
   return result;

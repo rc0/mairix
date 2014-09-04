@@ -748,7 +748,7 @@ int main (int argc, char **argv)/*{{{*/
           database_path);
       unlock_and_exit(3);
     }
-    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
+    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose, imap_pipe, imap_server, imap_username, imap_password);
 
   } else {
     enum filetype ftype;

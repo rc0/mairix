@@ -378,7 +378,7 @@ int is_glob_match(struct globber *g, const char *s);
 void write_database(struct database *db, char *filename, int do_integrity_checks);
 
 /* In search.c */
-int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose);
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password);
 
 /* In stats.c */
 void get_db_stats(struct database *db);

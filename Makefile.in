@@ -75,6 +75,7 @@ nvp.o : nvpscan.h
 
 mairix.o : imapinterface.h
 db.o : imapinterface.h
+search.o : imapinterface.h
 
 imap.o : imap.c imap.h
 imapinterface.o : imapinterface.c imapinterface.h imap.h
