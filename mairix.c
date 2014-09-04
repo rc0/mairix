@@ -269,6 +269,23 @@ static void parse_rc_file(char *name)/*{{{*/
   if (used_default_name) free(name);
 }
 /*}}}*/
+
+static int message_compare(const void *a, const void *b)/*{{{*/
+{
+  /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
+  struct msgpath *aa = (struct msgpath *) a;
+  struct msgpath *bb = (struct msgpath *) b;
+  if (aa->type < bb->type) return -1;
+  if (aa->type > bb->type) return 1;
+  return strcmp(aa->src.mpf.path, bb->src.mpf.path);
+}
+/*}}}*/
+static void sort_message_list(struct msgpath_array *arr)/*{{{*/
+{
+  qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
+}
+/*}}}*/
+
 static int compare_strings(const void *a, const void *b)/*{{{*/
 {
   const char **aa = (const char **) a;
@@ -725,6 +742,7 @@ int main (int argc, char **argv)/*{{{*/
     if (mh_folders) {
       build_message_list(folder_base, mh_folders, FT_MH, msgs, omit_globs);
     }
+    sort_message_list(msgs);
 
     /* The next call sorts the msgs array as part of looking for duplicates. */
     if (check_message_list_for_duplicates(msgs)) {

@@ -348,21 +348,6 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
 }
 /*}}}*/
 #endif
-static int message_compare(const void *a, const void *b)/*{{{*/
-{
-  /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
-  struct msgpath *aa = (struct msgpath *) a;
-  struct msgpath *bb = (struct msgpath *) b;
-  if (aa->type < bb->type) return -1;
-  if (aa->type > bb->type) return 1;
-  return strcmp(aa->src.mpf.path, bb->src.mpf.path);
-}
-/*}}}*/
-static void sort_message_list(struct msgpath_array *arr)/*{{{*/
-{
-  qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
-}
-/*}}}*/
 /*{{{ void build_message_list */
 void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs,
@@ -392,7 +377,6 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
 
   if (paths) free(paths);
 
-  sort_message_list(msgs);
   return;
 }
 /*}}}*/
