@@ -102,12 +102,18 @@ maildir
 MH (compatible with the MH folder formats used by xmh, sylpheed, claws-mail, nnml (Gnus) and evolution)
 .IP *
 mbox (including mboxes that have been compressed with gzip or bzip2)
+.IP *
+IMAP: remote folders on an IMAP server
 .PP
 If maildir or MH source folders are used, and a search outputs its matches to
 an mfolder in maildir or MH format, symbolic links are used to reference the
 original messages inside the mfolder.  However, if mbox folders are involved,
-copies of messages are made instead.
-
+copies of messages are made instead. If IMAP folders are used for both source
+results, IMAP server-side copies of messages are made. With IMAP source folders
+and any other type of results folder, messages are downloaded from the IMAP
+server to be written to the results folder. With an IMAP results folder and
+any other type of source folders, messages are uploaded to the IMAP server
+to be appended to the results folder.
 .SH OPTIONS
 
 .B mairix
@@ -233,7 +239,8 @@ paths on stdout.
 .br
 Instead of creating an mfolder containing the matched messages, display an
 excerpt from their headers on stdout.  The excerpt shows To, Cc, From, Subject
-and Date.
+and Date. With IMAP source folders, this requires downloading each matched
+message from the IMAP server.
 
 .TP
 .B -H, --force-hardlinks
