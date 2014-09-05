@@ -1017,13 +1017,13 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   /* Extract key headers {{{*/
   ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
-    if      (match_string("to", x->text))
+    if      (match_string("to:", x->text))
       copy_or_concat_header_value(&result->hdrs.to, x->text);
-    else if (match_string("cc", x->text))
+    else if (match_string("cc:", x->text))
       copy_or_concat_header_value(&result->hdrs.cc, x->text);
-    else if (!result->hdrs.from && match_string("from", x->text))
+    else if (!result->hdrs.from && match_string("from:", x->text))
       result->hdrs.from = copy_header_value(x->text);
-    else if (!result->hdrs.subject && match_string("subject", x->text))
+    else if (!result->hdrs.subject && match_string("subject:", x->text))
       result->hdrs.subject = copy_header_value(x->text);
     else if (!ct_nvp && (nvp = make_nvp(src, x->text, "content-type:")))
       ct_nvp = nvp;
@@ -1031,19 +1031,19 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
       cte_nvp = nvp;
     else if (!cd_nvp && (nvp = make_nvp(src, x->text, "content-disposition:")))
       cd_nvp = nvp;
-    else if (!result->hdrs.date && match_string("date", x->text)) {
+    else if (!result->hdrs.date && match_string("date:", x->text)) {
       char *date_string = copy_header_value(x->text);
       result->hdrs.date = parse_rfc822_date(date_string);
       free(date_string);
-    } else if (!result->hdrs.message_id && match_string("message-id", x->text))
+    } else if (!result->hdrs.message_id && match_string("message-id:", x->text))
       result->hdrs.message_id = copy_header_value(x->text);
-    else if (!result->hdrs.in_reply_to && match_string("in-reply-to", x->text))
+    else if (!result->hdrs.in_reply_to && match_string("in-reply-to:", x->text))
       result->hdrs.in_reply_to = copy_header_value(x->text);
-    else if (!result->hdrs.references && match_string("references", x->text))
+    else if (!result->hdrs.references && match_string("references:", x->text))
       result->hdrs.references = copy_header_value(x->text);
-    else if (match_string("status", x->text))
+    else if (match_string("status:", x->text))
       scan_status_flags(x->text + sizeof("status:"), &result->hdrs);
-    else if (match_string("x-status", x->text))
+    else if (match_string("x-status:", x->text))
       scan_status_flags(x->text + sizeof("x-status:"), &result->hdrs);
   }
 /*}}}*/
