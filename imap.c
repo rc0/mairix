@@ -838,6 +838,19 @@ imap_ll_status(struct imap_ll_tokenlist *t)
 	return t->leaf;
 }
 
+int
+imap_ll_is_trycreate(struct imap_ll_tokenlist *t)
+{
+	return (
+		(0 == strcmp(imap_ll_status(t), "NO")) &&
+		(t->last->first->next) &&
+		((t->last->first->next->type) == TLTYPE_SQLIST) &&
+		(t->last->first->next->first) &&
+		((t->last->first->next->first->type) == TLTYPE_ATOM) &&
+		(0 == strcmp(t->last->first->next->first->leaf, "TRYCREATE"))
+	);
+}
+
 #ifdef USE_OPENSSL
 enum imap_ll_starttls_result
 imap_ll_starttls(struct imap_ll *ll, SSL_CTX *sslctx, const char *servername)

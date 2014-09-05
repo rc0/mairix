@@ -829,7 +829,7 @@ static void string_tolower(char *str)
   }
 }
 
-static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password)/*{{{*/
+static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password, int please_clear)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
@@ -1330,6 +1330,54 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       }
       break;
 /*}}}*/
+    case FT_IMAP:/*{{{*/
+      GET_IMAP;
+      if (!imapc) break;
+      if (please_clear) {
+        imap_clear_folder(imapc, output_path);
+      }
+      for (i=0; i<db->n_msgs; i++) {
+        if (hit3[i]) {
+          int is_seen, is_replied, is_flagged;
+          get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
+          switch (rd_msg_type(db, i)) {
+            case DB_MSG_FILE:
+              {
+                int len;
+                unsigned char *data;
+                create_ro_mapping(db->data + db->path_offsets[i], &data, &len);
+                if (data) {
+                  imap_append_new_message(imapc, output_path, data, len, is_seen, is_replied, is_flagged);
+                  free_ro_mapping(data, len);
+                }
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_IMAP:
+              {
+                imap_copy_message(imapc, db->data + db->path_offsets[i], output_path);
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_MBOX:
+              {
+                unsigned char *start, *data;
+                int mbox_len, msg_len, mbi;
+                get_validated_mbox_msg(db, i, &mbi, &data, &mbox_len, &start, &msg_len);
+                imap_append_new_message(imapc, output_path, start, msg_len, is_seen, is_replied, is_flagged);
+                if (data) {
+                  free_ro_mapping(data, mbox_len);
+                }
+                ++n_hits;
+              }
+              break;
+            case DB_MSG_DEAD:
+              break;
+          }
+        }
+      }
+      break;
+/*}}}*/
     default:
       assert(0);
       break;
@@ -1500,6 +1548,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
 {
   struct read_db *db;
   int result;
+  int please_clear = 0;
 
   db = open_db(database_path);
 
@@ -1517,6 +1566,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
       break;
     case FT_RAW:
     case FT_EXCERPT:
+    case FT_IMAP:	/* Do it later, we do not yet have an IMAP connection */
       break;
     default:
       assert(0);
@@ -1537,12 +1587,16 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
       case FT_RAW:
       case FT_EXCERPT:
         break;
+      case FT_IMAP:
+        /* Do it later: we do not yet have an IMAP connection */
+        please_clear = 1;
+        break;
       default:
         assert(0);
     }
   }
 
-  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose, imap_pipe, imap_server, imap_username, imap_password);
+  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose, imap_pipe, imap_server, imap_username, imap_password, please_clear);
   free(complete_mfolder);
   close_db(db);
   return result;

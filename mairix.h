@@ -248,7 +248,8 @@ enum folder_type {/*{{{*/
   FT_MH,
   FT_MBOX,
   FT_RAW,
-  FT_EXCERPT
+  FT_EXCERPT,
+  FT_IMAP
 };
 /*}}}*/
 

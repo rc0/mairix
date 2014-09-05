@@ -270,3 +270,151 @@ struct make_rfc822_from_imap_s s;
 	imap_fetch_message_raw(pseudopath, imapc, callback822, &s);
 	return s.r;
 }
+
+void
+imap_clear_folder(struct imap_ll *imapc, const char *folder)
+{
+struct imap_ll_tokenlist *cmd, *result;
+
+	if (!imap_select(imapc, folder, -1, 1, NULL)) return;
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "STORE", (size_t)-1,
+		TLTYPE_ATOM, "1:*", (size_t)-1,
+		TLTYPE_ATOM, "+FLAGS", (size_t)-1,
+		TLTYPE_ATOM, "\\Deleted", (size_t)-1,
+		TLTYPE_END
+	);
+	result = imap_ll_command(imapc, cmd, 10);
+	imap_ll_freeline(cmd);
+	imap_ll_freeline(result);
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "EXPUNGE", (size_t)-1,
+		TLTYPE_END
+	);
+	result = imap_ll_command(imapc, cmd, 10);
+	imap_ll_freeline(cmd);
+	imap_ll_freeline(result);
+}
+
+void
+create_folder(struct imap_ll *imapc, const char *folder)
+{
+struct imap_ll_tokenlist *cmd, *result;
+
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "CREATE", (size_t)-1,
+		TLTYPE_STRING, folder, (size_t)-1,
+		TLTYPE_END
+	);
+	result = imap_ll_command(imapc, cmd, 10);
+	imap_ll_freeline(cmd);
+	imap_ll_freeline(result);
+}
+
+void
+imap_copy_message(struct imap_ll *imapc, const char *pseudopath, const char *to_folder)
+{
+struct imap_ll_tokenlist *cmd, *result;
+const char *uidvalidity, *uid, *folder, *p;
+size_t uidvalidity_len, uid_len;
+const char *actual_uidvalidity;
+
+	/* first part is the uidvalidity */
+	uidvalidity = pseudopath;
+	p = strchr(pseudopath, ':');
+	if (!p) return;
+	uidvalidity_len = p-pseudopath;
+	uid = p+1;
+
+	/* second part is the uid */
+	p = strchr(uid, ':');
+	if (!p) return;
+	uid_len = p-uid;
+	folder = p+1;
+
+	actual_uidvalidity = imap_select(imapc, folder, -1, 0, NULL);
+	if (!actual_uidvalidity) return;
+
+	if (
+		(strlen(actual_uidvalidity) != uidvalidity_len) ||
+		(0 != memcmp(uidvalidity, actual_uidvalidity, uidvalidity_len))
+	) {
+		return;
+	}
+
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "UID", (size_t)-1,
+		TLTYPE_ATOM, "COPY", (size_t)-1,
+		TLTYPE_ATOM, uid, uid_len,
+		TLTYPE_STRING, to_folder, (size_t)-1,
+		TLTYPE_END
+	);
+	result = imap_ll_command(imapc, cmd, 10);
+
+	if (imap_ll_is_trycreate(result)) {
+		imap_ll_freeline(result);
+		create_folder(imapc, to_folder);
+		result = imap_ll_command(imapc, cmd, 10);
+	}
+	imap_ll_freeline(cmd);
+
+	if (0 != strcmp(imap_ll_status(result), "OK")) {
+		fprintf(stderr, "unable to COPY message to folder \"%s\":\n", to_folder);
+		imap_ll_pprint(result, 0, stderr);
+	}
+	imap_ll_freeline(result);
+}
+
+void
+imap_append_new_message(
+	struct imap_ll *imapc, const char *folder,
+	const unsigned char *data, size_t len,
+	int seen, int answered, int flagged
+)
+{
+struct imap_ll_tokenlist *flags, *cmd, *result;
+
+	if (!imap_select(imapc, folder, -1, 1, NULL)) return;
+	flags = imap_ll_build(TLTYPE_LIST, TLTYPE_END);
+	if (seen) {
+		imap_ll_append(flags, imap_ll_build(
+			TLTYPE_ATOM, "\\Seen", (size_t)-1, TLTYPE_END
+		));
+	}
+	if (answered) {
+		imap_ll_append(flags, imap_ll_build(
+			TLTYPE_ATOM, "\\Answered", (size_t)-1, TLTYPE_END
+		));
+	}
+	if (flagged) {
+		imap_ll_append(flags, imap_ll_build(
+			TLTYPE_ATOM, "\\Flagged", (size_t)-1, TLTYPE_END
+		));
+	}
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "APPEND", (size_t)-1,
+		TLTYPE_STRING, folder, (size_t)-1,
+		TLTYPE_SUB, flags,
+		TLTYPE_STRING, data, len,
+		TLTYPE_END
+	);
+	result = imap_ll_command(imapc, cmd, 10);
+
+	if (imap_ll_is_trycreate(result)) {
+		imap_ll_freeline(result);
+		create_folder(imapc, folder);
+		result = imap_ll_command(imapc, cmd, 10);
+	}
+	imap_ll_freeline(cmd);
+
+	if (0 != strcmp(imap_ll_status(result), "OK")) {
+		fprintf(stderr, "unable to APPEND message to folder \"%s\":\n", folder);
+		imap_ll_pprint(result, 0, stderr);
+	}
+	imap_ll_freeline(result);
+}

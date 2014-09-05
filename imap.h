@@ -41,6 +41,7 @@ void imap_ll_append(struct imap_ll_tokenlist *, struct imap_ll_tokenlist *);
 void imap_ll_pprint(struct imap_ll_tokenlist *, int indent, FILE *);
 struct imap_ll_tokenlist *imap_ll_command(struct imap_ll *, struct imap_ll_tokenlist *, int timeout);
 const char *imap_ll_status(struct imap_ll_tokenlist *);
+int imap_ll_is_trycreate(struct imap_ll_tokenlist *);
 
 #ifdef USE_OPENSSL
 enum imap_ll_starttls_result {

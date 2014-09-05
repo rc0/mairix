@@ -106,6 +106,7 @@ int member_of (const char *complete_mfolder,
       break;
     case FT_RAW: /* cannot happen but to keep compiler happy */
     case FT_EXCERPT:
+    case FT_IMAP:
       break;
   }
   for (i=0; i<n_paths; i++) {
@@ -174,6 +175,8 @@ static void parse_output_folder(char *p)/*{{{*/
     output_folder_type = FT_EXCERPT;
   } else if (!strncasecmp(temp, "mbox", 4)) {
     output_folder_type = FT_MBOX;
+  } else if (!strncasecmp(temp, "imap", 4)) {
+    output_folder_type = FT_IMAP;
   }
   else {
     fprintf(stderr, "Unrecognized mformat <%s>\n", temp);
@@ -712,22 +715,29 @@ int main (int argc, char **argv)/*{{{*/
       mfolder = new_string("");
     }
 
-    /* complete_mfolder is needed by search_top() and member_of() so
-       compute it once here rather than in search_top() as well */
-    if ((mfolder[0] == '/') ||
-        ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
+    if (output_folder_type == FT_IMAP) {
       complete_mfolder = new_string(mfolder);
     } else {
-      len = strlen(folder_base) + strlen(mfolder) + 2;
-      complete_mfolder = new_array(char, len);
-      strcpy(complete_mfolder, folder_base);
-      strcat(complete_mfolder, "/");
-      strcat(complete_mfolder, mfolder);
+      /* complete_mfolder is needed by search_top() and member_of() so
+         compute it once here rather than in search_top() as well */
+      if ((mfolder[0] == '/') ||
+          ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
+        complete_mfolder = new_string(mfolder);
+      } else {
+        len = strlen(folder_base) + strlen(mfolder) + 2;
+        complete_mfolder = new_array(char, len);
+        strcpy(complete_mfolder, folder_base);
+        strcat(complete_mfolder, "/");
+        strcat(complete_mfolder, mfolder);
+      }
     }
     /* check whether mfolder output would destroy a mail folder or mbox */
     switch (output_folder_type) {
       case FT_RAW:
       case FT_EXCERPT:
+        break;
+      case FT_IMAP:
+        /* the same check as below could be implemented in the future */
         break;
       default:
         if ((member_of(complete_mfolder,folder_base, maildir_folders, FT_MAILDIR, omit_globs)||

@@ -24,4 +24,8 @@ int imap_fetch_message_raw(
 struct rfc822 *
 make_rfc822_from_imap(const char *pseudopath, struct imap_ll *);
 
+void imap_clear_folder(struct imap_ll *, const char *);
+void imap_append_new_message(struct imap_ll *, const char *folder, const unsigned char *data, size_t len, int seen, int answered, int flagged);
+void imap_copy_message(struct imap_ll *, const char *pseudopath, const char *to_folder);
+
 #endif
