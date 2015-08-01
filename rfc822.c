@@ -144,19 +144,19 @@ static void splice_header_lines(struct line *header)/*{{{*/
   return;
 }
 /*}}}*/
-static int audit_header(struct line *header)/*{{{*/
+static long audit_header(struct line *header)/*{{{*/
 {
   /* Check for obvious broken-ness
    * 1st line has no leading spaces, single word then colon
    * following lines have leading spaces or single word followed by colon
    * */
   struct line *x;
-  int first=1;
-  int count=1;
+  long first=1;
+  long count=1;
   for (x=header->next; x!=header; x=x->next) {
-    int has_leading_space=0;
-    int is_blank;
-    int has_word_colon=0;
+    long has_leading_space=0;
+    long is_blank;
+    long has_word_colon=0;
 
     if (1 || first) {
       /* Ignore any UUCP or mbox style From line at the start */
@@ -172,7 +172,7 @@ static int audit_header(struct line *header)/*{{{*/
     is_blank = !(x->text[0]);
     if (!is_blank) {
       char *p;
-      int saw_char = 0;
+      long saw_char = 0;
       has_leading_space = isspace(x->text[0] & 0xff);
       has_word_colon = 0; /* default */
       p = x->text;
@@ -210,9 +210,9 @@ static int audit_header(struct line *header)/*{{{*/
   /* If we get here the header must have been OK */
   return 1;
 }/*}}}*/
-static int match_string(const char *ref, const char *candidate)/*{{{*/
+static long match_string(const char *ref, const char *candidate)/*{{{*/
 {
-  int len = strlen(ref);
+  long len = strlen(ref);
   return !strncasecmp(ref, candidate, len);
 }
 /*}}}*/
@@ -236,7 +236,7 @@ static char equal_table[] = {/*{{{*/
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   /* f0-ff */
 };
 /*}}}*/
-static int base64_table[] = {/*{{{*/
+static long base64_table[] = {/*{{{*/
    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 00-0f */
    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  /* 10-1f */
    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  62,  -1,  -1,  -1,  63,  /* 20-2f */
@@ -255,7 +255,7 @@ static int base64_table[] = {/*{{{*/
    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1   /* f0-ff */
 };
 /*}}}*/
-static int hex_to_val(char x) {/*{{{*/
+static long hex_to_val(char x) {/*{{{*/
   switch (x) {
     case '0':
     case '1':
@@ -314,7 +314,7 @@ static void decode_header_value(char *text){/*{{{*/
     if (b - a != 2)
       continue; /* unknown encoding */
     if (*a == 'q' || *a == 'Q') {
-      int val;
+      long val;
       q = b;
       while (q < e) {
         if (*q == '_') {
@@ -329,8 +329,8 @@ static void decode_header_value(char *text){/*{{{*/
           *p++ = *q++;
       }
     } else if (*a == 'b' || *a == 'B') {
-      int reg, nc, eq; /* register, #characters in reg, #equals */
-      int dc; /* decoded character */
+      long reg, nc, eq; /* register, #characters in reg, #equals */
+      long dc; /* decoded character */
       eq = reg = nc = 0;
       for (q = b; q < e; q++) {
         unsigned char cq = *(unsigned char *)q;
@@ -448,7 +448,7 @@ static char *looking_at_ws_then_newline(char *start)/*{{{*/
 }
 /*}}}*/
 
-static char *unencode_data(struct msg_src *src, char *input, int input_len, const char *enc, int *output_len)/*{{{*/
+static char *unencode_data(struct msg_src *src, char *input, long input_len, const char *enc, long *output_len)/*{{{*/
 {
   enum encoding_type encoding;
   char *result, *end_result;
@@ -483,7 +483,7 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
           if (*q == '=') {
             /* followed by optional whitespace then \n?  discard them. */
             char *r;
-            int val;
+            long val;
             q++;
             r = looking_at_ws_then_newline(q);
             if (r) {
@@ -507,8 +507,8 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
     case ENC_BASE64:/*{{{*/
       {
         char *p, *q;
-        int reg, nc, eq; /* register, #characters in reg, #equals */
-        int dc; /* decoded character */
+        long reg, nc, eq; /* register, #characters in reg, #equals */
+        long dc; /* decoded character */
         eq = reg = nc = 0;
         for (q=input, p=result; q<end_input; q++) {
           unsigned char cq =  * (unsigned char *)q;
@@ -548,7 +548,7 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
         p = result;
         while (q < end_input) { /* process line */
 #define DEC(c) (((c) - ' ') & 077)
-          int len = DEC(*q++);
+          long len = DEC(*q++);
           if (len == 0)
             break;
           for (; len > 0; q += 4, len -= 3) {
@@ -587,9 +587,9 @@ static char *unencode_data(struct msg_src *src, char *input, int input_len, cons
 char *format_msg_src(struct msg_src *src)/*{{{*/
 {
   static char *buffer = NULL;
-  static int buffer_len = 0;
+  static long buffer_len = 0;
   char *result;
-  int len;
+  long len;
   switch (src->type) {
     case MS_FILE:
       result = src->filename;
@@ -613,10 +613,10 @@ char *format_msg_src(struct msg_src *src)/*{{{*/
   return result;
 }
 /*}}}*/
-static int split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
+static long split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
 {
   char *sol, *eol;
-  int blank_line;
+  long blank_line;
   header->next = header->prev = header;
   sol = data;
   do {
@@ -629,7 +629,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
     }
     if (*eol == '\n') {
       if (!blank_line) {
-        int line_length = eol - sol;
+        long line_length = eol - sol;
         char *line_text = new_array(char, 1 + line_length);
         struct line *new_header;
 
@@ -663,20 +663,20 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
 /*}}}*/
 
 /* Forward prototypes */
-static void do_multipart(struct msg_src *src, char *input, int input_len,
+static void do_multipart(struct msg_src *src, char *input, long input_len,
     const char *boundary, struct attachment *atts,
     enum data_to_rfc822_error *error);
 
 /*{{{ do_body() */
 static void do_body(struct msg_src *src,
-    char *body_start, int body_len,
+    char *body_start, long body_len,
     struct nvp *ct_nvp, struct nvp *cte_nvp,
     struct nvp *cd_nvp,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
   char *decoded_body;
-  int decoded_body_len;
+  long decoded_body_len;
   const char *content_transfer_encoding;
   content_transfer_encoding = NULL;
   if (cte_nvp) {
@@ -770,7 +770,7 @@ static void do_attachment(struct msg_src *src,
   /* decode attachment and add to attachment list */
   struct line header, *x, *nx;
   char *body_start;
-  int body_len;
+  long body_len;
 
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
 
@@ -834,15 +834,15 @@ static void do_attachment(struct msg_src *src,
 /*}}}*/
 /*{{{ do_multipart() */
 static void do_multipart(struct msg_src *src,
-    char *input, int input_len,
+    char *input, long input_len,
     const char *boundary,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
   char *b0, *b1, *be, *bx;
   char *line_after_b0, *start_b1_search_from;
-  int boundary_len;
-  int looking_at_end_boundary;
+  long boundary_len;
+  long looking_at_end_boundary;
 
   if (!boundary) {
     fprintf(stderr, "Can't process multipart message %s with no boundary string\n",
@@ -858,7 +858,7 @@ static void do_multipart(struct msg_src *src,
   be = input + input_len;
 
   do {
-    int boundary_ok;
+    long boundary_ok;
     start_b1_search_from = line_after_b0;
     do {
       /* reject boundaries that aren't a whole line */
@@ -990,7 +990,7 @@ static void scan_status_flags(const char *s, struct headers *hdrs)/*{{{*/
 
 /*{{{ data_to_rfc822() */
 struct rfc822 *data_to_rfc822(struct msg_src *src,
-    char *data, int length,
+    char *data, long length,
     enum data_to_rfc822_error *error)
 {
   struct rfc822 *result;
@@ -998,7 +998,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   struct line header;
   struct line *x, *nx;
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
-  int body_len;
+  long body_len;
 
   if (error) *error = DTR8_OK; /* default */
   result = new(struct rfc822);
@@ -1082,9 +1082,9 @@ int data_alloc_type;
 #define COMPRESSION_GZIP 1
 #define COMPRESSION_BZIP 2
 
-static int get_compression_type(const char *filename) {/*{{{*/
+static long get_compression_type(const char *filename) {/*{{{*/
   size_t len = strlen(filename);
-  int ptr;
+  long ptr;
 
 #ifdef USE_GZIP_MBOX
   ptr = len - 3;
@@ -1104,7 +1104,7 @@ static int get_compression_type(const char *filename) {/*{{{*/
 }
 /*}}}*/
 
-static int is_compressed(const char *filename) {/*{{{*/
+static long is_compressed(const char *filename) {/*{{{*/
   return (get_compression_type(filename) != COMPRESSION_NONE);
 }
 /*}}}*/
@@ -1122,7 +1122,7 @@ struct zFile {/*{{{*/
 #endif
     void *zptr;
   } foo;
-  int type;
+  long type;
 };
 /*}}}*/
 
@@ -1173,7 +1173,7 @@ static void xx_zclose(struct zFile *zf) {/*{{{*/
   free(zf);
 }
 /*}}}*/
-static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
+static long xx_zread(struct zFile *zf, void *buf, long len) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
@@ -1201,16 +1201,16 @@ struct ro_mapping {
   unsigned char *map;
   size_t len;
 };
-static int ro_cache_init = 0;
+static long ro_cache_init = 0;
 static struct ro_mapping ro_mapping_cache[ROCACHE_SIZE];
 
 /* find a temp file in the mapping cache.  If nothing is found lasti is
  * set to the next slot to use for insertion.  You have to check that slot
  * to see if it is currently in use
  */
-static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
+static struct ro_mapping *find_ro_cache(const char *filename, long *lasti)
 {
-  int i = 0;
+  long i = 0;
   struct ro_mapping *ro = NULL;
   if (lasti)
     *lasti = 0;
@@ -1234,9 +1234,9 @@ static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
  * put a new tempfile into the cache.  It is mmaped as part of this function
  * so you can safely close the file handle after calling this.
  */
-static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
+static struct ro_mapping *add_ro_cache(const char *filename, long fd, size_t len)
 {
-  int i = 0;
+  long i = 0;
   struct ro_mapping *ro = NULL;
   if (!ro_cache_init) {
     memset(&ro_mapping_cache, 0, sizeof(ro_mapping_cache));
@@ -1265,10 +1265,10 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
-void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/*{{{*/
 {
   struct stat sb;
-  int fd;
+  long fd;
 
 #if USE_GZIP_MBOX || USE_BZIP_MBOX
   struct zFile *zf;
@@ -1320,7 +1320,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     *len = cur_read;
     if (cur_read >= SIZE_STEP) {
       while(1) {
-        int ret;
+        long ret;
         cur_read = xx_zread(zf, p, SIZE_STEP);
         if (cur_read <= 0)
           break;
@@ -1386,9 +1386,9 @@ comp_error:
   data_alloc_type = ALLOC_MMAP;
 }
 /*}}}*/
-void free_ro_mapping(unsigned char *data, int len)/*{{{*/
+void free_ro_mapping(unsigned char *data, size_t len)/*{{{*/
 {
-  int r;
+  long r;
 
   if(data_alloc_type == ALLOC_MALLOC) {
     free(data);
@@ -1414,7 +1414,7 @@ static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 /*}}}*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
-  int len;
+  size_t len;
   unsigned char *data;
   struct rfc822 *result;
 
@@ -1469,13 +1469,13 @@ void free_rfc822(struct rfc822 *msg)/*{{{*/
 
 static void do_indent(int indent)/*{{{*/
 {
-  int i;
+  long i;
   for (i=indent; i>0; i--) {
     putchar(' ');
   }
 }
 /*}}}*/
-static void show_header(char *tag, char *x, int indent)/*{{{*/
+static void show_header(char *tag, char *x, long indent)/*{{{*/
 {
   if (x) {
     do_indent(indent);
@@ -1483,7 +1483,7 @@ static void show_header(char *tag, char *x, int indent)/*{{{*/
   }
 }
 /*}}}*/
-static void show_rfc822(struct rfc822 *msg, int indent)/*{{{*/
+static void show_rfc822(struct rfc822 *msg, long indent)/*{{{*/
 {
   struct attachment *a;
   show_header("From", msg->hdrs.from, indent);
