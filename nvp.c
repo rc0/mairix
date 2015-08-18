@@ -146,9 +146,9 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
   unsigned int tok;
   char *q;
   unsigned char qq;
-  char name[256];
-  char minor[256];
-  char value[256];
+  char name[strlen(s)+1];
+  char minor[strlen(s)+1];
+  char value[strlen(s)+1];
   enum nvp_action last_action, current_action;
   struct nvp *result;
   size_t pfxlen;
