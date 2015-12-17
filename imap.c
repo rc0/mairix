@@ -1038,23 +1038,6 @@ const char *close = NULL;
 }
 
 static struct imap_ll_tokenlist *
-find_capability_list_from_greeting(struct imap_ll_tokenlist *l)
-{
-	if (
-		(!(l->first)) || (!(l->first->next)) ||
-		(l->first->next->type != TLTYPE_SQLIST) ||
-		(!(l->first->next->first)) ||
-		(!(l->first->next->first->leaf)) ||
-		(0 != strcmp(l->first->next->first->leaf, "CAPABILITY"))
-	) {
-		fprintf(stderr, "IMAP client cannot find capabilities list\n");
-		return NULL;
-	}
-	return l->first->next->first->next;
-}
-
-#ifdef USE_OPENSSL
-static struct imap_ll_tokenlist *
 find_capability_list_in_untagged_response(struct imap_ll_tokenlist *l)
 {
 	for (l = l->first; l; l = l->next) {
@@ -1068,6 +1051,42 @@ find_capability_list_in_untagged_response(struct imap_ll_tokenlist *l)
 	return NULL;
 }
 
+static struct imap_ll_tokenlist *
+ask_for_capabilities(struct imap_ll *ll)
+{
+struct imap_ll_tokenlist *cmd, *result;
+
+	cmd = imap_ll_build(
+		TLTYPE_TAGGED,
+		TLTYPE_ATOM, "CAPABILITY", (size_t)-1,
+		TLTYPE_END
+	);
+	result = imap_ll_command(ll, cmd, 10);
+	imap_ll_freeline(cmd);
+	return result;
+}
+
+/* caller should free whatever this function fills into freeme_p */
+static struct imap_ll_tokenlist *
+find_capability_list_from_greeting(struct imap_ll *ll, struct imap_ll_tokenlist *l, struct imap_ll_tokenlist **freeme_p)
+{
+	*freeme_p = NULL;
+	if (
+		(!(l->first)) || (!(l->first->next)) ||
+		(l->first->next->type != TLTYPE_SQLIST) ||
+		(!(l->first->next->first)) ||
+		(!(l->first->next->first->leaf)) ||
+		(0 != strcmp(l->first->next->first->leaf, "CAPABILITY"))
+	) {
+		/* Server did not send capabilities in greeting. */
+		*freeme_p = l = ask_for_capabilities(ll);
+		return find_capability_list_in_untagged_response(l);
+	} else {
+		return l->first->next->first->next;
+	}
+}
+
+#ifdef USE_OPENSSL
 static int
 have_capability(struct imap_ll_tokenlist *l, const char *cap)
 {
@@ -1097,9 +1116,11 @@ imap_login(
 	, SSL_CTX *sslctx, const char *servername
 #endif
 ) {
-struct imap_ll_tokenlist *cmd, *result, *caps;
+struct imap_ll_tokenlist *cmd, *result, *caps, *freeme;
+enum imap_login_result ret;
 const char *status;
 
+	freeme = NULL;
 	imap_ll_timeout(ll, 60);
 	if (!(result = imap_ll_waitline(ll))) {
 		fprintf(stderr, "error reading IMAP server greeting\n");
@@ -1119,7 +1140,9 @@ const char *status;
 		fprintf(stderr, "IMAP server rejected connection\n");
 		return imap_login_error;
 	} else if (0 == strcmp(result->first->leaf, "PREAUTH")) {
-		if (!(caps = find_capability_list_from_greeting(result))) {
+		if (!(caps = find_capability_list_from_greeting(ll, result, &freeme))) {
+			imap_ll_freeline(result);
+			if (freeme) imap_ll_freeline(freeme);
 			return imap_login_error;
 		}
 		goto logged_in;
@@ -1128,7 +1151,9 @@ const char *status;
 		return imap_login_error;
 	}
 
-	if (!(caps = find_capability_list_from_greeting(result))) {
+	if (!(caps = find_capability_list_from_greeting(ll, result, &freeme))) {
+		imap_ll_freeline(result);
+		if (freeme) imap_ll_freeline(freeme);
 		return imap_login_error;
 	}
 
@@ -1139,30 +1164,36 @@ const char *status;
 				break;
 			case IMAP_LL_STARTTLS_FAILED:
 			case IMAP_LL_STARTTLS_FAILED_CERT:
+				if (freeme) imap_ll_freeline(freeme);
 				imap_ll_freeline(result);
 				return imap_login_error;
 			case IMAP_LL_STARTTLS_SUCCESS:
+				if (freeme) imap_ll_freeline(freeme);
+				freeme = NULL;
 				imap_ll_freeline(result);
-				cmd = imap_ll_build(
-					TLTYPE_TAGGED,
-					TLTYPE_ATOM, "CAPABILITY", (size_t)-1,
-					TLTYPE_END
-				);
-				result = imap_ll_command(ll, cmd, 10);
-				imap_ll_freeline(cmd);
+				result = ask_for_capabilities(ll);
 				if (!(caps = find_capability_list_in_untagged_response(result))) {
+					imap_ll_freeline(result);
 					return imap_login_error;
 				}
 		}
 	}
 #endif
 
-	if (!need_capability(caps, "LITERAL+")) return imap_login_error;
+	if (!need_capability(caps, "LITERAL+")) {
+		ret = imap_login_error;
+		goto exit;
+	}
 	if ((!username) || (!password)) {
 		fprintf(stderr, "IMAP login credentials are needed\n");
-		return imap_login_denied;
+		ret = imap_login_denied;
+		goto exit;
 	}
-	if (!need_capability(caps, "AUTH=PLAIN")) return imap_login_error;
+	if (!need_capability(caps, "AUTH=PLAIN")) {
+		ret = imap_login_error;
+		goto exit;
+	}
+	if (freeme) imap_ll_freeline(freeme);
 	imap_ll_freeline(result);
 	cmd = imap_ll_build(
 		TLTYPE_TAGGED,
@@ -1175,13 +1206,18 @@ const char *status;
 	imap_ll_freeline(cmd);
 	status = imap_ll_status(result);
 	if (0 == strcmp(status, "OK")) {
-		if (!(caps = find_capability_list_from_greeting(result->last))) {
+		if (!(caps = find_capability_list_from_greeting(ll, result->last, &freeme))) {
+			if (freeme) imap_ll_freeline(freeme);
+			imap_ll_freeline(result);
 			return imap_login_error;
 		}
 logged_in:
-		if (!need_capability(caps, "LITERAL+")) return imap_login_error;
+		ret = imap_login_ok;
+		if (!need_capability(caps, "LITERAL+")) ret = imap_login_error;
+exit:
 		imap_ll_freeline(result);
-		return imap_login_ok;
+		if (freeme) imap_ll_freeline(freeme);
+		return ret;
 	} else if (0 == strcmp(status, "NO")) {
 		fprintf(stderr, "IMAP authentication failed\n");
 		imap_ll_freeline(result);
