@@ -138,7 +138,7 @@ struct toktable2_db {/*{{{*/
 struct read_db {/*{{{*/
   /* Raw file parameters, needed later for munmap */
   char *data;
-  int len;
+  size_t len;
 
   /* Pathname information */
   int n_msgs;
