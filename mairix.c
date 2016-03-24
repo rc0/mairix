@@ -51,6 +51,7 @@ static char *omit = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 static int skip_integrity_checks = 0;
+static int follow_mbox_symlinks = 0;
 
 enum filetype {
   M_NONE, M_FILE, M_DIR, M_OTHER
@@ -249,6 +250,7 @@ static void parse_rc_file(char *name)/*{{{*/
     }
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
+    else if (!strncasecmp(p, "follow_mbox_symlinks", 20)) follow_mbox_symlinks = 1;
     else if (!strncasecmp(p, "omit=", 5)) add_folders(&omit, copy_value(p));
 
     else if (!strncasecmp(p, "mformat=", 8)) {
@@ -490,6 +492,7 @@ int main (int argc, char **argv)/*{{{*/
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
   int do_fast_index = 0;
+  int do_mbox_symlinks = 0;
 
   unsigned int forced_hash_key = CREATE_RANDOM_DATABASE_HASH;
 
@@ -615,6 +618,10 @@ int main (int argc, char **argv)/*{{{*/
 
   if (skip_integrity_checks) {
     do_integrity_checks = 0;
+  }
+
+  if (follow_mbox_symlinks) {
+    do_mbox_symlinks = 1;
   }
 
   if (!folder_base) {
@@ -746,7 +753,7 @@ int main (int argc, char **argv)/*{{{*/
       unlock_and_exit(2);
     }
 
-    build_mbox_lists(db, folder_base, mboxen, omit_globs);
+    build_mbox_lists(db, folder_base, mboxen, omit_globs, do_mbox_symlinks);
 
     any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index);
     if (do_purge) {
