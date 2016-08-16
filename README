@@ -21,8 +21,6 @@ Sylpheed (which supports MH folders).
 [(*) where the input or output folder is an mbox, a copy of the message is made
 instead of symlinking.]
 
-See also the mairix.txt file.
-
 *********************************************************************
  Copyright (C) Richard P. Curnow  2002-2004
  
