@@ -59,46 +59,49 @@ static void append(struct nvp *nvp, struct nvp_entry *ne)/*{{{*/
   nvp->last = ne;
 }
 /*}}}*/
-static void append_name(struct nvp *nvp, char *name)/*{{{*/
+static void append_name(struct nvp *nvp, char **name)/*{{{*/
 {
   struct nvp_entry *ne;
   ne = new(struct nvp_entry);
   ne->type = NVP_NAME;
-  ne->lhs = new_string(name);
+  ne->lhs = *name;
+  *name = NULL;
   append(nvp, ne);
 }
 /*}}}*/
-static void append_majorminor(struct nvp *nvp, char *major, char *minor)/*{{{*/
+static void append_majorminor(struct nvp *nvp, char **major, char **minor)/*{{{*/
 {
   struct nvp_entry *ne;
   ne = new(struct nvp_entry);
   ne->type = NVP_MAJORMINOR;
-  ne->lhs = new_string(major);
-  ne->rhs = new_string(minor);
+  ne->lhs = *major;
+  ne->rhs = *minor;
+  *major = *minor = NULL;
   append(nvp, ne);
 
 }
 /*}}}*/
-static void append_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
+static void append_namevalue(struct nvp *nvp, char **name, char **value)/*{{{*/
 {
   struct nvp_entry *ne;
   ne = new(struct nvp_entry);
   ne->type = NVP_NAMEVALUE;
-  ne->lhs = new_string(name);
-  ne->rhs = new_string(value);
+  ne->lhs = *name;
+  ne->rhs = *value;
+  *name = *value = NULL;
   append(nvp, ne);
 }
 /*}}}*/
-static void combine_namevalue(struct nvp *nvp, char *name, char *value)/*{{{*/
+static void combine_namevalue(struct nvp *nvp, char **name, char **value)/*{{{*/
 {
   struct nvp_entry *n;
   for (n=nvp->first; n; n=n->next) {
     if (n->type == NVP_NAMEVALUE) {
-      if (!strcmp(n->lhs, name)) {
+      if (!strcmp(n->lhs, *name)) {
         char *new_rhs;
-        new_rhs = new_array(char, strlen(n->rhs) + strlen(value) + 1);
+        new_rhs = new_array(char, strlen(n->rhs) + strlen(*value) + 1);
         strcpy(new_rhs, n->rhs);
-        strcat(new_rhs, value);
+        strcat(new_rhs, *value);
         free(n->rhs);
         n->rhs = new_rhs;
         return;
@@ -144,15 +147,16 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 {
   int current_state;
   unsigned int tok;
-  char *q;
+  char *q, *tempsrc, *tempdst;
   unsigned char qq;
-  char name[256];
-  char minor[256];
-  char value[256];
+  char *name = NULL;
+  char *minor = NULL;
+  char *value = NULL;
+  char *copy_start;
   enum nvp_action last_action, current_action;
+  enum nvp_copier last_copier;
   struct nvp *result;
   size_t pfxlen;
-  char *nn, *mm, *vv;
 
   pfxlen = strlen(pfx);
   if (strncasecmp(pfx, s, pfxlen))
@@ -165,10 +169,8 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
   current_state = nvp_in;
 
   q = s;
-  nn = name;
-  mm = minor;
-  vv = value;
   last_action = GOT_NOTHING;
+  last_copier = COPY_NOWHERE;
   do {
     qq = *(unsigned char *) q;
     if (qq) {
@@ -194,27 +196,40 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
       return NULL;
     }
 
-    switch (nvp_copier[current_state]) {
-      case COPY_TO_NAME:
+    if (nvp_copier[current_state] != last_copier) {
+      if (last_copier != COPY_NOWHERE) {
+        char *newstring = Malloc(q - copy_start + 1);
+	memcpy(newstring, copy_start, q - copy_start);
+	newstring[q - copy_start] = 0;
+        switch (last_copier) {
+          case COPY_TO_NAME:
+            if (name) free(name);
+            name = newstring;
 #ifdef VERBOSE_TEST
-        fprintf(stderr, "  COPY_TO_NAME\n");
+            fprintf(stderr, "  COPY_TO_NAME \"%s\"\n", name);
 #endif
-        *nn++ = *q;
-        break;
-      case COPY_TO_MINOR:
+            break;
+          case COPY_TO_MINOR:
+            if (minor) free(minor);
+            minor = newstring;
 #ifdef VERBOSE_TEST
-        fprintf(stderr, "  COPY_TO_MINOR\n");
+            fprintf(stderr, "  COPY_TO_MINOR \"%s\"\n", minor);
 #endif
-        *mm++ = *q;
-        break;
-      case COPY_TO_VALUE:
+            break;
+          case COPY_TO_VALUE:
+            if (value) free(value);
+            value = newstring;
 #ifdef VERBOSE_TEST
-        fprintf(stderr, "  COPY_TO_VALUE\n");
+            fprintf(stderr, "  COPY_TO_VALUE \"%s\"\n", value);
 #endif
-        *vv++ = *q;
-        break;
-      case COPY_NOWHERE:
-        break;
+            break;
+          case COPY_NOWHERE:
+            /* NOTREACHED */
+            break;
+        }
+      }
+      last_copier = nvp_copier[current_state];
+      copy_start = q;
     }
 
     current_action = nvp_action[current_state];
@@ -237,33 +252,26 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 #endif
         switch (last_action) {
           case GOT_NAME:
-            *nn = 0;
-            append_name(result, name);
+            append_name(result, &name);
             break;
           case GOT_NAME_TRAILING_SPACE:
-            while (isspace(*--nn)) {}
-            *++nn = 0;
-            append_name(result, name);
+            tempdst = name + strlen(name);
+            while (isspace(*--tempdst)) {}
+            *++tempdst = 0;
+            append_name(result, &name);
             break;
           case GOT_MAJORMINOR:
-            *nn = 0;
-            *mm = 0;
-            append_majorminor(result, name, minor);
+            append_majorminor(result, &name, &minor);
             break;
           case GOT_NAMEVALUE:
-            *nn = 0;
-            *vv = 0;
-            append_namevalue(result, name, value);
+            append_namevalue(result, &name, &value);
             break;
           case GOT_NAMEVALUE_CSET:
           case GOT_NAMEVALUE_CCONT:
-            *mm = 0;
-            *nn = 0;
-            *vv = 0;
-	    for(mm = vv = value; *vv; vv++) {
-		if (*vv == '%') {
-		    int val = hex_to_val(*++vv) << 4;
-		    val |= hex_to_val(*++vv);
+	    for(tempsrc = tempdst = value; *tempsrc; tempsrc++) {
+		if (*tempsrc == '%') {
+		    int val = hex_to_val(*++tempsrc) << 4;
+		    val |= hex_to_val(*++tempsrc);
 		    if (val < 0) {
 #ifdef TEST
 			fprintf(stderr, "'%s' could not be parsed (%%)\n", s);
@@ -272,29 +280,25 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 				pfx, s, format_msg_src(src));
 #endif
 			release_nvp(result);
-			return NULL;
+			result = NULL;
+			goto out;
 		    }
-		    *mm++ = val;
+		    *tempdst++ = val;
 		} else
-		    *mm++ = *vv;
+		    *tempdst++ = *tempsrc;
 	    }
-            *mm = 0;
+            *tempdst = 0;
             if (current_action == GOT_NAMEVALUE_CSET)
-              append_namevalue(result, name, value);
+              append_namevalue(result, &name, &value);
             else
-              combine_namevalue(result, name, value);
+              combine_namevalue(result, &name, &value);
             break;
           case GOT_NAMEVALUE_CONT:
-            *nn = 0;
-            *vv = 0;
-            combine_namevalue(result, name, value);
+            combine_namevalue(result, &name, &value);
             break;
           default:
             break;
         }
-        nn = name;
-        mm = minor;
-        vv = value;
         break;
       case GOT_NOTHING:
         break;
@@ -303,6 +307,11 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
     q++;
   } while (tok != nvp_EOS);
 
+out:
+  /* Not all productions consume these values */
+  if (name) free(name);
+  if (value) free(value);
+  if (minor) free(minor);
   return result;
 }
 /*}}}*/
