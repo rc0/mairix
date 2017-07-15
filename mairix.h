@@ -359,7 +359,8 @@ int cull_dead_messages(struct database *db, int do_integrity_checks);
 
 /* In mbox.c */
 void build_mbox_lists(struct database *db, const char *folder_base,
-    const char *mboxen_paths, struct globber_array *omit_globs);
+    const char *mboxen_paths, struct globber_array *omit_globs,
+    int do_mbox_symlinks);
 int add_mbox_messages(struct database *db);
 void compute_checksum(const char *data, size_t len, checksum_t *csum);
 void cull_dead_mboxen(struct database *db);
