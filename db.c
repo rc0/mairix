@@ -916,6 +916,13 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
 }
 /*}}}*/
 
+enum stat_result {/*{{{*/
+  STAT_RESULT_BAD,
+  STAT_RESULT_FILE,
+  STAT_RESULT_DIR,
+};
+/*}}}*/
+
 static int do_stat(struct msgpath *mp)/*{{{*/
 {
   struct stat sb;
@@ -923,17 +930,20 @@ static int do_stat(struct msgpath *mp)/*{{{*/
   if (mp->type == MTY_IMAP) {
     mp->src.mpf.mtime = 0;
     mp->src.mpf.size = 0;
-    return 1;
+    return STAT_RESULT_FILE;
   }
   status = stat(mp->src.mpf.path, &sb);
-  if ((status < 0) ||
-      !S_ISREG(sb.st_mode)) {
-    return 0;
-  } else {
+  if (status < 0) {
+    return STAT_RESULT_BAD;
+  }
+  if (S_ISREG(sb.st_mode)) {
     mp->src.mpf.mtime = sb.st_mtime;
     mp->src.mpf.size = sb.st_size;
-    return 1;
+    return STAT_RESULT_FILE;
+  } else if (S_ISDIR(sb.st_mode)) {
+    return STAT_RESULT_DIR;
   }
+  return STAT_RESULT_BAD;
 }
 /*}}}*/
 int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index, struct imap_ll *imapc)/*{{{*/
@@ -951,7 +961,6 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   int matched_index;
   int i, new_entries_start_at;
   int any_new, n_newly_pruned, n_already_dead;
-  int status;
 
   file_in_db = new_array(char, n_msgs);
   file_in_new_list = new_array(char, db->n_msgs);
@@ -972,16 +981,18 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
             file_in_db[matched_index] = 1;
             file_in_new_list[i] = 1;
           } else {
-            status = do_stat(sorted_paths + matched_index);
-            if (status) {
-              if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
-                /* Treat stale files as though the path has changed. */
-                file_in_db[matched_index] = 1;
-                file_in_new_list[i] = 1;
-              }
-            } else {
-              /* This path will get treated as dead, and be re-stated below.
-               * When that stat fails, the path won't get added to the db. */
+            switch (do_stat(sorted_paths + matched_index)) {
+              case STAT_RESULT_FILE:
+                if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
+                  /* Treat stale files as though the path has changed. */
+                  file_in_db[matched_index] = 1;
+                  file_in_new_list[i] = 1;
+                }
+                break;
+              default:
+                /* This path will get treated as dead, and be re-stated below.
+                 * When that stat fails, the path won't get added to the db. */
+                break;
             }
           }
         }
@@ -1045,16 +1056,27 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   any_new = 0;
   for (i=0; i<n_msgs; i++) {
     if (!file_in_db[i]) {
-      int status;
       any_new = 1;
       /* The 'sorted_paths' array is only used for file-per-message folders. */
-      status = do_stat(sorted_paths + i);
-      if (status) {
-        /* We only add files that could be successfully stat()'d as regular
-         * files. */
-        add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size, sorted_paths[i].type);
-      } else {
-        fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+      switch(do_stat(sorted_paths + i)) {
+        case STAT_RESULT_FILE:
+          /* We only add files that could be successfully stat()'d as regular
+           * files. */
+          add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size, sorted_paths[i].type);
+          break;
+        case STAT_RESULT_DIR:
+          if (sorted_paths[i].source_ft == FT_MH) {
+            /* With MH, something that looks like a message but is a
+               directory is actually a subfolder with a numeric name.
+               Don't warn about it */
+            break;
+          }
+          /* In all other cases, treat any non-regular-file the same
+             and warn about it. */
+          /* fallthrough */
+        default:
+          fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+          break;
       }
     }
   }

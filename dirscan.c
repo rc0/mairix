@@ -61,7 +61,7 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
   free(x);
 }
 /*}}}*/
-static void add_file_to_list(char *x, struct msgpath_array *arr) {/*{{{*/
+static void add_file_to_list(char *x, struct msgpath_array *arr, enum folder_type ft) {/*{{{*/
   char *y = new_string(x);
   if (arr->n == arr->max) {
     arr->max += 1024;
@@ -69,6 +69,7 @@ static void add_file_to_list(char *x, struct msgpath_array *arr) {/*{{{*/
   }
   arr->paths[arr->n].type = MTY_FILE;
   arr->paths[arr->n].src.mpf.path = y;
+  arr->paths[arr->n].source_ft = ft;
   ++arr->n;
   return;
 }
@@ -102,7 +103,7 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
         strcpy(fname, subdir);
         strcat(fname, "/");
         strcat(fname, de->d_name);
-        add_file_to_list(fname, arr);
+        add_file_to_list(fname, arr, FT_MAILDIR);
       }
       closedir(d);
     }
@@ -149,7 +150,7 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
       strcat(fname, "/");
       strcat(fname, de->d_name);
       if (valid_mh_filename_p(de->d_name)) {
-        add_file_to_list(fname, arr);
+        add_file_to_list(fname, arr, FT_MH);
       }
     }
     closedir(d);

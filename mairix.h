@@ -42,6 +42,16 @@ enum message_type {/*{{{*/
 };
 /*}}}*/
 
+enum folder_type {/*{{{*/
+  FT_MAILDIR,
+  FT_MH,
+  FT_MBOX,
+  FT_RAW,
+  FT_EXCERPT,
+  FT_IMAP
+};
+/*}}}*/
+
 struct msgpath {/*{{{*/
   enum message_type type; /* selector for union 'src' */
   union {
@@ -59,6 +69,10 @@ struct msgpath {/*{{{*/
   /* Now fields that are common to both types of message. */
   time_t date;  /* representation of Date: header in message */
   int tid;      /* thread-id */
+
+  /* Track the folder type this came from, so we know the difference
+     between MH and Maildir, both of which have type MTY_FILE. */
+  enum folder_type source_ft;
 
   /* Message flags. */
   unsigned int seen:1;
@@ -240,16 +254,6 @@ struct database {/*{{{*/
    * Encoding chain 1 stores just the Message-Id.  Used for search by message ID.
   */
   struct toktable2 *msg_ids;
-};
-/*}}}*/
-
-enum folder_type {/*{{{*/
-  FT_MAILDIR,
-  FT_MH,
-  FT_MBOX,
-  FT_RAW,
-  FT_EXCERPT,
-  FT_IMAP
 };
 /*}}}*/
 
