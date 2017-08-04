@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#ifdef USE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#endif
 #include "imapinterface.h"
 #include "imap.h"
 #include "mairix.h"
