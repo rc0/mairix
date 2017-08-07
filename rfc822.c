@@ -863,7 +863,7 @@ static void do_multipart(struct msg_src *src,
     do {
       /* reject boundaries that aren't a whole line */
       b1 = NULL;
-      for (bx = start_b1_search_from; bx < be - (boundary_len + 4); bx++) {
+      for (bx = start_b1_search_from; bx < be - (boundary_len + 2); bx++) {
         if (bx[0] == '-' && bx[1] == '-' &&
             !strncmp(bx+2, boundary, boundary_len)) {
           b1 = bx;
@@ -876,12 +876,12 @@ static void do_multipart(struct msg_src *src,
         return;
       }
 
-      looking_at_end_boundary = (b1[boundary_len+2] == '-' &&
+      looking_at_end_boundary = (b1+boundary_len+3 < be) && (b1[boundary_len+2] == '-' &&
           b1[boundary_len+3] == '-');
       boundary_ok = 1;
       if ((b1 > input) && (*(b1-1) != '\n'))
         boundary_ok = 0;
-      if (!looking_at_end_boundary && !(
+      if (!looking_at_end_boundary && (b1 + boundary_len + 3 < be) && !(
           ((b1 + boundary_len + 2 < input + input_len) && (*(b1 + boundary_len + 2) == '\n')) ||
           ((b1 + boundary_len + 3 < input + input_len) && (*(b1 + boundary_len + 2) == '\r') && (*(b1 + boundary_len + 3) == '\n'))
       ))
