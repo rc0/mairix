@@ -52,6 +52,14 @@ struct nvp {/*{{{*/
 /*}}}*/
 static void append(struct nvp *nvp, struct nvp_entry *ne)/*{{{*/
 {
+  if (!ne->rhs) {
+    ne->rhs = Malloc(1);
+    ne->rhs[0] = 0;
+  }
+  if (!ne->lhs) {
+    ne->lhs = Malloc(1);
+    ne->lhs[0] = 0;
+  }
   ne->next = NULL;
   ne->prev = nvp->last;
   if (nvp->last) nvp->last->next = ne;
@@ -203,21 +211,21 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 	newstring[q - copy_start] = 0;
         switch (last_copier) {
           case COPY_TO_NAME:
-            if (name) free(name);
+            free(name);
             name = newstring;
 #ifdef VERBOSE_TEST
             fprintf(stderr, "  COPY_TO_NAME \"%s\"\n", name);
 #endif
             break;
           case COPY_TO_MINOR:
-            if (minor) free(minor);
+            free(minor);
             minor = newstring;
 #ifdef VERBOSE_TEST
             fprintf(stderr, "  COPY_TO_MINOR \"%s\"\n", minor);
 #endif
             break;
           case COPY_TO_VALUE:
-            if (value) free(value);
+            free(value);
             value = newstring;
 #ifdef VERBOSE_TEST
             fprintf(stderr, "  COPY_TO_VALUE \"%s\"\n", value);
@@ -309,9 +317,9 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
 
 out:
   /* Not all productions consume these values */
-  if (name) free(name);
-  if (value) free(value);
-  if (minor) free(minor);
+  free(name);
+  free(value);
+  free(minor);
   return result;
 }
 /*}}}*/
