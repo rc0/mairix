@@ -1,7 +1,7 @@
 Dump of database
 13 messages
      0: FILE messages/maildir/animals/cur/1294156254.3884_1.spencer:2,RS, size=1111, tid=0 seen replied
-     1: FILE messages/maildir/animals/cur/1294156254.3884_3.spencer:2,S, size=1258, tid=0 seen
+     1: FILE messages/maildir/animals/cur/1294156254.3884_3.spencer:2,S, size=1259, tid=0 seen
      2: FILE messages/maildir/animals/new/1294156254.3884_5.spencer, size=1366, tid=0
      3: FILE messages/mh/animals/1, size=1335, tid=0
      4: FILE messages/mh/animals/2, size=1467, tid=0

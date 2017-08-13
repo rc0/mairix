@@ -16,7 +16,7 @@ Subject: Second Reply to First Message
 Message-ID: <20110104154108.GB3257@someid.some.unique.id>
 References: <20110104153833.GA3126@someid.some.unique.id>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=us-ascii;
 Content-Disposition: inline
 In-Reply-To: <20110104153833.GA3126@someid.some.unique.id>
 X-PFX-Antivirus: 0 (no virus found)
