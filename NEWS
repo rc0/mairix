@@ -1,3 +1,12 @@
+NEW IN VERSION 0.24
+===================
+* Support fancy Content-Disposition
+* RFC5987-compliant headers
+* Support for remote IMAP folders
+* Fix string overrun bugs in nvp.c
+* Option to follow symlinks to mboxes in rc file
+* Minor parsing improvements, documentation fixes, and small bug repairs.
+
 NEW IN VERSION 0.23
 ===================
 * Allow '=' in message-id search for RFC2822 conformance

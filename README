@@ -18,11 +18,15 @@ The program is a very useful complement to mail programs like mutt
 (http://www.mutt.org/, which supports Maildir, MH and mbox folders) and
 Sylpheed (which supports MH folders).
 
+The original author of mairix is Richard P. Curnow <rc@rc0.org.uk>.
+It is maintained since 2017 by Kim Vandry <vandry@TZoNE.ORG>.
+
 [(*) where the input or output folder is an mbox, a copy of the message is made
 instead of symlinking.]
 
 *********************************************************************
  Copyright (C) Richard P. Curnow  2002-2004
+ Copyright (C) Richard P. Curnow & Kim Vandry & contributors  2017-
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of version 2 of the GNU General Public License as
@@ -39,8 +43,9 @@ instead of symlinking.]
  
 *********************************************************************
 
-Suggestions, bug reports, experiences, praise, complaints etc to the author
-please, at <rc@rc0.org.uk>
+Suggestions, bug reports, experiences, praise, complaints are welcom on
+the mailing list or as issues or pull requests at
+https://github.com/vandry/mairix
 
 Since July 2006, there is a mairix-users mailing list.  To subscribe or to view
 the archives, visit
