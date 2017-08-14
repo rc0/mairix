@@ -307,6 +307,9 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
           default:
             break;
         }
+        /* Clear last_action so we don't repeat the action if we
+           get another terminator immediately. */
+        last_action = GOT_NOTHING;
         break;
       case GOT_NOTHING:
         break;

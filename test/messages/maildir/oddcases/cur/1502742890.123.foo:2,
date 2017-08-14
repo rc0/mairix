@@ -1,0 +1,11 @@
+Return-Path: <someid@some.server>
+Date: Mon, 14 Aug 2017 21:35:46 +0100
+From: someidA@some.server
+To: someidAto@some.server
+Subject: test 1
+Message-ID: <20170814212600.GA3126@someid.some.unique.id>
+MIME-Version: 1.0
+Content-Type: text/plain; name*=UTF-8''thing;
+Content-Disposition: inline
+
+foo
