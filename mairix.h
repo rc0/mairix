@@ -33,9 +33,27 @@
 
 #include "memmac.h"
 
+enum message_type {/*{{{*/
+  MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
+                   prune it on a '-p' run. */
+  MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
+  MTY_MBOX,     /* multiple msgs per file : MBOX format file */
+  MTY_IMAP	/* Message on IMAP server; syntax: uidvalidity:uid:folder */
+};
+/*}}}*/
+
+enum folder_type {/*{{{*/
+  FT_MAILDIR,
+  FT_MH,
+  FT_MBOX,
+  FT_RAW,
+  FT_EXCERPT,
+  FT_IMAP
+};
+/*}}}*/
+
 struct msgpath {/*{{{*/
-  /* The 'selector' for this union is the corresponding entry of type 'enum
-   * message_type' */
+  enum message_type type; /* selector for union 'src' */
   union {
     struct {
       char *path;
@@ -52,6 +70,10 @@ struct msgpath {/*{{{*/
   time_t date;  /* representation of Date: header in message */
   int tid;      /* thread-id */
 
+  /* Track the folder type this came from, so we know the difference
+     between MH and Maildir, both of which have type MTY_FILE. */
+  enum folder_type source_ft;
+
   /* Message flags. */
   unsigned int seen:1;
   unsigned int replied:1;
@@ -61,15 +83,7 @@ struct msgpath {/*{{{*/
 };
 /*}}}*/
 
-enum message_type {/*{{{*/
-  MTY_DEAD,     /* msg no longer exists, i.e. don't report in searches,
-                   prune it on a '-p' run. */
-  MTY_FILE,     /* msg <-> file in 1-1 correspondence e.g. maildir, MH */
-  MTY_MBOX      /* multiple msgs per file : MBOX format file */
-};
-/*}}}*/
 struct msgpath_array {/*{{{*/
-  enum message_type *type;
   struct msgpath *paths;
   int n;
   int max;
@@ -243,15 +257,6 @@ struct database {/*{{{*/
 };
 /*}}}*/
 
-enum folder_type {/*{{{*/
-  FT_MAILDIR,
-  FT_MH,
-  FT_MBOX,
-  FT_RAW,
-  FT_EXCERPT
-};
-/*}}}*/
-
 struct string_list {/*{{{*/
   struct string_list *next;
   struct string_list *prev;
@@ -351,13 +356,15 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
 void free_database(struct database *db);
 void maybe_grow_message_arrays(struct database *db);
 void tokenise_message(int file_index, struct database *db, struct rfc822 *msg);
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths, int do_fast_index);
+struct imap_ll;
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_paths, int do_fast_index, struct imap_ll *);
 void check_database_integrity(struct database *db);
 int cull_dead_messages(struct database *db, int do_integrity_checks);
 
 /* In mbox.c */
 void build_mbox_lists(struct database *db, const char *folder_base,
-    const char *mboxen_paths, struct globber_array *omit_globs);
+    const char *mboxen_paths, struct globber_array *omit_globs,
+    int do_mbox_symlinks);
 int add_mbox_messages(struct database *db);
 void compute_checksum(const char *data, size_t len, checksum_t *csum);
 void cull_dead_mboxen(struct database *db);
@@ -377,7 +384,7 @@ int is_glob_match(struct globber *g, const char *s);
 void write_database(struct database *db, char *filename, int do_integrity_checks);
 
 /* In search.c */
-int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose);
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password);
 
 /* In stats.c */
 void get_db_stats(struct database *db);

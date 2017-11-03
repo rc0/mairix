@@ -102,12 +102,18 @@ maildir
 MH (compatible with the MH folder formats used by xmh, sylpheed, claws-mail, nnml (Gnus) and evolution)
 .IP *
 mbox (including mboxes that have been compressed with gzip or bzip2)
+.IP *
+IMAP: remote folders on an IMAP server
 .PP
 If maildir or MH source folders are used, and a search outputs its matches to
 an mfolder in maildir or MH format, symbolic links are used to reference the
 original messages inside the mfolder.  However, if mbox folders are involved,
-copies of messages are made instead.
-
+copies of messages are made instead. If IMAP folders are used for both source
+results, IMAP server-side copies of messages are made. With IMAP source folders
+and any other type of results folder, messages are downloaded from the IMAP
+server to be written to the results folder. With an IMAP results folder and
+any other type of source folders, messages are uploaded to the IMAP server
+to be appended to the results folder.
 .SH OPTIONS
 
 .B mairix
@@ -233,7 +239,8 @@ paths on stdout.
 .br
 Instead of creating an mfolder containing the matched messages, display an
 excerpt from their headers on stdout.  The excerpt shows To, Cc, From, Subject
-and Date.
+and Date. With IMAP source folders, this requires downloading each matched
+message from the IMAP server.
 
 .TP
 .B -H, --force-hardlinks
@@ -467,12 +474,12 @@ parts the expression applies to.  If there is no colon, the expression applies
 to all the headers listed earlier and the body.
 
 .IP "3."
-After the colon, commas delineate separate disjuncts, which are
+After the colon, slashes delineate separate disjuncts, which are
 OR-ed together.
 
 .IP "4."
 Each disjunct may contain separate conjuncts, which are separated
-by plus signs.  These conditions are AND-ed together.
+by commas.  These conditions are AND-ed together.
 
 .IP "5."
 Each conjunct may start with a tilde to negate it, and may be
@@ -597,9 +604,9 @@ for mutt, you could do
 mkdir -p /home/richard/Mail/mfolder
 touch /home/richard/Mail/mfolder/.mh_sequences
 .Ex
-which seems to work.  Alternatively, within mutt, you could set MBOX_TYPE to
-'mh' and save a message to '+mfolder' to have mutt set up the structure for you
-in advance.
+which seems to work.  Alternatively, within mutt, you could set
+MBOX_TYPE to 'mh' and save a message to '+mfolder' to have mutt set up
+the structure for you in advance.
 
 If you use Sylpheed, the best way seems to be to create the new folder from
 within Sylpheed before letting mairix write into it.

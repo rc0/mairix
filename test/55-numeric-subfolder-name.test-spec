@@ -1,0 +1,6 @@
+# Test that we do not get the following error:
+#
+# Cannot add '..../test/55-numeric-subfolder-name.data/messages/mh/99/2' to database; stat() failed
+#
+
+add_messages mh 99

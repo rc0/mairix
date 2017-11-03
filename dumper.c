@@ -99,6 +99,10 @@ void dump_database(char *filename)
         printf("FILE %s, size=%d, tid=%d",
                db->data + db->path_offsets[i], db->size_table[i], db->tid_table[i]);
         break;
+      case DB_MSG_IMAP:
+        printf("IMAP %s, tid=%d",
+               db->data + db->path_offsets[i], db->tid_table[i]);
+        break;
       case DB_MSG_MBOX:
         {
           unsigned int mbix, msgix;

@@ -181,6 +181,30 @@ test_for_flex () {
 }
 #}}}
 
+#{{{ test_for_openssl
+test_for_openssl () {
+  cat > docheck.c <<EOF;
+#include <openssl/ssl.h>
+int main () {
+  SSL_load_error_strings();
+  SSL_library_init();
+  return 0;
+}
+EOF
+  echo "Test program is" 1>&5
+  cat docheck.c 1>&5
+  ${MYCC} ${MYCPPFLAGS} ${MYCFLAGS} ${MYLDFLAGS} -o docheck docheck.c -lssl -lcrypto 1>&5 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  rm -f docheck.c docheck
+  echo $result
+}
+#}}}
+
 #{{{ usage
 usage () {
   cat <<EOF;
@@ -341,6 +365,15 @@ if [ `test_for_flex` -eq 0 ]; then
 else
   printf "No\n";
   exit 1;
+fi
+
+printf "Checking for OpenSSL : "
+if [ `test_for_openssl` -eq 0 ]; then
+  printf "Yes\n";
+  DEFS="${DEFS} -DUSE_OPENSSL"
+  LIBS="${LIBS} -lssl -lcrypto"
+else
+  printf "No (disabled IMAP STARTTLS support)\n";
 fi
 
 #{{{ Determine version number of the program.

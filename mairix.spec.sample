@@ -5,10 +5,10 @@ Release:	1
 Source:		%{name}-%{version}.tar.gz
 License:	GPL
 Group:		Application/Internet
-Packager:	Richard P. Curnow
+Packager:	Kim Vandry
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root-%(id -u -n)
 Requires:	info
-URL:		http://www.rc0.org.uk/mairix
+URL:		https://github.com/vandry/mairix
 
 %description
 mairix is a tool for indexing email messages stored in maildir format folders

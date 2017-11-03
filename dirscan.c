@@ -35,7 +35,6 @@ struct msgpath_array *new_msgpath_array(void)/*{{{*/
   struct msgpath_array *result;
   result = new(struct msgpath_array);
   result->paths = NULL;
-  result->type = NULL;
   result->n = 0;
   result->max = 0;
   return result;
@@ -46,8 +45,9 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
   int i;
   if (x->paths) {
     for (i=0; i<x->n; i++) {
-      switch (x->type[i]) {
+      switch (x->paths[i].type) {
         case MTY_FILE:
+        case MTY_IMAP:
           free(x->paths[i].src.mpf.path);
           break;
         case MTY_MBOX:
@@ -56,21 +56,20 @@ void free_msgpath_array(struct msgpath_array *x)/*{{{*/
           break;
       }
     }
-    free(x->type);
     free(x->paths);
   }
   free(x);
 }
 /*}}}*/
-static void add_file_to_list(char *x, struct msgpath_array *arr) {/*{{{*/
+static void add_file_to_list(char *x, struct msgpath_array *arr, enum folder_type ft) {/*{{{*/
   char *y = new_string(x);
   if (arr->n == arr->max) {
     arr->max += 1024;
     arr->paths = grow_array(struct msgpath,    arr->max, arr->paths);
-    arr->type  = grow_array(enum message_type, arr->max, arr->type);
   }
-  arr->type[arr->n] = MTY_FILE;
+  arr->paths[arr->n].type = MTY_FILE;
   arr->paths[arr->n].src.mpf.path = y;
+  arr->paths[arr->n].source_ft = ft;
   ++arr->n;
   return;
 }
@@ -104,7 +103,7 @@ static void get_maildir_message_paths(char *folder, struct msgpath_array *arr)/*
         strcpy(fname, subdir);
         strcat(fname, "/");
         strcat(fname, de->d_name);
-        add_file_to_list(fname, arr);
+        add_file_to_list(fname, arr, FT_MAILDIR);
       }
       closedir(d);
     }
@@ -151,7 +150,7 @@ static void get_mh_message_paths(char *folder, struct msgpath_array *arr)/*{{{*/
       strcat(fname, "/");
       strcat(fname, de->d_name);
       if (valid_mh_filename_p(de->d_name)) {
-        add_file_to_list(fname, arr);
+        add_file_to_list(fname, arr, FT_MH);
       }
     }
     closedir(d);
@@ -351,20 +350,6 @@ static void scan_directory(char *folder_base, char *this_folder, enum folder_typ
 }
 /*}}}*/
 #endif
-static int message_compare(const void *a, const void *b)/*{{{*/
-{
-  /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
-  struct msgpath *aa = (struct msgpath *) a;
-  struct msgpath *bb = (struct msgpath *) b;
-  /* This should only get called on 'file' type messages - TBC! */
-  return strcmp(aa->src.mpf.path, bb->src.mpf.path);
-}
-/*}}}*/
-static void sort_message_list(struct msgpath_array *arr)/*{{{*/
-{
-  qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
-}
-/*}}}*/
 /*{{{ void build_message_list */
 void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs,
@@ -394,7 +379,6 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
 
   if (paths) free(paths);
 
-  sort_message_list(msgs);
   return;
 }
 /*}}}*/

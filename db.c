@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include "imapinterface.h"
 
 struct sortable_token {/*{{{*/
   char *text;
@@ -134,12 +135,13 @@ static void check_message_path_integrity(struct database *db)/*{{{*/
   /* TODO : for now only checks integrity of non-mbox paths. */
   /* Check there are no duplicates */
   int i;
-  int n;
+  int n, imap_n;
   int has_duplicate = 0;
 
-  char **paths;
+  char **paths, **imaps;
   paths = new_array(char *, db->n_msgs);
-  for (i=0, n=0; i<db->n_msgs; i++) {
+  imaps = new_array(char *, db->n_msgs);
+  for (i=0, n=0, imap_n=0; i<db->n_msgs; i++) {
     switch (db->type[i]) {
       case MTY_DEAD:
       case MTY_MBOX:
@@ -147,14 +149,24 @@ static void check_message_path_integrity(struct database *db)/*{{{*/
       case MTY_FILE:
         paths[n++] = db->msgs[i].src.mpf.path;
         break;
+      case MTY_IMAP:
+        imaps[imap_n++] = db->msgs[i].src.mpf.path;
+        break;
     }
   }
 
   qsort(paths, n, sizeof(char *), compare_strings);
+  qsort(imaps, imap_n, sizeof(char *), compare_strings);
 
   for (i=1; i<n; i++) {
     if (!strcmp(paths[i-1], paths[i])) {
       fprintf(stderr, "Path <%s> repeated\n", paths[i]);
+      has_duplicate = 1;
+    }
+  }
+  for (i=1; i<imap_n; i++) {
+    if (!strcmp(imaps[i-1], imaps[i])) {
+      fprintf(stderr, "IMAP message <%s> repeated\n", imaps[i]);
       has_duplicate = 1;
     }
   }
@@ -163,6 +175,7 @@ static void check_message_path_integrity(struct database *db)/*{{{*/
   assert(!has_duplicate);
 
   free(paths);
+  free(imaps);
   return;
 }
 /*}}}*/
@@ -241,6 +254,7 @@ void free_database(struct database *db)/*{{{*/
         case MTY_MBOX:
           break;
         case MTY_FILE:
+        case MTY_IMAP:
           assert(db->msgs[i].src.mpf.path);
           free(db->msgs[i].src.mpf.path);
           break;
@@ -468,6 +482,12 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
         result->msgs[i].src.mpf.path = new_string(input->data + input->path_offsets[i]);
         result->msgs[i].src.mpf.mtime = input->mtime_table[i];
         result->msgs[i].src.mpf.size  = input->size_table[i];
+        break;
+      case DB_MSG_IMAP:
+        result->type[i] = MTY_IMAP;
+        result->msgs[i].src.mpf.path = new_string(input->data + input->path_offsets[i]);
+        result->msgs[i].src.mpf.mtime = 0;
+        result->msgs[i].src.mpf.size  = 0;
         break;
       case DB_MSG_MBOX:
         {
@@ -713,7 +733,7 @@ static void scan_maildir_flags(struct msgpath *m)/*{{{*/
   }
 }
 /*}}}*/
-static void scan_new_messages(struct database *db, int start_at)/*{{{*/
+static void scan_new_messages(struct database *db, int start_at, struct imap_ll *imapc)/*{{{*/
 {
   int i;
   for (i=start_at; i<db->n_msgs; i++) {
@@ -733,6 +753,10 @@ static void scan_new_messages(struct database *db, int start_at)/*{{{*/
       case MTY_FILE:
         if (verbose) fprintf(stderr, "Scanning <%s>\n", db->msgs[i].src.mpf.path);
         msg = make_rfc822(db->msgs[i].src.mpf.path);
+        break;
+      case MTY_IMAP:
+        if (verbose) fprintf(stderr, "Scanning IMAP <%s>\n", db->msgs[i].src.mpf.path);
+        msg = make_rfc822_from_imap(db->msgs[i].src.mpf.path, imapc);
         break;
     }
     if(msg)
@@ -844,7 +868,7 @@ static void find_threading(struct database *db)/*{{{*/
   return;
 }
 /*}}}*/
-static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*{{{*/
+static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key, enum message_type type)/*{{{*/
 {
   /* Implement bisection search */
  int l, h, m, r;
@@ -853,7 +877,13 @@ static int lookup_msgpath(struct msgpath *sorted_paths, int n_msgs, char *key)/*
  while (h > l) {
    m = (h + l) >> 1;
    /* Should only get called on 'file' type messages - TBC */
-   r = strcmp(sorted_paths[m].src.mpf.path, key);
+   if (sorted_paths[m].type < type) {
+     r = -1;
+   } else if (sorted_paths[m].type > type) {
+     r = 1;
+   } else {
+     r = strcmp(sorted_paths[m].src.mpf.path, key);
+   }
    if (r == 0) break;
    if (l == m) return -1;
    if (r > 0) h = m;
@@ -875,10 +905,10 @@ void maybe_grow_message_arrays(struct database *db)/*{{{*/
   }
 }
 /*}}}*/
-static void add_msg_path(struct database *db, char *path, time_t mtime, size_t message_size)/*{{{*/
+static void add_msg_path(struct database *db, char *path, time_t mtime, size_t message_size, enum message_type type)/*{{{*/
 {
   maybe_grow_message_arrays(db);
-  db->type[db->n_msgs] = MTY_FILE;
+  db->type[db->n_msgs] = type;
   db->msgs[db->n_msgs].src.mpf.path = new_string(path);
   db->msgs[db->n_msgs].src.mpf.mtime = mtime;
   db->msgs[db->n_msgs].src.mpf.size = message_size;
@@ -886,22 +916,37 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
 }
 /*}}}*/
 
+enum stat_result {/*{{{*/
+  STAT_RESULT_BAD,
+  STAT_RESULT_FILE,
+  STAT_RESULT_DIR,
+};
+/*}}}*/
+
 static int do_stat(struct msgpath *mp)/*{{{*/
 {
   struct stat sb;
   int status;
+  if (mp->type == MTY_IMAP) {
+    mp->src.mpf.mtime = 0;
+    mp->src.mpf.size = 0;
+    return STAT_RESULT_FILE;
+  }
   status = stat(mp->src.mpf.path, &sb);
-  if ((status < 0) ||
-      !S_ISREG(sb.st_mode)) {
-    return 0;
-  } else {
+  if (status < 0) {
+    return STAT_RESULT_BAD;
+  }
+  if (S_ISREG(sb.st_mode)) {
     mp->src.mpf.mtime = sb.st_mtime;
     mp->src.mpf.size = sb.st_size;
-    return 1;
+    return STAT_RESULT_FILE;
+  } else if (S_ISDIR(sb.st_mode)) {
+    return STAT_RESULT_DIR;
   }
+  return STAT_RESULT_BAD;
 }
 /*}}}*/
-int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index)/*{{{*/
+int update_database(struct database *db, struct msgpath *sorted_paths, int n_msgs, int do_fast_index, struct imap_ll *imapc)/*{{{*/
 {
   /* The incoming list must be sorted into order, to make binary searching
    * possible.  We search for each existing path in the incoming sorted array.
@@ -916,7 +961,6 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   int matched_index;
   int i, new_entries_start_at;
   int any_new, n_newly_pruned, n_already_dead;
-  int status;
 
   file_in_db = new_array(char, n_msgs);
   file_in_new_list = new_array(char, db->n_msgs);
@@ -929,7 +973,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   for (i=0; i<db->n_msgs; i++) {
     switch (db->type[i]) {
       case MTY_FILE:
-        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path);
+        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path, MTY_FILE);
         if (matched_index >= 0) {
           if (do_fast_index) {
             /* Assume the presence of a matching path is good enough without
@@ -937,18 +981,27 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
             file_in_db[matched_index] = 1;
             file_in_new_list[i] = 1;
           } else {
-            status = do_stat(sorted_paths + matched_index);
-            if (status) {
-              if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
-                /* Treat stale files as though the path has changed. */
-                file_in_db[matched_index] = 1;
-                file_in_new_list[i] = 1;
-              }
-            } else {
-              /* This path will get treated as dead, and be re-stated below.
-               * When that stat fails, the path won't get added to the db. */
+            switch (do_stat(sorted_paths + matched_index)) {
+              case STAT_RESULT_FILE:
+                if (sorted_paths[matched_index].src.mpf.mtime == db->msgs[i].src.mpf.mtime) {
+                  /* Treat stale files as though the path has changed. */
+                  file_in_db[matched_index] = 1;
+                  file_in_new_list[i] = 1;
+                }
+                break;
+              default:
+                /* This path will get treated as dead, and be re-stated below.
+                 * When that stat fails, the path won't get added to the db. */
+                break;
             }
           }
+        }
+        break;
+      case MTY_IMAP:
+        matched_index = lookup_msgpath(sorted_paths, n_msgs, db->msgs[i].src.mpf.path, MTY_IMAP);
+        if (matched_index >= 0) {
+          file_in_db[matched_index] = 1;
+          file_in_new_list[i] = 1;
         }
         break;
       case MTY_MBOX:
@@ -966,6 +1019,7 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
     /* Weed dead entries */
     switch (db->type[i]) {
       case MTY_FILE:
+      case MTY_IMAP:
         if (!file_in_new_list[i]) {
           free(db->msgs[i].src.mpf.path);
           db->msgs[i].src.mpf.path = NULL;
@@ -1002,22 +1056,33 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
   any_new = 0;
   for (i=0; i<n_msgs; i++) {
     if (!file_in_db[i]) {
-      int status;
       any_new = 1;
       /* The 'sorted_paths' array is only used for file-per-message folders. */
-      status = do_stat(sorted_paths + i);
-      if (status) {
-        /* We only add files that could be successfully stat()'d as regular
-         * files. */
-        add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size);
-      } else {
-        fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+      switch(do_stat(sorted_paths + i)) {
+        case STAT_RESULT_FILE:
+          /* We only add files that could be successfully stat()'d as regular
+           * files. */
+          add_msg_path(db, sorted_paths[i].src.mpf.path, sorted_paths[i].src.mpf.mtime, sorted_paths[i].src.mpf.size, sorted_paths[i].type);
+          break;
+        case STAT_RESULT_DIR:
+          if (sorted_paths[i].source_ft == FT_MH) {
+            /* With MH, something that looks like a message but is a
+               directory is actually a subfolder with a numeric name.
+               Don't warn about it */
+            break;
+          }
+          /* In all other cases, treat any non-regular-file the same
+             and warn about it. */
+          /* fallthrough */
+        default:
+          fprintf(stderr, "Cannot add '%s' to database; stat() failed\n", sorted_paths[i].src.mpf.path);
+          break;
       }
     }
   }
 
   if (any_new) {
-    scan_new_messages(db, new_entries_start_at);
+    scan_new_messages(db, new_entries_start_at, imapc);
   }
 
   /* Add newly found mbox messages. */
@@ -1252,6 +1317,7 @@ int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
     switch (db->type[i]) {
       case MTY_FILE:
       case MTY_MBOX:
+      case MTY_IMAP:
         new_idx[i] = j++;
         break;
       case MTY_DEAD:
@@ -1276,6 +1342,7 @@ int cull_dead_messages(struct database *db, int do_integrity_checks)/*{{{*/
         break;
       case MTY_FILE:
       case MTY_MBOX:
+      case MTY_IMAP:
         if (i > j) {
           db->msgs[j] = db->msgs[i];
           db->type[j]  = db->type[i];

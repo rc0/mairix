@@ -56,9 +56,40 @@ Any line starting with a '#' character is treated as a comment.
 This defines the path to the common parent directory of all your
 maildir folders.
 
-If the path is relative, it is treated as relative to the location of the
-.I mairixrc
-file.
+.TP
+.BI imap_server= hostname
+.br
+If any IMAP source folders are specified or the results folder is an IMAP
+folder, this defines the host name of the IMAP server. The port is
+currently always 143. This option is mutually exclusive with the 'imap_pipe'
+option.
+
+.TP
+.BI imap_pipe= shell-command
+.br
+If any IMAP source folders are specified or the results folder is an IMAP
+folder, this defines a shell command that can be used to connect to the
+IMAP server and talk to it over UNIX pipes instead of a TCP/IP connection.
+This option is mutually exclusive with the 'imap_server' option.
+
+.TP
+.BI imap_username= username
+.br
+If any IMAP source folders are specified or the results folder is an IMAP
+folder, this defines the user name to use to log in to the IMAP server.
+This parameter is optional, but IMAP servers normally require clients to
+log in, so it is normally necessary to specify it. One example of a case
+where it is not required is if the 'imap_pipe' option is in use the the
+shell command established a connection with an IMAP server in
+pre-autenticated state.
+
+.TP
+.BI imap_password= password
+.br
+If any IMAP source folders are specified or the results folder is an IMAP
+folder, this defines the password to use to log in to the IMAP server.
+This parameter is optional, but IMAP servers normally require clients to
+log in, so it is normally necessary to specify it.
 
 .TP
 .BI maildir= list-of-folder-specifications
@@ -115,7 +146,7 @@ Each colon-separated entry may be a wildcard, see the discussion
 under maildir (above) and mbox (below) for the syntax and
 semantics of specifying wildcards.
 
-.b mairix
+.B mairix
 recognizes the types of MH folders created by the following email applications:
 .RS 7
 .IP "*"
@@ -245,6 +276,20 @@ can support a maximum of 65536 separate mboxes, and a
 maximum of 65536 messages within any one mbox.
 
 .TP
+.BI imap= list-of-folders
+.br
+This is a colon-separated list of the IMAP folders that you want indexed.
+
+These folders must all be located on the same account on the same IMAP
+server. The configuration options imap_server and imap_pipe specify
+how to connect to the IMAP server.
+
+More than one line starting with 'imap' can be included.  In this
+case, 
+.B mairix
+joins the lines together with colons as though a
+single list of folders had been given on a single very long line.
+.TP
 .BI omit= list-of-glob-patterns
 This is a colon-separated list of glob patterns for folders to be omitted from
 the indexing.  This allows wide wildcards and recursive elements to be used
@@ -321,9 +366,9 @@ folders.
 .TP
 .BI mformat= format
 This defines the type of folder used for the match folder where
-the search results go.  There are four valid settings for
+the search results go.  There are six valid settings for
 .IR format ,
-namely 'maildir', 'mh', 'mbox', 'raw' or 'excerpt'.  If the 'raw' setting is
+namely 'maildir', 'mh', 'mbox', 'imap', 'raw', or 'excerpt'.  If the 'raw' setting is
 used then
 .B mairix
 will just print out the path names of the files that match and no match folder
@@ -357,6 +402,14 @@ is run,
 relative to the location of the 
 .I mairixrc
 file or anything like that.)
+
+.TP
+.BI follow_mbox_symlinks
+.br
+This takes no arguments.  By default, mairix will skip symlinks to
+mboxes when indexing.  If a line starting with
+.B follow_mbox_symlinks
+is present, mairix will follow them instead of skipping them.
 
 .SS Expansions
 

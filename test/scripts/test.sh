@@ -945,7 +945,14 @@ run_mairix() {
 #
 update_database () {
     [[ $# -eq 0 ]] || error "update_database does not accept arguments, but received $# arguments."
-    run_mairix "$MARKER_NO_DUMP"
+    run_mairix "$MARKER_NO_DUMP" 2>"$DATA_DIR_ABS/update_database.stderr"
+    if [ -s "$DATA_DIR_ABS/update_database.stderr" ]; then
+      echo "mairix unexpectedly emited error output:"
+      echo "<<<<<"
+      cat "$DATA_DIR_ABS/update_database.stderr"
+      echo ">>>>>"
+      false
+    fi
 }
 
 #--------------------------------------------------------------------------

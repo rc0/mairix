@@ -1,0 +1,58 @@
+Dump of database
+2 messages
+     0: FILE messages/maildir/oddcases/cur/1502742890.123.foo:2,, size=295, tid=0
+     1: FILE messages/maildir/oddcases/new/.gitignore, size=48, tid=1
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <someidato>
+  0 
+Word 1 : <someidato@some.server>
+  0 
+Word 2 : <server>
+  0 
+Word 3 : <some>
+  0 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+4 entries
+Word 0 : <someida>
+  0 
+Word 1 : <server>
+  0 
+Word 2 : <someida@some.server>
+  0 
+Word 3 : <some>
+  0 
+--------------------------------
+Contents of <Subject> table
+2 entries
+Word 0 : <1>
+  0 
+Word 1 : <test>
+  0 
+--------------------------------
+Contents of <Body> table
+1 entries
+Word 0 : <foo>
+  0 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+1 entries
+Word 0 : <20170814212600.ga3126@someid.some.unique.id>
+  0 
+Chain 1
+1 entries
+Word 0 : <20170814212600.ga3126@someid.some.unique.id>
+  0 
+--------------------------------

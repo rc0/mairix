@@ -116,6 +116,8 @@
 #define DB_MSG_FILE 1
 /* mbox : multiple files per message */
 #define DB_MSG_MBOX 2
+/* message comes from IMAP server */
+#define DB_MSG_IMAP 3
 /*}}}*/
 
 #define FLAG_SEEN    (1<<3)

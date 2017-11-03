@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <signal.h>
+#include "imapinterface.h"
 
 #ifdef TEST_OOM
 int total_bytes=0;
@@ -46,11 +47,17 @@ static char *folder_base = NULL;
 static char *maildir_folders = NULL;
 static char *mh_folders = NULL;
 static char *mboxen = NULL;
+static char *imap_folders = NULL;
+static char *imap_pipe = NULL;
+static char *imap_server = NULL;
+static char *imap_username = NULL;
+static char *imap_password = NULL;
 static char *mfolder = NULL;
 static char *omit = NULL;
 static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 static int skip_integrity_checks = 0;
+static int follow_mbox_symlinks = 0;
 
 enum filetype {
   M_NONE, M_FILE, M_DIR, M_OTHER
@@ -100,6 +107,7 @@ int member_of (const char *complete_mfolder,
       break;
     case FT_RAW: /* cannot happen but to keep compiler happy */
     case FT_EXCERPT:
+    case FT_IMAP:
       break;
   }
   for (i=0; i<n_paths; i++) {
@@ -168,6 +176,8 @@ static void parse_output_folder(char *p)/*{{{*/
     output_folder_type = FT_EXCERPT;
   } else if (!strncasecmp(temp, "mbox", 4)) {
     output_folder_type = FT_MBOX;
+  } else if (!strncasecmp(temp, "imap", 4)) {
+    output_folder_type = FT_IMAP;
   }
   else {
     fprintf(stderr, "Unrecognized mformat <%s>\n", temp);
@@ -249,6 +259,12 @@ static void parse_rc_file(char *name)/*{{{*/
     }
     else if (!strncasecmp(p, "mh=", 3)) add_folders(&mh_folders, copy_value(p));
     else if (!strncasecmp(p, "mbox=", 5)) add_folders(&mboxen, copy_value(p));
+    else if (!strncasecmp(p, "imap=", 5)) add_folders(&imap_folders, copy_value(p));
+    else if (!strncasecmp(p, "imap_pipe=", 10)) imap_pipe = copy_value(p);
+    else if (!strncasecmp(p, "imap_server=", 12)) imap_server = copy_value(p);
+    else if (!strncasecmp(p, "imap_username=", 14)) imap_username = copy_value(p);
+    else if (!strncasecmp(p, "imap_password=", 14)) imap_password = copy_value(p);
+    else if (!strncasecmp(p, "follow_mbox_symlinks", 20)) follow_mbox_symlinks = 1;
     else if (!strncasecmp(p, "omit=", 5)) add_folders(&omit, copy_value(p));
 
     else if (!strncasecmp(p, "mformat=", 8)) {
@@ -269,6 +285,23 @@ static void parse_rc_file(char *name)/*{{{*/
   if (used_default_name) free(name);
 }
 /*}}}*/
+
+static int message_compare(const void *a, const void *b)/*{{{*/
+{
+  /* FIXME : Is this a sensible way to do this with mbox messages in the picture? */
+  struct msgpath *aa = (struct msgpath *) a;
+  struct msgpath *bb = (struct msgpath *) b;
+  if (aa->type < bb->type) return -1;
+  if (aa->type > bb->type) return 1;
+  return strcmp(aa->src.mpf.path, bb->src.mpf.path);
+}
+/*}}}*/
+static void sort_message_list(struct msgpath_array *arr)/*{{{*/
+{
+  qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
+}
+/*}}}*/
+
 static int compare_strings(const void *a, const void *b)/*{{{*/
 {
   const char **aa = (const char **) a;
@@ -279,14 +312,15 @@ static int compare_strings(const void *a, const void *b)/*{{{*/
 static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
 {
   /* Caveat : only examines the file-per-message case */
-  char **sorted_paths;
-  int i, n, nn;
+  char **sorted_paths, **sorted_imap;
+  int i, n, nn, imap_nn;
   int result;
 
   n = msgs->n;
   sorted_paths = new_array(char *, n);
-  for (i=0, nn=0; i<n; i++) {
-    switch (msgs->type[i]) {
+  sorted_imap = new_array(char *, n);
+  for (i=0, nn=0, imap_nn=0; i<n; i++) {
+    switch (msgs->paths[i].type) {
       case MTY_MBOX:
         break;
       case MTY_DEAD:
@@ -295,9 +329,13 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
       case MTY_FILE:
         sorted_paths[nn++] = msgs->paths[i].src.mpf.path;
         break;
+      case MTY_IMAP:
+        sorted_imap[imap_nn++] = msgs->paths[i].src.mpf.path;
+        break;
     }
   }
   qsort(sorted_paths, nn, sizeof(char *), compare_strings);
+  qsort(sorted_imap, imap_nn, sizeof(char *), compare_strings);
 
   result = 0;
   for (i=1; i<nn; i++) {
@@ -306,8 +344,15 @@ static int check_message_list_for_duplicates(struct msgpath_array *msgs)/*{{{*/
       break;
     }
   }
+  for (i=1; i<imap_nn; i++) {
+    if (!strcmp(sorted_imap[i-1], sorted_imap[i])) {
+      result = 1;
+      break;
+    }
+  }
 
   free(sorted_paths);
+  free(sorted_imap);
   return result;
 }
 /*}}}*/
@@ -490,6 +535,8 @@ int main (int argc, char **argv)/*{{{*/
   int do_integrity_checks = 1;
   int do_forced_unlock = 0;
   int do_fast_index = 0;
+  int do_mbox_symlinks = 0;
+  struct imap_ll *imapc = NULL;
 
   unsigned int forced_hash_key = CREATE_RANDOM_DATABASE_HASH;
 
@@ -558,11 +605,14 @@ int main (int argc, char **argv)/*{{{*/
     } else if (!strcmp(*argv, "-h") ||
                !strcmp(*argv, "--help")) {
       do_help = 1;
-    } else if ((*argv)[0] == '-') {
-      fprintf(stderr, "Unrecognized option %s\n", *argv);
     } else if (!strcmp(*argv, "--")) {
       /* End of args */
+      argc--;
+      argv++;
       break;
+    } else if ((*argv)[0] == '-') {
+      fprintf(stderr, "Unrecognized option %s\n", *argv);
+      exit(3);
     } else {
       /* standard args start */
       break;
@@ -615,6 +665,10 @@ int main (int argc, char **argv)/*{{{*/
 
   if (skip_integrity_checks) {
     do_integrity_checks = 0;
+  }
+
+  if (follow_mbox_symlinks) {
+    do_mbox_symlinks = 1;
   }
 
   if (!folder_base) {
@@ -671,22 +725,29 @@ int main (int argc, char **argv)/*{{{*/
       mfolder = new_string("");
     }
 
-    /* complete_mfolder is needed by search_top() and member_of() so
-       compute it once here rather than in search_top() as well */
-    if ((mfolder[0] == '/') ||
-        ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
+    if (output_folder_type == FT_IMAP) {
       complete_mfolder = new_string(mfolder);
     } else {
-      len = strlen(folder_base) + strlen(mfolder) + 2;
-      complete_mfolder = new_array(char, len);
-      strcpy(complete_mfolder, folder_base);
-      strcat(complete_mfolder, "/");
-      strcat(complete_mfolder, mfolder);
+      /* complete_mfolder is needed by search_top() and member_of() so
+         compute it once here rather than in search_top() as well */
+      if ((mfolder[0] == '/') ||
+          ((mfolder[0] == '.') && (mfolder[1] == '/'))) {
+        complete_mfolder = new_string(mfolder);
+      } else {
+        len = strlen(folder_base) + strlen(mfolder) + 2;
+        complete_mfolder = new_array(char, len);
+        strcpy(complete_mfolder, folder_base);
+        strcat(complete_mfolder, "/");
+        strcat(complete_mfolder, mfolder);
+      }
     }
     /* check whether mfolder output would destroy a mail folder or mbox */
     switch (output_folder_type) {
       case FT_RAW:
       case FT_EXCERPT:
+        break;
+      case FT_IMAP:
+        /* the same check as below could be implemented in the future */
         break;
       default:
         if ((member_of(complete_mfolder,folder_base, maildir_folders, FT_MAILDIR, omit_globs)||
@@ -707,24 +768,40 @@ int main (int argc, char **argv)/*{{{*/
           database_path);
       unlock_and_exit(3);
     }
-    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose);
+    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose, imap_pipe, imap_server, imap_username, imap_password);
 
   } else {
     enum filetype ftype;
 
-    if (!maildir_folders && !mh_folders && !mboxen) {
-      fprintf(stderr, "No [mh_]folders/mboxen/MAIRIX_[MH_]FOLDERS set\n");
+    if (imap_pipe && imap_server) {
+      fprintf(stderr, "specify one of imap_pipe or imap_server, not both\n");
+      unlock_and_exit(2);
+    }
+
+    if (imap_folders && (!(imap_pipe || imap_server))) {
+      fprintf(stderr, "If imap is given, imap_pipe OR imap_server is required\n");
+      imap_folders = NULL;
+    }
+
+    if (!maildir_folders && !mh_folders && !mboxen && !imap_folders) {
+      fprintf(stderr, "No [mh_]folders/mboxen/imap/MAIRIX_[MH_]FOLDERS set\n");
       unlock_and_exit(2);
     }
 
     if (verbose) printf("Finding all currently existing messages...\n");
     msgs = new_msgpath_array();
+    if (imap_folders) {
+      imapc = imap_start(imap_pipe, imap_server, imap_username, imap_password);
+      if (!imapc) unlock_and_exit(2);
+      build_imap_message_list(imap_folders, msgs, omit_globs, imapc);
+    }
     if (maildir_folders) {
       build_message_list(folder_base, maildir_folders, FT_MAILDIR, msgs, omit_globs);
     }
     if (mh_folders) {
       build_message_list(folder_base, mh_folders, FT_MH, msgs, omit_globs);
     }
+    sort_message_list(msgs);
 
     /* The next call sorts the msgs array as part of looking for duplicates. */
     if (check_message_list_for_duplicates(msgs)) {
@@ -746,9 +823,9 @@ int main (int argc, char **argv)/*{{{*/
       unlock_and_exit(2);
     }
 
-    build_mbox_lists(db, folder_base, mboxen, omit_globs);
+    build_mbox_lists(db, folder_base, mboxen, omit_globs, do_mbox_symlinks);
 
-    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index);
+    any_updates = update_database(db, msgs->paths, msgs->n, do_fast_index, imapc);
     if (do_purge) {
       any_purges = cull_dead_messages(db, do_integrity_checks);
     }

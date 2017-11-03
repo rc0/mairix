@@ -743,7 +743,8 @@ void glob_and_expand_paths(const char *folder_base,
 /*}}}*/
 
 void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
-    const char *mboxen_paths, struct globber_array *omit_globs)
+    const char *mboxen_paths, struct globber_array *omit_globs,
+    int do_mbox_symlinks)
 {
   char **raw_paths, **paths;
   int n_raw_paths, i;
@@ -776,8 +777,8 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
     if (lstat(path, &sb) < 0) {
       /* can't stat */
     } else {
-      if (S_ISLNK(sb.st_mode)) {
-        /* Skip mbox if symlink */
+      if (S_ISLNK(sb.st_mode) && !do_mbox_symlinks) {
+        /* Skip mbox if symlink and no follow_mbox_symlinks in mairixrc */
         if (verbose) {
           printf("%s is a link - skipping\n", path);
         }

@@ -1,0 +1,17 @@
+add_messages mh AliceBobEve
+
+assert_dump AliceBobEve
+
+search_messages AliceBobEve s:track,re
+assert_match mh AliceBobEve/4    # Re: Your so totally off the track!
+assert_no_more_matches
+
+search_messages AliceBobEve s:let/lost
+assert_match mh AliceBobEve/2    # Let go!
+assert_match mh AliceBobEve/5    # Get lost
+assert_no_more_matches
+
+search_messages AliceBobEve s:alice,new/longer,not
+assert_match mh AliceBobEve/1    # Not so secret any longer
+assert_match mh AliceBobEve/6    # New Alice
+assert_no_more_matches
