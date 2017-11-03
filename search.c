@@ -80,7 +80,7 @@ static void mark_hits_in_table2(struct read_db *db, struct toktable2_db *tt, int
    Curnow - I haven't looked at any related source (webglimpse, agrep etc) in
    writing this.
 */
-static void build_match_vector(char *substring, unsigned long *a, unsigned long *hit)/*{{{*/
+static void build_match_vector(char *substring, unsigned long long *a, unsigned long long *hit)/*{{{*/
 {
   int len;
   char *p;
@@ -99,12 +99,12 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   return;
 }
 /*}}}*/
-static int substring_match_0(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_0(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0;
-  unsigned long anchor, anchor1;
+  unsigned long long r0;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   got_hit = 0;
@@ -122,12 +122,12 @@ static int substring_match_0(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_1(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_1(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, nr0;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, nr0;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -148,12 +148,12 @@ static int substring_match_1(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_2(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_2(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, r2, nr0, nr1;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, r2, nr0, nr1;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -177,12 +177,12 @@ static int substring_match_2(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_3(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_3(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, r2, r3, nr0, nr1, nr2;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -209,12 +209,12 @@ static int substring_match_3(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_general(unsigned long *a, unsigned long hit, int left_anchor, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
+static int substring_match_general(unsigned long long *a, unsigned long long hit, int left_anchor, char *token, int max_errors, unsigned long long *r, unsigned long long *nr)/*{{{*/
 {
   int got_hit=0;
   char *p;
   int j;
-  unsigned long anchor, anchor1;
+  unsigned long long anchor, anchor1;
 
   r[0] = ~0;
   anchor = 0;
@@ -250,9 +250,9 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
 {
 
   int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
   char *token;
 
   build_match_vector(substring, a, &hit);
@@ -295,9 +295,9 @@ static void match_substring_in_table2(struct read_db *db, struct toktable2_db *t
 {
 
   int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
   char *token;
 
   build_match_vector(substring, a, &hit);
@@ -340,9 +340,9 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
 {
 
   int i;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
 
   build_match_vector(substring, a, &hit);
 
