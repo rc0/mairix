@@ -9,10 +9,14 @@
 #include <time.h>
 #include <poll.h>
 #include <signal.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #ifdef USE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#endif
+#if defined(__FreeBSD__)
+#define __BSD_VISIBLE 1
 #endif
 #include "imap.h"
 
