@@ -590,7 +590,7 @@ char close = 0;
 static int
 imap_ll_write(struct imap_ll *ll, const char *p, const char *cmdend)
 {
-size_t len;
+ssize_t len;
 struct pollfd pfd;
 int ctimeout, n;
 #ifdef USE_OPENSSL
