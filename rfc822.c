@@ -151,12 +151,12 @@ static int audit_header(struct line *header)/*{{{*/
    * following lines have leading spaces or single word followed by colon
    * */
   struct line *x;
-  int first=1;
-  int count=1;
+  long long first=1;
+  long long count=1;
   for (x=header->next; x!=header; x=x->next) {
-    int has_leading_space=0;
-    int is_blank;
-    int has_word_colon=0;
+    long long has_leading_space=0;
+    long long is_blank;
+    long long has_word_colon=0;
 
     if (1 || first) {
       /* Ignore any UUCP or mbox style From line at the start */
@@ -172,7 +172,7 @@ static int audit_header(struct line *header)/*{{{*/
     is_blank = !(x->text[0]);
     if (!is_blank) {
       char *p;
-      int saw_char = 0;
+      long long saw_char = 0;
       has_leading_space = isspace(x->text[0] & 0xff);
       has_word_colon = 0; /* default */
       p = x->text;
@@ -212,7 +212,7 @@ static int audit_header(struct line *header)/*{{{*/
 }/*}}}*/
 static int match_string(const char *ref, const char *candidate)/*{{{*/
 {
-  int len = strlen(ref);
+  size_t len = strlen(ref);
   return !strncasecmp(ref, candidate, len);
 }
 /*}}}*/
@@ -448,7 +448,7 @@ static char *looking_at_ws_then_newline(char *start)/*{{{*/
 }
 /*}}}*/
 
-static char *unencode_data(struct msg_src *src, char *input, int input_len, const char *enc, int *output_len)/*{{{*/
+static char *unencode_data(struct msg_src *src, char *input, long long input_len, const char *enc, long long *output_len)/*{{{*/
 {
   enum encoding_type encoding;
   char *result, *end_result;
@@ -613,10 +613,10 @@ char *format_msg_src(struct msg_src *src)/*{{{*/
   return result;
 }
 /*}}}*/
-static int split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
+static long long split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
 {
   char *sol, *eol;
-  int blank_line;
+  long long blank_line;
   header->next = header->prev = header;
   sol = data;
   do {
@@ -629,7 +629,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
     }
     if (*eol == '\n') {
       if (!blank_line) {
-        int line_length = eol - sol;
+        long long line_length = eol - sol;
         char *line_text = new_array(char, 1 + line_length);
         struct line *new_header;
 
@@ -663,20 +663,20 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
 /*}}}*/
 
 /* Forward prototypes */
-static void do_multipart(struct msg_src *src, char *input, int input_len,
+static void do_multipart(struct msg_src *src, char *input, long long input_len,
     const char *boundary, struct attachment *atts,
     enum data_to_rfc822_error *error);
 
 /*{{{ do_body() */
 static void do_body(struct msg_src *src,
-    char *body_start, int body_len,
+    char *body_start, long long body_len,
     struct nvp *ct_nvp, struct nvp *cte_nvp,
     struct nvp *cd_nvp,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
   char *decoded_body;
-  int decoded_body_len;
+  long long decoded_body_len;
   const char *content_transfer_encoding;
   content_transfer_encoding = NULL;
   if (cte_nvp) {
@@ -770,7 +770,7 @@ static void do_attachment(struct msg_src *src,
   /* decode attachment and add to attachment list */
   struct line header, *x, *nx;
   char *body_start;
-  int body_len;
+  long long body_len;
 
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
 
@@ -834,15 +834,15 @@ static void do_attachment(struct msg_src *src,
 /*}}}*/
 /*{{{ do_multipart() */
 static void do_multipart(struct msg_src *src,
-    char *input, int input_len,
+    char *input, long long input_len,
     const char *boundary,
     struct attachment *atts,
     enum data_to_rfc822_error *error)
 {
   char *b0, *b1, *be, *bx;
   char *line_after_b0, *start_b1_search_from;
-  int boundary_len;
-  int looking_at_end_boundary;
+  long long boundary_len;
+  long long looking_at_end_boundary;
 
   if (!boundary) {
     fprintf(stderr, "Can't process multipart message %s with no boundary string\n",
@@ -858,7 +858,7 @@ static void do_multipart(struct msg_src *src,
   be = input + input_len;
 
   do {
-    int boundary_ok;
+    long long boundary_ok;
     start_b1_search_from = line_after_b0;
     do {
       /* reject boundaries that aren't a whole line */
@@ -993,7 +993,7 @@ static void scan_status_flags(const char *s, struct headers *hdrs)/*{{{*/
 
 /*{{{ data_to_rfc822() */
 struct rfc822 *data_to_rfc822(struct msg_src *src,
-    char *data, int length,
+    char *data, size_t length,
     enum data_to_rfc822_error *error)
 {
   struct rfc822 *result;
@@ -1001,7 +1001,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   struct line header;
   struct line *x, *nx;
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
-  int body_len;
+  long long body_len;
 
   if (error) *error = DTR8_OK; /* default */
   result = new(struct rfc822);
@@ -1176,7 +1176,7 @@ static void xx_zclose(struct zFile *zf) {/*{{{*/
   free(zf);
 }
 /*}}}*/
-static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
+static long long xx_zread(struct zFile *zf, void *buf, long long len) {/*{{{*/
   switch (zf->type) {
 #ifdef USE_GZIP_MBOX
     case COMPRESSION_GZIP:
@@ -1204,16 +1204,16 @@ struct ro_mapping {
   unsigned char *map;
   size_t len;
 };
-static int ro_cache_init = 0;
+static long long ro_cache_init = 0;
 static struct ro_mapping ro_mapping_cache[ROCACHE_SIZE];
 
 /* find a temp file in the mapping cache.  If nothing is found lasti is
  * set to the next slot to use for insertion.  You have to check that slot
  * to see if it is currently in use
  */
-static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
+static struct ro_mapping *find_ro_cache(const char *filename, long long *lasti)
 {
-  int i = 0;
+  long long i = 0;
   struct ro_mapping *ro = NULL;
   if (lasti)
     *lasti = 0;
@@ -1239,7 +1239,7 @@ static struct ro_mapping *find_ro_cache(const char *filename, int *lasti)
  */
 static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 {
-  int i = 0;
+  long long i = 0;
   struct ro_mapping *ro = NULL;
   if (!ro_cache_init) {
     memset(&ro_mapping_cache, 0, sizeof(ro_mapping_cache));
@@ -1268,7 +1268,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
-void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/*{{{*/
 {
   struct stat sb;
   int fd;
@@ -1323,7 +1323,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     *len = cur_read;
     if (cur_read >= SIZE_STEP) {
       while(1) {
-        int ret;
+        long long ret;
         cur_read = xx_zread(zf, p, SIZE_STEP);
         if (cur_read <= 0)
           break;
@@ -1389,7 +1389,7 @@ comp_error:
   data_alloc_type = ALLOC_MMAP;
 }
 /*}}}*/
-void free_ro_mapping(unsigned char *data, int len)/*{{{*/
+void free_ro_mapping(unsigned char *data, size_t len)/*{{{*/
 {
   int r;
 
@@ -1417,7 +1417,7 @@ static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 /*}}}*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
-  int len;
+  size_t len;
   unsigned char *data;
   struct rfc822 *result;
 

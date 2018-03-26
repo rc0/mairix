@@ -81,7 +81,7 @@ static void mark_hits_in_table2(struct read_db *db, struct toktable2_db *tt, int
    Curnow - I haven't looked at any related source (webglimpse, agrep etc) in
    writing this.
 */
-static void build_match_vector(char *substring, unsigned long *a, unsigned long *hit)/*{{{*/
+static void build_match_vector(char *substring, unsigned long long *a, unsigned long long *hit)/*{{{*/
 {
   int len;
   char *p;
@@ -100,12 +100,12 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   return;
 }
 /*}}}*/
-static int substring_match_0(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_0(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0;
-  unsigned long anchor, anchor1;
+  unsigned long long r0;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   got_hit = 0;
@@ -123,12 +123,12 @@ static int substring_match_0(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_1(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_1(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, nr0;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, nr0;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -149,12 +149,12 @@ static int substring_match_1(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_2(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_2(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, r2, nr0, nr1;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, r2, nr0, nr1;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -178,12 +178,12 @@ static int substring_match_2(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_3(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_3(unsigned long long *a, unsigned long long hit, int left_anchor, char *token)/*{{{*/
 {
   int got_hit=0;
   char *p;
-  unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
-  unsigned long anchor, anchor1;
+  unsigned long long r0, r1, r2, r3, nr0, nr1, nr2;
+  unsigned long long anchor, anchor1;
 
   r0 = ~0;
   r1 = r0<<1;
@@ -210,12 +210,12 @@ static int substring_match_3(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_general(unsigned long *a, unsigned long hit, int left_anchor, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
+static int substring_match_general(unsigned long long *a, unsigned long long hit, int left_anchor, char *token, int max_errors, unsigned long long *r, unsigned long long *nr)/*{{{*/
 {
   int got_hit=0;
   char *p;
   int j;
-  unsigned long anchor, anchor1;
+  unsigned long long anchor, anchor1;
 
   r[0] = ~0;
   anchor = 0;
@@ -251,9 +251,9 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
 {
 
   int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
   char *token;
 
   build_match_vector(substring, a, &hit);
@@ -296,9 +296,9 @@ static void match_substring_in_table2(struct read_db *db, struct toktable2_db *t
 {
 
   int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
   char *token;
 
   build_match_vector(substring, a, &hit);
@@ -341,9 +341,9 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
 {
 
   int i;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
+  unsigned long long a[256];
+  unsigned long long *r=NULL, *nr=NULL;
+  unsigned long long hit;
 
   build_match_vector(substring, a, &hit);
 
@@ -682,7 +682,7 @@ static void mbox_terminate(const unsigned char *data, int len, FILE *out)/*{{{*/
 static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
 {
   unsigned char *data;
-  int len;
+  size_t len;
   create_ro_mapping(path, &data, &len);
   if (data) {
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
@@ -719,7 +719,7 @@ static int had_failed_checksum;
 
 static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
                                    int *mbox_index,
-                                   unsigned char **mbox_data, int *mbox_len,
+                                   unsigned char **mbox_data, size_t *mbox_len,
                                    unsigned char **msg_data,  int *msg_len)
 {
   /* msg_data==NULL if checksum mismatches */
@@ -759,7 +759,8 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 {
   /* Need to common up code with try_copy_to_path */
   unsigned char *mbox_start, *msg_start;
-  int mbox_len, msg_len;
+  size_t mbox_len;
+  int msg_len;
   int mbox_index;
 
   get_validated_mbox_msg(db, msg_index, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
@@ -780,7 +781,8 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 static void try_copy_to_path(struct read_db *db, int msg_index, char *target_path)/*{{{*/
 {
   unsigned char *data;
-  int mbox_len, msg_len;
+  size_t mbox_len;
+  int msg_len;
   int mbi;
   FILE *out;
   unsigned char *start;
@@ -1286,7 +1288,8 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
                 unsigned int mbix, msgix;
                 int start, len, after_end;
                 unsigned char *mbox_start, *msg_start;
-                int mbox_len, msg_len;
+                size_t mbox_len;
+                int msg_len;
                 int mbox_index;
 
                 start = db->mtime_table[i];
