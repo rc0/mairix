@@ -817,7 +817,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
         mb->n_old_msgs_valid = mb->n_msgs;
       } else {
         unsigned char *va;
-        int len;
+        size_t len;
         create_ro_mapping(mb->path, &va, &len);
         if (va) {
           rescan_mbox(mb, (char *) va, len);
@@ -853,7 +853,7 @@ int add_mbox_messages(struct database *db)/*{{{*/
   int any_new = 0;
   int N;
   unsigned char *va;
-  int valen;
+  size_t valen;
   enum data_to_rfc822_error error;
 
   for (i=0; i<db->n_mboxen; i++) {

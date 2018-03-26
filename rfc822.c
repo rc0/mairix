@@ -993,7 +993,7 @@ static void scan_status_flags(const char *s, struct headers *hdrs)/*{{{*/
 
 /*{{{ data_to_rfc822() */
 struct rfc822 *data_to_rfc822(struct msg_src *src,
-    char *data, int length,
+    char *data, size_t length,
     enum data_to_rfc822_error *error)
 {
   struct rfc822 *result;
@@ -1268,7 +1268,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
 
-void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, size_t *len)/*{{{*/
 {
   struct stat sb;
   int fd;
@@ -1389,7 +1389,7 @@ comp_error:
   data_alloc_type = ALLOC_MMAP;
 }
 /*}}}*/
-void free_ro_mapping(unsigned char *data, int len)/*{{{*/
+void free_ro_mapping(unsigned char *data, size_t len)/*{{{*/
 {
   int r;
 
@@ -1417,7 +1417,7 @@ static struct msg_src *setup_msg_src(char *filename)/*{{{*/
 /*}}}*/
 struct rfc822 *make_rfc822(char *filename)/*{{{*/
 {
-  int len;
+  size_t len;
   unsigned char *data;
   struct rfc822 *result;
 

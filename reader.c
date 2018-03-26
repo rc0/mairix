@@ -81,7 +81,8 @@ static void read_toktable2_db(char *data, struct toktable2_db *toktable, int sta
 /*}}}*/
 struct read_db *open_db(char *filename)/*{{{*/
 {
-  int fd, len;
+  int fd;
+  size_t len;
   char *data;
   struct stat sb;
   struct read_db *result;

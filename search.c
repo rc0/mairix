@@ -682,7 +682,7 @@ static void mbox_terminate(const unsigned char *data, int len, FILE *out)/*{{{*/
 static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
 {
   unsigned char *data;
-  int len;
+  size_t len;
   create_ro_mapping(path, &data, &len);
   if (data) {
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
@@ -719,8 +719,8 @@ static int had_failed_checksum;
 
 static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
                                    int *mbox_index,
-                                   unsigned char **mbox_data, int *mbox_len,
-                                   unsigned char **msg_data,  int *msg_len)
+                                   unsigned char **mbox_data, size_t *mbox_len,
+                                   unsigned char **msg_data,  size_t *msg_len)
 {
   /* msg_data==NULL if checksum mismatches */
   unsigned char *start;
@@ -759,7 +759,7 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 {
   /* Need to common up code with try_copy_to_path */
   unsigned char *mbox_start, *msg_start;
-  int mbox_len, msg_len;
+  size_t mbox_len, msg_len;
   int mbox_index;
 
   get_validated_mbox_msg(db, msg_index, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
@@ -780,7 +780,7 @@ static void append_mboxmsg_to_mbox(struct read_db *db, int msg_index, FILE *out)
 static void try_copy_to_path(struct read_db *db, int msg_index, char *target_path)/*{{{*/
 {
   unsigned char *data;
-  int mbox_len, msg_len;
+  size_t mbox_len, msg_len;
   int mbi;
   FILE *out;
   unsigned char *start;
@@ -1286,7 +1286,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
                 unsigned int mbix, msgix;
                 int start, len, after_end;
                 unsigned char *mbox_start, *msg_start;
-                int mbox_len, msg_len;
+                size_t mbox_len, msg_len;
                 int mbox_index;
 
                 start = db->mtime_table[i];
