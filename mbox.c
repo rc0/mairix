@@ -358,7 +358,7 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
     start_from = mb->start[N - 1] + mb->len[N - 1] + mmdf;
   }
 
-  /* Locate next 'From ' at the start of a line */
+  /* Locate next 'From '/^A^A^A^A separator at the start of a line */
   start_from = find_next_separator(start_from, va, len);
   while (start_from != -1) {
     start_pos = message_start(start_from, va, len);

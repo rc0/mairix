@@ -166,14 +166,14 @@ Mew
 .TP
 .BI mbox= list-of-folder-specifications
 .br
-This is a colon-separated list of the mbox folders (relative to
-`base') that you want indexed.
+This is a colon-separated list of the mbox or MMDF folders (relative
+to `base') that you want indexed.
 
 Each colon-separated item in the list can be suffixed by '...'.
 If the item matches a regular file, that file is treated as a mbox
 folder and the '...' suffix is ignored.  If the item matches a
 directory, a recursive scan of everything inside that directory is
-made, and all regular files are initially considered as mbox
+made, and all regular files are initially considered as mbox/MMDF
 folders.  (Any directories found in this scan are themselves
 scanned, since the scan is recursive.)
 
@@ -240,8 +240,8 @@ matches 'foo/a', 'foo/aardvark/xxx', 'foo/zzz/foobar',
 \'foo/w/x/y/zzz', but not 'foo/A/foobar'
 
 Regular files that are mbox folder candidates are examined
-internally.  Only files containing standard mbox 'From ' separator
-lines will be scanned for messages.
+internally.  Only files containing standard mbox 'From ' or MMDF
+\'^A^A^A^A' separator lines will be scanned for messages.
 
 If a regular file has a name ending in '.gz', and gzip support is
 compiled into the 
@@ -368,7 +368,8 @@ folders.
 This defines the type of folder used for the match folder where
 the search results go.  There are six valid settings for
 .IR format ,
-namely 'maildir', 'mh', 'mbox', 'imap', 'raw', or 'excerpt'.  If the 'raw' setting is
+namely 'maildir', 'mh', 'mbox', 'imap', 'raw', or 'excerpt' (MMDF search
+results are not supported).  If the 'raw' setting is
 used then
 .B mairix
 will just print out the path names of the files that match and no match folder
@@ -407,7 +408,7 @@ file or anything like that.)
 .BI follow_mbox_symlinks
 .br
 This takes no arguments.  By default, mairix will skip symlinks to
-mboxes when indexing.  If a line starting with
+mboxes or MMDF files when indexing.  If a line starting with
 .B follow_mbox_symlinks
 is present, mairix will follow them instead of skipping them.
 
