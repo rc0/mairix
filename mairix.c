@@ -58,6 +58,7 @@ static char *database_path = NULL;
 static enum folder_type output_folder_type = FT_MAILDIR;
 static int skip_integrity_checks = 0;
 static int follow_mbox_symlinks = 0;
+static int sort_by_date = 0;
 
 enum filetype {
   M_NONE, M_FILE, M_DIR, M_OTHER
@@ -273,6 +274,7 @@ static void parse_rc_file(char *name)/*{{{*/
     else if (!strncasecmp(p, "mfolder=", 8)) mfolder = copy_value(p);
     else if (!strncasecmp(p, "database=", 9)) database_path = copy_value(p);
     else if (!strncasecmp(p, "nochecks", 8)) skip_integrity_checks = 1;
+    else if (!strncasecmp(p, "sort=date+", 10)) sort_by_date = 1;
     else {
       if (verbose) {
         fprintf(stderr, "Unrecognized option at line %d in %s\n", lineno, name);
@@ -768,7 +770,7 @@ int main (int argc, char **argv)/*{{{*/
           database_path);
       unlock_and_exit(3);
     }
-    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose, imap_pipe, imap_server, imap_username, imap_password);
+    result = search_top(do_threads, do_augment, database_path, complete_mfolder, argv, output_folder_type, verbose, imap_pipe, imap_server, imap_username, imap_password, sort_by_date);
 
   } else {
     enum filetype ftype;

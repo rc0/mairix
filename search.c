@@ -829,7 +829,16 @@ static void string_tolower(char *str)
   }
 }
 
-static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password, int please_clear)/*{{{*/
+static struct read_db *qsortdb;
+static int db_date_cmp(const void *va, const void *vb)
+{
+  const int *ap = (const int *) va;
+  const int *bp = (const int *) vb;
+
+  return qsortdb->date_table[*ap] - qsortdb->date_table[*bp];
+}
+
+static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password, int please_clear, int sort_by_date)/*{{{*/
 {
   char *colon, *start_words;
   int do_body, do_subject, do_from, do_to, do_cc, do_date, do_size;
@@ -839,10 +848,12 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
   int i;
+  int ii;
   int n_hits;
   int left_anchor;
   int imap_tried = 0;
   struct imap_ll *imapc;
+  int *results;
 
 #define GET_IMAP if (!imap_tried) {\
         imap_tried = 1;\
@@ -1084,8 +1095,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     }
   }
 
-  n_hits = 0;
-
   if (show_threads) {/*{{{*/
     char *tids;
     tids = new_array(char, db->n_msgs);
@@ -1103,83 +1112,82 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
     free(tids);
   }
 /*}}}*/
+
+  n_hits = 0;
+  results = new_array(int, db->n_msgs);
+  for (i=0; i<db->n_msgs; i++)
+    if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD)
+      results[n_hits++] = i;
+  if (sort_by_date) {
+    qsortdb = db;
+    qsort(results, n_hits, sizeof(*results), db_date_cmp);
+  }
+
   switch (ft) {
     case FT_MAILDIR:/*{{{*/
-      for (i=0; i<db->n_msgs; i++) {
-        if (hit3[i]) {
-          int is_seen, is_replied, is_flagged;
-          get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
-          switch (rd_msg_type(db, i)) {
-            case DB_MSG_FILE:
-              {
-                char *target_path;
-                char *message_path;
-                int is_in_new;
-                message_path = db->data + db->path_offsets[i];
-                is_in_new = looks_like_maildir_new_p(message_path);
-                target_path = mk_maildir_path(i, output_path, is_in_new, is_seen, is_replied, is_flagged);
-                create_symlink(message_path, target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_IMAP:
-              {
-                char *target_path;
-                target_path = mk_maildir_path(i, output_path, 0, is_seen, is_replied, is_flagged);
-                GET_IMAP;
-                if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_MBOX:
-              {
-                char *target_path = mk_maildir_path(i, output_path, !is_seen, is_seen, is_replied, is_flagged);
-                try_copy_to_path(db, i, target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_DEAD:
-              break;
-          }
+      for (ii=0; ii<n_hits; ii++) {
+        i = results[ii];
+        int is_seen, is_replied, is_flagged;
+        get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
+        switch (rd_msg_type(db, i)) {
+          case DB_MSG_FILE:
+            {
+              char *target_path;
+              char *message_path;
+              int is_in_new;
+              message_path = db->data + db->path_offsets[i];
+              is_in_new = looks_like_maildir_new_p(message_path);
+              target_path = mk_maildir_path(i, output_path, is_in_new, is_seen, is_replied, is_flagged);
+              create_symlink(message_path, target_path);
+              free(target_path);
+            }
+            break;
+          case DB_MSG_IMAP:
+            {
+              char *target_path;
+              target_path = mk_maildir_path(i, output_path, 0, is_seen, is_replied, is_flagged);
+              GET_IMAP;
+              if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
+              free(target_path);
+            }
+            break;
+          case DB_MSG_MBOX:
+            {
+              char *target_path = mk_maildir_path(i, output_path, !is_seen, is_seen, is_replied, is_flagged);
+              try_copy_to_path(db, i, target_path);
+              free(target_path);
+            }
+            break;
         }
       }
       break;
 /*}}}*/
     case FT_MH:/*{{{*/
-      for (i=0; i<db->n_msgs; i++) {
-        if (hit3[i]) {
-          switch (rd_msg_type(db, i)) {
-            case DB_MSG_FILE:
-              {
-                char *target_path = mk_mh_path(n_hits, output_path);
-                create_symlink(db->data + db->path_offsets[i], target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_IMAP:
-              {
-                char *target_path = mk_mh_path(n_hits, output_path);
-                GET_IMAP;
-                if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_MBOX:
-              {
-                char *target_path = mk_mh_path(n_hits, output_path);
-                try_copy_to_path(db, i, target_path);
-                free(target_path);
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_DEAD:
-              break;
-          }
+      for (ii=0; ii<n_hits; ii++) {
+        i = results[ii];
+        switch (rd_msg_type(db, i)) {
+          case DB_MSG_FILE:
+            {
+              char *target_path = mk_mh_path(ii, output_path);
+              create_symlink(db->data + db->path_offsets[i], target_path);
+              free(target_path);
+            }
+            break;
+          case DB_MSG_IMAP:
+            {
+              char *target_path = mk_mh_path(ii, output_path);
+              GET_IMAP;
+              if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
+              free(target_path);
+            }
+            break;
+          case DB_MSG_MBOX:
+            {
+              char *target_path = mk_mh_path(ii, output_path);
+              try_copy_to_path(db, i, target_path);
+              free(target_path);
+            }
+            break;
         }
       }
       break;
@@ -1193,31 +1201,25 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           unlock_and_exit(1);
         }
 
-        for (i=0; i<db->n_msgs; i++) {
-          if (hit3[i]) {
-            switch (rd_msg_type(db, i)) {
-              case DB_MSG_FILE:
-                {
-                  append_file_to_mbox(db->data + db->path_offsets[i], out);
-                  ++n_hits;
-                }
-                break;
-              case DB_MSG_IMAP:
-                {
-                  GET_IMAP;
-                  if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, append_data_to_mbox, out);
-                  ++n_hits;
-                }
-                break;
-              case DB_MSG_MBOX:
-                {
-                  append_mboxmsg_to_mbox(db, i, out);
-                  ++n_hits;
-                }
-                break;
-              case DB_MSG_DEAD:
-                break;
-            }
+        for (ii=0; ii<n_hits; ii++) {
+          i = results[ii];
+          switch (rd_msg_type(db, i)) {
+            case DB_MSG_FILE:
+              {
+                append_file_to_mbox(db->data + db->path_offsets[i], out);
+              }
+              break;
+            case DB_MSG_IMAP:
+              {
+                GET_IMAP;
+                if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, append_data_to_mbox, out);
+              }
+              break;
+            case DB_MSG_MBOX:
+              {
+                append_mboxmsg_to_mbox(db, i, out);
+              }
+              break;
           }
         }
         fclose(out);
@@ -1226,109 +1228,98 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       break;
 /*}}}*/
     case FT_RAW:/*{{{*/
-      for (i=0; i<db->n_msgs; i++) {
-        if (hit3[i]) {
-          switch (rd_msg_type(db, i)) {
-            case DB_MSG_FILE:
-            case DB_MSG_IMAP:
-              {
-                ++n_hits;
-                printf("%s\n", db->data + db->path_offsets[i]);
-              }
-              break;
-            case DB_MSG_MBOX:
-              {
-                unsigned int mbix, msgix;
-                int start, len, after_end;
-                start = db->mtime_table[i];
-                len   = db->size_table[i];
-                after_end = start + len;
-                ++n_hits;
-                decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
-                printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
-              }
-              break;
-            case DB_MSG_DEAD:
-              break;
-          }
+      for (ii=0; ii<n_hits; ii++) {
+        i = results[ii];
+        switch (rd_msg_type(db, i)) {
+          case DB_MSG_FILE:
+          case DB_MSG_IMAP:
+            {
+              printf("%s\n", db->data + db->path_offsets[i]);
+            }
+            break;
+          case DB_MSG_MBOX:
+            {
+              unsigned int mbix, msgix;
+              int start, len, after_end;
+              start = db->mtime_table[i];
+              len   = db->size_table[i];
+              after_end = start + len;
+              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
+            }
+            break;
         }
       }
       break;
 /*}}}*/
     case FT_EXCERPT:/*{{{*/
-      for (i=0; i<db->n_msgs; i++) {
-        if (hit3[i]) {
-          struct rfc822 *parsed = NULL;
-          switch (rd_msg_type(db, i)) {
-            case DB_MSG_FILE:
-              {
-                char *filename;
-                ++n_hits;
-                printf("---------------------------------\n");
-                filename = db->data + db->path_offsets[i];
-                printf("%s\n", filename);
-                parsed = make_rfc822(filename);
-              }
-              break;
-            case DB_MSG_IMAP:
-              {
-                char *filename;
-                ++n_hits;
-                printf("---------------------------------\n");
-                filename = db->data + db->path_offsets[i];
-                printf("%s\n", filename);
-                GET_IMAP;
-                parsed = imapc ? make_rfc822_from_imap(filename, imapc) : NULL;
-              }
-              break;
-            case DB_MSG_MBOX:
-              {
-                unsigned int mbix, msgix;
-                int start, len, after_end;
-                unsigned char *mbox_start, *msg_start;
-                int mbox_len, msg_len;
-                int mbox_index;
+      for (ii=0; ii<n_hits; ii++) {
+        i = results[ii];
+        struct rfc822 *parsed = NULL;
+        switch (rd_msg_type(db, i)) {
+          case DB_MSG_FILE:
+            {
+              char *filename;
+              printf("---------------------------------\n");
+              filename = db->data + db->path_offsets[i];
+              printf("%s\n", filename);
+              parsed = make_rfc822(filename);
+            }
+            break;
+          case DB_MSG_IMAP:
+            {
+              char *filename;
+              printf("---------------------------------\n");
+              filename = db->data + db->path_offsets[i];
+              printf("%s\n", filename);
+              GET_IMAP;
+              parsed = imapc ? make_rfc822_from_imap(filename, imapc) : NULL;
+            }
+            break;
+          case DB_MSG_MBOX:
+            {
+              unsigned int mbix, msgix;
+              int start, len, after_end;
+              unsigned char *mbox_start, *msg_start;
+              int mbox_len, msg_len;
+              int mbox_index;
 
-                start = db->mtime_table[i];
-                len   = db->size_table[i];
-                after_end = start + len;
-                ++n_hits;
-                printf("---------------------------------\n");
-                decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
-                printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
+              start = db->mtime_table[i];
+              len   = db->size_table[i];
+              after_end = start + len;
+              printf("---------------------------------\n");
+              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
 
-                get_validated_mbox_msg(db, i, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
-                if (msg_start) {
-                  enum data_to_rfc822_error error;
-                  struct msg_src *msg_src;
-                  msg_src = setup_mbox_msg_src(db->data + db->mbox_paths_table[mbix], start, msg_len);
-                  parsed = data_to_rfc822(msg_src, (char *) msg_start, msg_len, &error);
-                }
-                if (mbox_start) {
-                  free_ro_mapping(mbox_start, mbox_len);
-                }
+              get_validated_mbox_msg(db, i, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);
+              if (msg_start) {
+                enum data_to_rfc822_error error;
+                struct msg_src *msg_src;
+                msg_src = setup_mbox_msg_src(db->data + db->mbox_paths_table[mbix], start, msg_len);
+                parsed = data_to_rfc822(msg_src, (char *) msg_start, msg_len, &error);
               }
-              break;
-            case DB_MSG_DEAD:
-              break;
-          }
+              if (mbox_start) {
+                free_ro_mapping(mbox_start, mbox_len);
+              }
+            }
+            break;
+        }
 
-          if (parsed) {
-            char datebuf[64];
-            struct tm *thetm;
-            if (parsed->hdrs.to)      printf("  To:         %s\n", parsed->hdrs.to);
-            if (parsed->hdrs.cc)      printf("  Cc:         %s\n", parsed->hdrs.cc);
-            if (parsed->hdrs.from)    printf("  From:       %s\n", parsed->hdrs.from);
-            if (parsed->hdrs.subject) printf("  Subject:    %s\n", parsed->hdrs.subject);
-            if (parsed->hdrs.message_id)
-                                      printf("  Message-ID: %s\n", parsed->hdrs.message_id);
-            if (parsed->hdrs.in_reply_to)
-                                      printf("  In-Reply-To:%s\n", parsed->hdrs.in_reply_to);
-            thetm = gmtime(&parsed->hdrs.date);
-            strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y", thetm);
-            printf("  Date:        %s\n", datebuf);
-            free_rfc822(parsed);
-          }
+        if (parsed) {
+          char datebuf[64];
+          struct tm *thetm;
+          if (parsed->hdrs.to)      printf("  To:         %s\n", parsed->hdrs.to);
+          if (parsed->hdrs.cc)      printf("  Cc:         %s\n", parsed->hdrs.cc);
+          if (parsed->hdrs.from)    printf("  From:       %s\n", parsed->hdrs.from);
+          if (parsed->hdrs.subject) printf("  Subject:    %s\n", parsed->hdrs.subject);
+          if (parsed->hdrs.message_id)
+                                    printf("  Message-ID: %s\n", parsed->hdrs.message_id);
+          if (parsed->hdrs.in_reply_to)
+                                    printf("  In-Reply-To:%s\n", parsed->hdrs.in_reply_to);
+          thetm = gmtime(&parsed->hdrs.date);
+          strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y", thetm);
+          printf("  Date:        %s\n", datebuf);
+          free_rfc822(parsed);
         }
       }
       break;
@@ -1339,44 +1330,38 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       if (please_clear) {
         imap_clear_folder(imapc, output_path);
       }
-      for (i=0; i<db->n_msgs; i++) {
-        if (hit3[i]) {
-          int is_seen, is_replied, is_flagged;
-          get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
-          switch (rd_msg_type(db, i)) {
-            case DB_MSG_FILE:
-              {
-                int len;
-                unsigned char *data;
-                create_ro_mapping(db->data + db->path_offsets[i], &data, &len);
-                if (data) {
-                  imap_append_new_message(imapc, output_path, data, len, is_seen, is_replied, is_flagged);
-                  free_ro_mapping(data, len);
-                }
-                ++n_hits;
+      for (ii=0; ii<n_hits; ii++) {
+        i = results[ii];
+        int is_seen, is_replied, is_flagged;
+        get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
+        switch (rd_msg_type(db, i)) {
+          case DB_MSG_FILE:
+            {
+              int len;
+              unsigned char *data;
+              create_ro_mapping(db->data + db->path_offsets[i], &data, &len);
+              if (data) {
+                imap_append_new_message(imapc, output_path, data, len, is_seen, is_replied, is_flagged);
+                free_ro_mapping(data, len);
               }
-              break;
-            case DB_MSG_IMAP:
-              {
-                imap_copy_message(imapc, db->data + db->path_offsets[i], output_path);
-                ++n_hits;
+            }
+            break;
+          case DB_MSG_IMAP:
+            {
+              imap_copy_message(imapc, db->data + db->path_offsets[i], output_path);
+            }
+            break;
+          case DB_MSG_MBOX:
+            {
+              unsigned char *start, *data;
+              int mbox_len, msg_len, mbi;
+              get_validated_mbox_msg(db, i, &mbi, &data, &mbox_len, &start, &msg_len);
+              imap_append_new_message(imapc, output_path, start, msg_len, is_seen, is_replied, is_flagged);
+              if (data) {
+                free_ro_mapping(data, mbox_len);
               }
-              break;
-            case DB_MSG_MBOX:
-              {
-                unsigned char *start, *data;
-                int mbox_len, msg_len, mbi;
-                get_validated_mbox_msg(db, i, &mbi, &data, &mbox_len, &start, &msg_len);
-                imap_append_new_message(imapc, output_path, start, msg_len, is_seen, is_replied, is_flagged);
-                if (data) {
-                  free_ro_mapping(data, mbox_len);
-                }
-                ++n_hits;
-              }
-              break;
-            case DB_MSG_DEAD:
-              break;
-          }
+            }
+            break;
         }
       }
       break;
@@ -1386,6 +1371,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       break;
   }
 
+  free(results);
   free(hit0);
   free(hit1);
   free(hit2);
@@ -1547,7 +1533,7 @@ static void clear_mbox_folder(char *path)/*{{{*/
 }
 /*}}}*/
 
-int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password)/*{{{*/
+int search_top(int do_threads, int do_augment, char *database_path, char *complete_mfolder, char **argv, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password, int sort_by_date)/*{{{*/
 {
   struct read_db *db;
   int result;
@@ -1599,7 +1585,7 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
     }
   }
 
-  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose, imap_pipe, imap_server, imap_username, imap_password, please_clear);
+  result = do_search(db, argv, complete_mfolder, do_threads, ft, verbose, imap_pipe, imap_server, imap_username, imap_password, please_clear, sort_by_date);
   free(complete_mfolder);
   close_db(db);
   return result;
