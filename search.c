@@ -1154,7 +1154,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
-                char *target_path = mk_mh_path(i, output_path);
+                char *target_path = mk_mh_path(n_hits, output_path);
                 create_symlink(db->data + db->path_offsets[i], target_path);
                 free(target_path);
                 ++n_hits;
@@ -1162,7 +1162,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               break;
             case DB_MSG_IMAP:
               {
-                char *target_path = mk_mh_path(i, output_path);
+                char *target_path = mk_mh_path(n_hits, output_path);
                 GET_IMAP;
                 if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
                 free(target_path);
@@ -1171,7 +1171,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               break;
             case DB_MSG_MBOX:
               {
-                char *target_path = mk_mh_path(i, output_path);
+                char *target_path = mk_mh_path(n_hits, output_path);
                 try_copy_to_path(db, i, target_path);
                 free(target_path);
                 ++n_hits;
