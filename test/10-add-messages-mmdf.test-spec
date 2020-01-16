@@ -1,0 +1,3 @@
+add_messages mmdf animals
+
+assert_dump animals-mmdf

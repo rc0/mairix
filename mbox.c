@@ -169,10 +169,11 @@ static int find_number_intact(struct mbox *mb, char *va, size_t len)/*{{{*/
 /*}}}*/
 
 
-static int fromtab_inited = 0;
+static int scantabs_inited = 0;
 static signed char fromtab[256];
+static unsigned long mmdftab[256] = { 0 };
 
-static void init_fromtab(void)/*{{{*/
+static void init_scantabs(void)/*{{{*/
 {
   memset(fromtab, 0xff, 256);
   fromtab[(int)(unsigned char)'\n'] = ~(1<<0);
@@ -181,6 +182,19 @@ static void init_fromtab(void)/*{{{*/
   fromtab[(int)(unsigned char)'o']  = ~(1<<3);
   fromtab[(int)(unsigned char)'m']  = ~(1<<4);
   fromtab[(int)(unsigned char)' ']  = ~(1<<5);
+  /* For any character read, the word it indexes in mmdftab is split
+   * into eight nibbles, indexed from 0 (the least significant).
+   * Nibble N holds the next state value if we're already in state N.
+   * So: most characters in most states loop us back to state 0; '\n'
+   * takes us from state 5 to state 15/0xf (finished) and from any other
+   * state to state 1; '\1' takes us from 1 to 2 to 3 to 4 to 5.
+   *
+   * Could process the mbox 'From ' header in the same way, but the
+   * additional validation check, looks_like_from_separator(),
+   * complicates things. */
+  mmdftab[(int)(unsigned char)'\n'] = 0xf11111;
+  mmdftab[(int)(unsigned char)'\1'] = 0x054320;
+  scantabs_inited = 1;
 }
 /*}}}*/
 
@@ -233,15 +247,9 @@ static off_t find_next_from(off_t n, char *va, size_t len)/*{{{*/
   unsigned long reg;
   unsigned long mask;
 
-  if (!n) {
-    if ((len >= 5) && !strncmp(va, "From ", 5)) {
-      return 0;
-    }
-  }
-
 scan_again:
 
-  reg = (unsigned long) -1;
+  reg = fromtab[(int) '\n'];
   hit = ~(1<<5);
   while (n < len) {
     c = va[n];
@@ -288,6 +296,32 @@ static off_t start_of_next_line(off_t n, char *va, size_t len)/*{{{*/
 }
 /*}}}*/
 
+static off_t find_next_mmdfsep(off_t n, char *va, size_t len)/*{{{*/
+{
+  unsigned char c;
+  /* Start in "just read a newline" state since we're always called at
+   * the beginning of the file or just after a preceding MMDF separator.
+   */
+  unsigned long state = mmdftab[(int) '\n'] & 15;
+
+  while (n < len) {
+    c = va[n];
+    state = (mmdftab[(int)c] >> (state * 4)) & 15;
+    if(state == 15) {
+      return (n-4);
+    }
+    n++;
+  }
+  return -1;
+}
+/*}}}*/
+static off_t skip_mmdfsep(off_t n, char *va, size_t len)/*{{{*/
+{
+  /* Just expect an immediate second MMDF separator. */
+  return n + 5 <= len && ! strncmp(va + n, "\1\1\1\1\n", 5) ? n + 5 : -1;
+}
+/*}}}*/
+
 
 static struct message_list *build_new_message_list(struct mbox *mb, char *va, size_t len, int *n_messages)/*{{{*/
 {
@@ -295,8 +329,24 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
   off_t start_from, start_pos, end_from;
   int old_percent = -100;
   int N;
+  int mmdf;
+  off_t (*message_start)(off_t n, char *va, size_t len);
+  off_t (*find_next_separator)(off_t n, char *va, size_t len);
 
 #define PERCENT_GRAN 2
+
+  if(len > 10 && ! strncmp(va, "\1\1\1\1\n", 5)) {
+    mmdf = 5;
+    message_start = skip_mmdfsep;
+    find_next_separator = find_next_mmdfsep;
+  } else {
+    mmdf = 0;
+    message_start = start_of_next_line;
+    find_next_separator = find_next_from;
+  }
+  if (!scantabs_inited) {
+    init_scantabs();
+  }
 
   *n_messages = 0;
 
@@ -305,23 +355,15 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
   if (N == 0) {
     start_from = 0;
   } else {
-    /* Must point to the \n at the end of the preceding message, otherwise the
-       'From ' at the start of the first message in the section to be rescanned
-       won't get detected and that message won't get indexed. */
-    start_from = mb->start[N - 1] + mb->len[N - 1] - 1;
-  }
-
-  if (!fromtab_inited) {
-    init_fromtab();
-    fromtab_inited = 1;
+    start_from = mb->start[N - 1] + mb->len[N - 1] + mmdf;
   }
 
   /* Locate next 'From ' at the start of a line */
-  start_from = find_next_from(start_from, va, len);
+  start_from = find_next_separator(start_from, va, len);
   while (start_from != -1) {
-    start_pos = start_of_next_line(start_from, va, len);
+    start_pos = message_start(start_from, va, len);
     if (start_pos == -1) {
-      /* Something is awry. */
+      /* Something is awry, or (MMDF) we've hit the last message. */
       goto done;
     }
     if (verbose) {
@@ -334,7 +376,7 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
       }
     }
 
-    end_from = find_next_from(start_pos, va, len);
+    end_from = find_next_separator(start_pos, va, len);
     next = new(struct message_list);
     next->next = NULL;
     next->start = start_pos;
@@ -351,7 +393,7 @@ static struct message_list *build_new_message_list(struct mbox *mb, char *va, si
       here = next;
     }
     ++*n_messages;
-    start_from = end_from;
+    start_from = end_from + mmdf;
   }
 
 done:

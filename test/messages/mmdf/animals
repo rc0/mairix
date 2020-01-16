@@ -1,0 +1,69 @@
+
+Return-Path: <someid@some.server>
+Delivered-To: PFX delivery to someid@some.server
+Received: from pop.pop.domain [212.227.17.169]
+	by spencer.some.domain with POP3 (fetchmail-6.3.16)
+	for <someid@localhost> (single-drop); Tue, 04 Jan 2011 16:44:27 +0100 (CET)
+Received: (qmail invoked by alias); 04 Jan 2011 15:44:05 -0000
+Received: from xk14-33.server.country (EHLO localhost) [5.5.28.33]
+  by mail.pop.domain (mp013) with SMTP; 04 Jan 2011 16:44:05 +0100
+X-Authenticated: #2854174
+X-Provags-ID: V01U2FsdGVkX1/UkVZ/qETU9eiNFzdJ0nDhbGyuhq3JjUdFQLx5BE
+	qTkcr2lPmHxXTw
+Date: Tue, 4 Jan 2011 16:44:04 +0100
+From: someidA@some.server
+To: someidAto@some.server
+Subject: Second Reply to first Relply to first Message
+Message-ID: <20110104154404.GB3382@someid.some.unique.id>
+References: <20110104153833.GA3126@someid.some.unique.id>
+ <20110104153949.GA3257@someid.some.unique.id>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110104153949.GA3257@someid.some.unique.id>
+X-PFX-Antivirus: 0 (no virus found)
+X-PFX-Antispam: 0 (Mail was not recognized as spam);
+ Detail=5D7Q89H36p5xOp9NadjzZ8pTpoDrhxfLb5d6X/hHsbQfQnPxfRi+HjywWomBJ/jWRTx3q
+ 0LntzDxYVXxB0UCed4ma1opj377N6Cgsyru6srOZNFLKM3CIi5mq5N1aibaPpQo56kHaW5h+camK
+ jQH5A==V1;
+Status: RO
+X-Status: A
+Content-Length: 10
+
+Mouse
+Cat
+
+
+Return-Path: <someid@some.server>
+Delivered-To: PFX delivery to someid@some.server
+Received: from pop.pop.domain [212.227.17.169]
+	by spencer.some.domain with POP3 (fetchmail-6.3.16)
+	for <someid@localhost> (single-drop); Tue, 04 Jan 2011 16:45:37 +0100 (CET)
+Received: (qmail invoked by alias); 04 Jan 2011 15:45:23 -0000
+Received: from xk14-33.server.country (EHLO localhost) [5.5.28.33]
+  by mail.pop.domain (mp022) with SMTP; 04 Jan 2011 16:45:23 +0100
+X-Authenticated: #2854174
+X-Provags-ID: V01U2FsdGVkX18jwBwmzsMjHOff3WG4Q/k5WzC+dkT3WHf+Dj8yNA
+	q5YWDdB8HXE9es
+Date: Tue, 4 Jan 2011 16:45:22 +0100
+From: someidB@some.server
+To: someidBto@some.server
+Subject: First reply to second Reply to first Relply to first Message
+Message-ID: <20110104154522.GA3573@some.unique.id>
+References: <20110104153833.GA3126@someid.some.unique.id>
+ <20110104153949.GA3257@someid.some.unique.id>
+ <20110104154404.GB3382@someid.some.unique.id>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110104154404.GB3382@someid.some.unique.id>
+X-PFX-Antivirus: 0 (no virus found)
+X-PFX-Antispam: 0 (Mail was not recognized as spam);
+ Detail=5D7Q89H36p5xOp9NadjzZ8pTpoDrhxfLb5d6X/hHsbQfQnPxfRi+HjywWomBJ/jWRTx3q
+ 0LntzDxYVXxB0UCed4ma1opj377N6Cgsyru6srOZNFLKM3CIi5mq5N1aibaPpQo56kHaW5h+camK
+ jQH5A==V1;
+Status: RO
+Content-Length: 12
+
+Frog, goose
+

@@ -299,6 +299,15 @@ conf_add_mbox () {
 }
 
 #--------------------------------------------------------------------------
+# conf_add_mmdf is the same as conf_add_mbox: all that's different is the
+# format of the file it loads.
+conf_add_mmdf () {
+echo conf_add_mmdf "$@"
+    conf_add_mbox "$@"
+    echo done.
+}
+
+#--------------------------------------------------------------------------
 # removes a maildir directory from the mairix configuration, and regenerates
 # the mairix rc file.
 #
@@ -401,6 +410,9 @@ published_add_messages() {
 	"mbox" )
 	    set_dir_variable_RELD FORMAT "$MBOX_DIR_RELD"
 	    ;;
+	"mmdf" )
+	    set_dir_variable_RELD FORMAT "$MMDF_DIR_RELD"
+	    ;;
 	*)
 	    error "unknown message kind $SOURCE_FORMAT"
 	    ;;
@@ -486,6 +498,14 @@ published_add_messages() {
 		    # individual messages within the mboxen
 		    "${SCRIPT_DIR_ABS}/split_mbox.sh" "$TARGET_FILE_ABS"
 		    ;; #--------------------------------------- mbox file -end-
+
+		"mmdf" ) #------ mmdf same as mbox but splits differently -----
+		    local TARGET_FILE_ABS="$FORMAT_DIR_ABS/$SOURCE_FILE_RELU"
+		    mkdir -p "$(dirname "$TARGET_FILE_ABS" )"
+		    cp "$SOURCE_FILE_RELB" "$TARGET_FILE_ABS"
+		    update_database
+		    "${SCRIPT_DIR_ABS}/split_mmdf.sh" "$TARGET_FILE_ABS"
+		    ;; #--------------------------------------- mmdf file -end-
 
 		* )
 		    error "single files not implemented for $SOURCE_FORMAT"
@@ -1134,6 +1154,7 @@ set_file_variable_RELD CURRENT_STATE_DUMP "database.dump" # the place to
 set_dir_variable_RELD MAILDIR    "messages/maildir"
 set_dir_variable_RELD MH         "messages/mh"
 set_dir_variable_RELD MBOX       "messages/mbox"
+set_dir_variable_RELD MMDF       "messages/mmdf"
 set_dir_variable_RELD MBOX_SPLIT "messages/mbox_split" # for the automatically
                                      # split messages originating from an mbox
 

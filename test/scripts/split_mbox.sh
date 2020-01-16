@@ -24,7 +24,7 @@ do
 	    shift
 	    ;;
 	* )
-	    [[ $# -le 1 ]] || error "Further paramaters follow the mbox parameter"
+	    [[ $# -le 1 ]] || error "Further parameters follow the mbox parameter"
 	    MBOX_FILE="$1"
 	    ;;
 	esac
@@ -58,7 +58,7 @@ PREVIOUS_SEPARATION_POS=1 # the position of the newline before the mbox From
 LINE_OFFSET=2 # the parameter passed to tail to strip the correct number of lines.
   # This is two for the first iteration, and three for the following iterations
 
-# SEPARATION_POS is the byte offset rom the beginning of the file to a newline
+# SEPARATION_POS is the byte offset from the beginning of the file to a newline
 # before a "From" mbox separator. We add the file size as final separation
 # point to not omit the last message of the mbox.
 for SEPARATION_POS in $( grep -b -B 1 '^From[[:space:]]' "$MBOX_FILE" | grep '^[0-9]*-$' | sed -e 's/-//' ) $(($(stat "-c%s" "$MBOX_FILE")-1))
