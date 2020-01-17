@@ -47,6 +47,9 @@
 #ifdef USE_BZIP_MBOX
 #  include <bzlib.h>
 #endif
+#ifdef USE_XZ_MBOX
+#  include "xzfile.h"
+#endif
 
 struct DLL {/*{{{*/
   struct DLL *next;
@@ -1077,13 +1080,14 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
 
 int data_alloc_type;
 
-#if USE_GZIP_MBOX || USE_BZIP_MBOX
+#if USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX
 
 #define SIZE_STEP (8 * 1024 * 1024)
 
 #define COMPRESSION_NONE 0
 #define COMPRESSION_GZIP 1
 #define COMPRESSION_BZIP 2
+#define COMPRESSION_XZ   3
 
 static int get_compression_type(const char *filename) {/*{{{*/
   size_t len = strlen(filename);
@@ -1098,8 +1102,15 @@ static int get_compression_type(const char *filename) {/*{{{*/
 
 #ifdef USE_BZIP_MBOX
   ptr = len - 4;
-  if (len > 3 && strncasecmp(filename + ptr, ".bz2", 4) == 0) {
+  if (len > 4 && strncasecmp(filename + ptr, ".bz2", 4) == 0) {
     return COMPRESSION_BZIP;
+  }
+#endif
+
+#ifdef USE_XZ_MBOX
+  ptr = len - 3;
+  if (len > 3 && strncasecmp(filename + ptr, ".xz", 3) == 0) {
+    return COMPRESSION_XZ;
   }
 #endif
 
@@ -1123,6 +1134,9 @@ struct zFile {/*{{{*/
 #ifdef USE_BZIP_MBOX
     BZFILE *bzf;
 #endif
+#ifdef USE_XZ_MBOX
+    xzFile *xzf;
+#endif
     void *zptr;
   } foo;
   int type;
@@ -1142,6 +1156,11 @@ static struct zFile * xx_zopen(const char *filename, const char *mode) {/*{{{*/
 #ifdef USE_BZIP_MBOX
     case COMPRESSION_BZIP:
       zf->foo.bzf = BZ2_bzopen(filename, "rb");
+      break;
+#endif
+#ifdef USE_XZ_MBOX
+    case COMPRESSION_XZ:
+      zf->foo.xzf = xzopen(filename, "rb");
       break;
 #endif
     default:
@@ -1169,6 +1188,11 @@ static void xx_zclose(struct zFile *zf) {/*{{{*/
       BZ2_bzclose(zf->foo.bzf);
       break;
 #endif
+#ifdef USE_XZ_MBOX
+    case COMPRESSION_XZ:
+      xzclose(zf->foo.xzf);
+      break;
+#endif
     default:
       zf->foo.zptr = NULL;
       break;
@@ -1188,6 +1212,11 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
       return BZ2_bzread(zf->foo.bzf, buf, len);
       break;
 #endif
+#ifdef USE_XZ_MBOX
+    case COMPRESSION_XZ:
+      return xzread(zf->foo.xzf, buf, len);
+      break;
+#endif
     default:
       return 0;
       break;
@@ -1196,7 +1225,7 @@ static int xx_zread(struct zFile *zf, void *buf, int len) {/*{{{*/
 /*}}}*/
 #endif
 
-#if USE_GZIP_MBOX || USE_BZIP_MBOX
+#if USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX
 /* do we need ROCACHE_SIZE > 1? the code supports any number here */
 #define ROCACHE_SIZE 1
 struct ro_mapping {
@@ -1266,14 +1295,14 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
   ro->filename = new_string(filename);
   return ro;
 }
-#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
+#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX */
 
 void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
 {
   struct stat sb;
   int fd;
 
-#if USE_GZIP_MBOX || USE_BZIP_MBOX
+#if USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX
   struct zFile *zf;
 #endif
 
@@ -1284,7 +1313,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     return;
   }
 
-#if USE_GZIP_MBOX || USE_BZIP_MBOX
+#if USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX
   if(is_compressed(filename)) {
     unsigned char *p;
     size_t cur_read;
@@ -1357,7 +1386,7 @@ comp_error:
       fclose(tmpf);
     return;
   }
-#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX */
+#endif /* USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX */
 
   *len = sb.st_size;
   if (*len == 0) {

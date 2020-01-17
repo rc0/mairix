@@ -1,0 +1,97 @@
+Dump of database
+2 messages
+     0: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
+     1: MBOX 0, msg 1, offset=1431, size=1378, tid=0 seen
+
+
+MBOX INFORMATION
+1 mboxen
+   0: 2 msgs in messages/mbox/animals.xz
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+6 entries
+Word 0 : <some>
+  0 1 
+Word 1 : <someidato>
+  0 
+Word 2 : <someidato@some.server>
+  0 
+Word 3 : <someidbto@some.server>
+  1 
+Word 4 : <someidbto>
+  1 
+Word 5 : <server>
+  0 1 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+6 entries
+Word 0 : <some>
+  0 1 
+Word 1 : <someidb>
+  1 
+Word 2 : <someida>
+  0 
+Word 3 : <someida@some.server>
+  0 
+Word 4 : <someidb@some.server>
+  1 
+Word 5 : <server>
+  0 1 
+--------------------------------
+Contents of <Subject> table
+6 entries
+Word 0 : <second>
+  0 1 
+Word 1 : <to>
+  0 1 
+Word 2 : <relply>
+  0 1 
+Word 3 : <first>
+  0 1 
+Word 4 : <message>
+  0 1 
+Word 5 : <reply>
+  0 1 
+--------------------------------
+Contents of <Body> table
+4 entries
+Word 0 : <cat>
+  0 
+Word 1 : <goose>
+  1 
+Word 2 : <frog>
+  1 
+Word 3 : <mouse>
+  0 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+4 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  1 
+Word 1 : <20110104153833.ga3126@someid.some.unique.id>
+  0 1 
+Word 2 : <20110104154404.gb3382@someid.some.unique.id>
+  0 1 
+Word 3 : <20110104153949.ga3257@someid.some.unique.id>
+  0 1 
+Chain 1
+4 entries
+Word 0 : <20110104154522.ga3573@some.unique.id>
+  1 
+Word 1 : <20110104153833.ga3126@someid.some.unique.id>
+  
+Word 2 : <20110104154404.gb3382@someid.some.unique.id>
+  0 
+Word 3 : <20110104153949.ga3257@someid.some.unique.id>
+  
+--------------------------------

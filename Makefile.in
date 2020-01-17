@@ -50,7 +50,7 @@ docdir=$(DESTDIR)@docdir@
 OBJ = mairix.o db.o rfc822.o tok.o hash.o dirscan.o writer.o \
       reader.o search.o stats.o dates.o datescan.o mbox.o md5.o \
   	  fromcheck.o glob.o dumper.o expandstr.o dotlock.o \
-			nvp.o nvpscan.o imap.o imapinterface.o
+			nvp.o nvpscan.o imap.o imapinterface.o xzfile.o
 
 all : mairix
 

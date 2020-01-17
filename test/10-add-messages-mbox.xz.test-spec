@@ -1,0 +1,3 @@
+add_messages mbox animals.xz
+
+assert_dump animals-mbox-xz

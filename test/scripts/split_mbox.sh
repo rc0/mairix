@@ -50,6 +50,12 @@ fi
 
 mkdir -p "$SPLIT_MBOX_DIR"
 
+case "$MBOX_FILE" in
+  *.gz) CAT=zcat ;;
+  *.xz) CAT=xzcat ;;
+  *) CAT=cat ;;
+esac
+
 PART=0 # the suffix number for the split files
 PREVIOUS_SEPARATION_POS=1 # the position of the newline before the mbox From
   # separator for the previous message. We initialize it to the beginning of
@@ -61,7 +67,7 @@ LINE_OFFSET=2 # the parameter passed to tail to strip the correct number of line
 # SEPARATION_POS is the byte offset from the beginning of the file to a newline
 # before a "From" mbox separator. We add the file size as final separation
 # point to not omit the last message of the mbox.
-for SEPARATION_POS in $( grep -b -B 1 '^From[[:space:]]' "$MBOX_FILE" | grep '^[0-9]*-$' | sed -e 's/-//' ) $(($(stat "-c%s" "$MBOX_FILE")-1))
+for SEPARATION_POS in $( $CAT "$MBOX_FILE" | grep -b -B 1 '^From[[:space:]]' | grep '^[0-9]*-$' | sed -e 's/-//' ) $(($(stat "-c%s" "$MBOX_FILE")-1))
 do
 
     # We first chop off the part after the message, then the part before the

@@ -154,6 +154,29 @@ EOF
   echo $result
 }
 #}}}
+#{{{ test_for_lzma
+test_for_lzma () {
+  cat > docheck.c <<EOF;
+#include <lzma.h>
+int main () {
+  const char *foo;
+  foo = lzma_version_string();
+  return 0;
+}
+EOF
+  echo "Test program is" 1>&5
+  cat docheck.c 1>&5
+  ${MYCC} ${MYCPPFLAGS} ${MYCFLAGS} ${MYLDFLAGS} -o docheck docheck.c -llzma 1>&5 2>&1
+  if [ $? -eq 0 ]
+  then
+    result=0
+  else
+    result=1
+  fi
+  rm -f docheck.c docheck
+  echo $result
+}
+#}}}
 
 #{{{ test_for_bison
 test_for_bison () {
@@ -262,6 +285,7 @@ use_readline=yes
 bad_options=no
 use_gzip_mbox=yes
 use_bzip_mbox=yes
+use_xz_mbox=yes
 
 # Parse options to configure
 for option
@@ -294,6 +318,12 @@ do
     ;;
   --disable-bzip-mbox )
     use_bzip_mbox=no
+    ;;
+  --enable-xz-mbox )
+    use_xz_mbox=yes
+    ;;
+  --disable-xz-mbox )
+    use_xz_mbox=no
     ;;
   -h | --help )
     usage
@@ -348,6 +378,17 @@ if [ $use_bzip_mbox = "yes" ]; then
     LIBS="${LIBS} -lbz2"
   else
     printf "No (disabled bzip2ed mbox support)\n";
+  fi
+fi
+
+if [ $use_xz_mbox = "yes" ]; then
+  printf "Checking for liblzma (for .xz) : "
+  if [ `test_for_lzma` -eq 0 ]; then
+    printf "Yes\n";
+    DEFS="${DEFS} -DUSE_XZ_MBOX"
+    LIBS="${LIBS} -llzma"
+  else
+    printf "No (disabled xz'ed mbox support)\n";
   fi
 fi
 
