@@ -683,7 +683,7 @@ static void append_file_to_mbox(const char *path, FILE *out)/*{{{*/
 {
   unsigned char *data;
   int len;
-  create_ro_mapping(path, &data, &len);
+  create_ro_mapping(path, &data, &len, MAP_DECOMPRESS_IF_APPLICABLE);
   if (data) {
     fprintf(out, "From mairix@mairix Mon Jan  1 12:34:56 1970\n");
     fprintf(out, "X-source-folder: %s\n", path);
@@ -733,7 +733,8 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
   decode_mbox_indices(db->path_offsets[msg_index], &mbi, &msgi);
   *mbox_index = mbi;
 
-  create_ro_mapping(db->data + db->mbox_paths_table[mbi], mbox_data, mbox_len);
+  create_ro_mapping(db->data + db->mbox_paths_table[mbi], mbox_data, mbox_len,
+      MAP_DECOMPRESS_IF_APPLICABLE);
   if (!*mbox_data) return;
 
   start = *mbox_data + db->mtime_table[msg_index];
@@ -1339,7 +1340,8 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
             {
               int len;
               unsigned char *data;
-              create_ro_mapping(db->data + db->path_offsets[i], &data, &len);
+              create_ro_mapping(db->data + db->path_offsets[i], &data, &len,
+                  MAP_DECOMPRESS_IF_APPLICABLE);
               if (data) {
                 imap_append_new_message(imapc, output_path, data, len, is_seen, is_replied, is_flagged);
                 free_ro_mapping(data, len);

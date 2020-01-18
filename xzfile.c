@@ -24,23 +24,18 @@
 #ifdef USE_XZ_MBOX
 
 #include <lzma.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mairix.h"
 #include "memmac.h"
 
 #include "xzfile.h"
 
-/* Input buffer size. */
-#define IBSZ 65536
-
 static const lzma_stream s_lzma_init = LZMA_STREAM_INIT;
 
 struct xzFile_s {
-  FILE        *m_fp;
-  lzma_stream  m_lzma;
-  uint8_t      m_inbuf[IBSZ];
+  lzma_stream m_lzma;
 };
 
 xzFile *
@@ -48,23 +43,26 @@ xzopen(const char *filename, const char *mode)
 {
   xzFile      *xzf;
   lzma_stream *lzs;
+  int          len;
 
   if(filename == NULL || strcmp(mode, "rb") != 0)
     goto fail;
   if((xzf = new(xzFile)) == NULL)
     goto fail;
-  if((xzf->m_fp = fopen(filename, mode)) == NULL)
-    goto fail_free;
 
   lzs = &xzf->m_lzma;
   memcpy(lzs, &s_lzma_init, sizeof(*lzs));
-  if(lzma_stream_decoder(lzs, UINT64_MAX, LZMA_CONCATENATED) == LZMA_OK) {
-    lzs->next_in = xzf->m_inbuf;
-    lzs->avail_in = fread(xzf->m_inbuf, sizeof(uint8_t), IBSZ, xzf->m_fp);
+  if(lzma_stream_decoder(lzs, UINT64_MAX, LZMA_CONCATENATED) != LZMA_OK)
+    goto fail_free;
+
+  create_ro_mapping(filename, (unsigned char **) &lzs->next_in, &len,
+      MAP_NO_DECOMPRESSION);
+  if(lzs->next_in != NULL) {
+    lzs->avail_in = len;
     return xzf;
   }
 
-  fclose(xzf->m_fp);
+  lzma_end(&xzf->m_lzma);
 fail_free:
   free(xzf);
 fail:
@@ -76,23 +74,14 @@ xzread(xzFile *xzf, void *buf, int len)
 {
   lzma_stream *lzs;
 
-  if(xzf == NULL || xzf->m_fp == NULL || buf == NULL || len <= 0)
+  if(xzf == NULL || buf == NULL || len <= 0)
     return -1;
 
   lzs = &xzf->m_lzma;
   lzs->next_out = buf;
   lzs->avail_out = len;
-  while(1) {
-    if(lzma_code(lzs, LZMA_RUN) != LZMA_OK) /* Argh! */
-      return -1;
-    if(! lzs->avail_out || feof(xzf->m_fp))
-      break;
-    /* lzma_code either exhausted the input buffer or filled the output
-     * buffer; we know it wasn't the latter.  We also know that we're
-     * not at EOF.  So: it's time to refill the input buffer. */
-    lzs->next_in = xzf->m_inbuf;
-    lzs->avail_in = fread(xzf->m_inbuf, sizeof(uint8_t), IBSZ, xzf->m_fp);
-  }
+  if(lzma_code(lzs, LZMA_RUN) != LZMA_OK) /* Argh! */
+    return -1;
 
   return lzs->next_out - (uint8_t *) buf;
 }
@@ -100,12 +89,13 @@ xzread(xzFile *xzf, void *buf, int len)
 void
 xzclose(xzFile *xzf)
 {
+  lzma_stream *lzs;
+
   if(xzf == NULL)
     return;
-  if(xzf->m_fp != NULL) {
-    fclose(xzf->m_fp);
-    xzf->m_fp = NULL;
-  }
+  lzs = &xzf->m_lzma;
+  free_ro_mapping((unsigned char *) lzs->next_in - lzs->total_in,
+      lzs->total_in + lzs->avail_in);
   lzma_end(&xzf->m_lzma);
   free(xzf);
 }

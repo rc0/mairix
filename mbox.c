@@ -32,6 +32,7 @@
 #include "mairix.h"
 #include "from.h"
 #include "fromcheck.h"
+#include "mairix.h"
 #include "md5.h"
 
 struct extant_mbox {/*{{{*/
@@ -860,7 +861,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
       } else {
         unsigned char *va;
         int len;
-        create_ro_mapping(mb->path, &va, &len);
+        create_ro_mapping(mb->path, &va, &len, MAP_DECOMPRESS_IF_APPLICABLE);
         if (va) {
           rescan_mbox(mb, (char *) va, len);
           free_ro_mapping(va, len);
@@ -926,7 +927,8 @@ int add_mbox_messages(struct database *db)/*{{{*/
         next = here->next;
 
         if (!va) {
-          create_ro_mapping(mb->path, &va, &valen);
+          create_ro_mapping(mb->path, &va, &valen,
+              MAP_DECOMPRESS_IF_APPLICABLE);
         }
         if (!va) {
           fprintf(stderr, "Couldn't create mapping of file %s\n", mb->path);

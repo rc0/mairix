@@ -333,7 +333,11 @@ enum data_to_rfc822_error {
   DTR8_BAD_ATTACHMENT /* corrupt attachment (e.g. no body part) */
 };
 struct rfc822 *data_to_rfc822(struct msg_src *src, char *data, int length, enum data_to_rfc822_error *error);
-void create_ro_mapping(const char *filename, unsigned char **data, int *len);
+enum ro_map_compressed_behaviour {
+  MAP_DECOMPRESS_IF_APPLICABLE,
+  MAP_NO_DECOMPRESSION
+};
+void create_ro_mapping(const char *filename, unsigned char **data, int *len, enum ro_map_compressed_behaviour cb);
 void free_ro_mapping(unsigned char *data, int len);
 char *format_msg_src(struct msg_src *src);
 

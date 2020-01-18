@@ -1297,7 +1297,7 @@ static struct ro_mapping *add_ro_cache(const char *filename, int fd, size_t len)
 }
 #endif /* USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX */
 
-void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{{*/
+void create_ro_mapping(const char *filename, unsigned char **data, int *len, enum ro_map_compressed_behaviour cb)/*{{{*/
 {
   struct stat sb;
   int fd;
@@ -1314,14 +1314,12 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
   }
 
 #if USE_GZIP_MBOX || USE_BZIP_MBOX || USE_XZ_MBOX
-  if(is_compressed(filename)) {
+  if(cb == MAP_DECOMPRESS_IF_APPLICABLE && is_compressed(filename)) {
     unsigned char *p;
     size_t cur_read;
     struct ro_mapping *ro;
     FILE *tmpf;
 
-    /* this branch never returns things that are freeable */
-    data_alloc_type = ALLOC_NONE;
     ro = find_ro_cache(filename, NULL);
     if (ro) {
       *data = ro->map;
@@ -1366,6 +1364,14 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len)/*{{
     }
     free(p);
     xx_zclose(zf);
+    /* Urgh.  So.  The existence/use of (global) data_alloc_type kindof
+     * prevents this function from being re-entrant.  However, by
+     * setting data_alloc_type here, *after* xx_zopen/zread/zclose, the
+     * decompression functions can get away with memory mapping their
+     * compressed input files while decompressing them to their
+     * temporary file. */
+    /* this branch never returns things that are freeable */
+    data_alloc_type = ALLOC_NONE;
 
     if(*len > 0) {
       ro = add_ro_cache(filename, fileno(tmpf), *len);
@@ -1450,7 +1456,7 @@ struct rfc822 *make_rfc822(char *filename)/*{{{*/
   unsigned char *data;
   struct rfc822 *result;
 
-  create_ro_mapping(filename, &data, &len);
+  create_ro_mapping(filename, &data, &len, MAP_DECOMPRESS_IF_APPLICABLE);
 
   /* Don't process empty files */
   result = NULL;
