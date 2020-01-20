@@ -626,7 +626,7 @@ static char *mk_maildir_path(int token, char *output_dir, int is_in_new,
 static char *mk_mh_path(int token, char *output_dir)/*{{{*/
 {
   char *result;
-  char uniq_buf[8];
+  char uniq_buf[12];
   int len;
 
   len = strlen(output_dir) + 10; /* oversize */
@@ -830,13 +830,18 @@ static void string_tolower(char *str)
   }
 }
 
-static struct read_db *qsortdb;
+typedef struct {
+  int m_db_id;   /* Database ID */
+  int m_date;    /* Sort key */
+  int m_seq_num; /* Result sequence number (for sorting) */
+} searchResult;
+
 static int db_date_cmp(const void *va, const void *vb)
 {
-  const int *ap = (const int *) va;
-  const int *bp = (const int *) vb;
+  const searchResult *ap = (const searchResult *) va;
+  const searchResult *bp = (const searchResult *) vb;
 
-  return qsortdb->date_table[*ap] - qsortdb->date_table[*bp];
+  return ap->m_date - bp->m_date;
 }
 
 static int do_search(struct read_db *db, char **args, char *output_path, int show_threads, enum folder_type ft, int verbose, const char *imap_pipe, const char *imap_server, const char *imap_username, const char *imap_password, int please_clear, int sort_by_date)/*{{{*/
@@ -849,12 +854,12 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   char *key;
   char *hit0, *hit1, *hit2, *hit3;
   int i;
-  int ii;
   int n_hits;
   int left_anchor;
   int imap_tried = 0;
   struct imap_ll *imapc;
-  int *results;
+  searchResult *results;
+  searchResult *cur;
 
 #define GET_IMAP if (!imap_tried) {\
         imap_tried = 1;\
@@ -1114,20 +1119,36 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   }
 /*}}}*/
 
-  n_hits = 0;
-  results = new_array(int, db->n_msgs);
-  for (i=0; i<db->n_msgs; i++)
-    if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD)
-      results[n_hits++] = i;
+  results = new_array(searchResult, db->n_msgs);
   if (sort_by_date) {
-    qsortdb = db;
+    for (cur=results,i=0; i<db->n_msgs; i++) {
+      results[i].m_seq_num = -1;
+      if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD) {
+        cur->m_db_id = i;
+        cur->m_date = (int) db->date_table[i];
+        ++cur;
+      }
+    }
+    n_hits = cur - results;
     qsort(results, n_hits, sizeof(*results), db_date_cmp);
+    for (i=0; i<n_hits; i++)
+      results[results[i].m_db_id].m_seq_num = i;
+  } else {
+    n_hits = 0;
+    for (i=0; i<db->n_msgs; i++) {
+      if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD)
+        results[i].m_seq_num = i;
+      else
+        results[i].m_seq_num = -1;
+      ++n_hits;
+    }
   }
 
   switch (ft) {
     case FT_MAILDIR:/*{{{*/
-      for (ii=0; ii<n_hits; ii++) {
-        i = results[ii];
+      for (i=0; i<db->n_msgs; i++) {
+        if (results[i].m_seq_num == -1)
+          continue;
         int is_seen, is_replied, is_flagged;
         get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
         switch (rd_msg_type(db, i)) {
@@ -1164,19 +1185,20 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       break;
 /*}}}*/
     case FT_MH:/*{{{*/
-      for (ii=0; ii<n_hits; ii++) {
-        i = results[ii];
+      for (i=0; i<db->n_msgs; i++) {
+        if (results[i].m_seq_num == -1)
+          continue;
         switch (rd_msg_type(db, i)) {
           case DB_MSG_FILE:
             {
-              char *target_path = mk_mh_path(ii, output_path);
+              char *target_path = mk_mh_path(results[i].m_seq_num, output_path);
               create_symlink(db->data + db->path_offsets[i], target_path);
               free(target_path);
             }
             break;
           case DB_MSG_IMAP:
             {
-              char *target_path = mk_mh_path(ii, output_path);
+              char *target_path = mk_mh_path(results[i].m_seq_num, output_path);
               GET_IMAP;
               if (imapc) imap_fetch_message_raw(db->data + db->path_offsets[i], imapc, write_to_file, target_path);
               free(target_path);
@@ -1184,7 +1206,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
             break;
           case DB_MSG_MBOX:
             {
-              char *target_path = mk_mh_path(ii, output_path);
+              char *target_path = mk_mh_path(results[i].m_seq_num, output_path);
               try_copy_to_path(db, i, target_path);
               free(target_path);
             }
@@ -1202,8 +1224,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
           unlock_and_exit(1);
         }
 
-        for (ii=0; ii<n_hits; ii++) {
-          i = results[ii];
+        for (i=0; i<db->n_msgs; i++) {
+          if (results[i].m_seq_num == -1)
+            continue;
           switch (rd_msg_type(db, i)) {
             case DB_MSG_FILE:
               {
@@ -1229,8 +1252,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       break;
 /*}}}*/
     case FT_RAW:/*{{{*/
-      for (ii=0; ii<n_hits; ii++) {
-        i = results[ii];
+      for (i=0; i<db->n_msgs; i++) {
+        if (results[i].m_seq_num == -1)
+          continue;
         switch (rd_msg_type(db, i)) {
           case DB_MSG_FILE:
           case DB_MSG_IMAP:
@@ -1254,8 +1278,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       break;
 /*}}}*/
     case FT_EXCERPT:/*{{{*/
-      for (ii=0; ii<n_hits; ii++) {
-        i = results[ii];
+      for (i=0; i<db->n_msgs; i++) {
+        if (results[i].m_seq_num == -1)
+          continue;
         struct rfc822 *parsed = NULL;
         switch (rd_msg_type(db, i)) {
           case DB_MSG_FILE:
@@ -1331,8 +1356,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
       if (please_clear) {
         imap_clear_folder(imapc, output_path);
       }
-      for (ii=0; ii<n_hits; ii++) {
-        i = results[ii];
+      for (i=0; i<db->n_msgs; i++) {
+        if (results[i].m_seq_num == -1)
+          continue;
         int is_seen, is_replied, is_flagged;
         get_flags_from_file(db, i, &is_seen, &is_replied, &is_flagged);
         switch (rd_msg_type(db, i)) {
