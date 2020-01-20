@@ -272,7 +272,8 @@ Some influential environment variables:
 Use these variables to override the choices made by \`configure' or to help
 it to find libraries and programs with nonstandard names/locations.
 
-Report bugs to <rc@rc0.org.uk>.
+Report bugs at https://github.com/vandry/mairix/issues
+or to Kim Vandry <vandry@TZoNE.ORG>.
 EOF
 }
 #}}}
