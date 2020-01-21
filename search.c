@@ -859,7 +859,6 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   int imap_tried = 0;
   struct imap_ll *imapc;
   searchResult *results;
-  searchResult *cur;
 
 #define GET_IMAP if (!imap_tried) {\
         imap_tried = 1;\
@@ -1121,7 +1120,9 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 
   results = new_array(searchResult, db->n_msgs);
   if (sort_by_date) {
-    for (cur=results,i=0; i<db->n_msgs; i++) {
+    searchResult *cur = results;
+
+    for (i=0; i<db->n_msgs; i++) {
       results[i].m_seq_num = -1;
       if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD) {
         cur->m_db_id = i;
@@ -1136,11 +1137,11 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
   } else {
     n_hits = 0;
     for (i=0; i<db->n_msgs; i++) {
-      if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD)
+      if (hit3[i] && rd_msg_type(db, i) != DB_MSG_DEAD) {
+        ++n_hits;
         results[i].m_seq_num = i;
-      else
+      } else
         results[i].m_seq_num = -1;
-      ++n_hits;
     }
   }
 
