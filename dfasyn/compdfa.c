@@ -425,7 +425,7 @@ do_next_dfa_state:
 
     for (j=0; j<ntokens; j++) {
       int next_state = dfas[i]->map[j];
-      if (leads_to_result[next_state] == 0) {
+      if (next_state >= 0 && leads_to_result[next_state] == 0) {
         dfas[i]->map[j] = -1;
       }
     }
