@@ -616,21 +616,26 @@ char *format_msg_src(struct msg_src *src)/*{{{*/
   return result;
 }
 /*}}}*/
-static int split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
+static int split_and_splice_header(struct msg_src *src, char *data, size_t data_len, struct line *header, char **body_start)/*{{{*/
 {
   char *sol, *eol;
   int blank_line;
   header->next = header->prev = header;
   sol = data;
   do {
-    if (!*sol) break;
+    if ((data_len == 0) || (!*sol)) break;
     blank_line = 1; /* until proven otherwise */
     eol = sol;
-    while (*eol && (*eol != '\n')) {
+    while ((data_len > 0) && *eol && (*eol != '\n')) {
       if (!isspace(*(unsigned char *) eol)) blank_line = 0;
       eol++;
+      data_len--;
     }
-    if (*eol == '\n') {
+    if (data_len == 0) {
+      fprintf(stderr, "Found end of message while still in header processing %s\n",
+          format_msg_src(src));
+      return -1; /* & leak memory */
+    } else if (*eol == '\n') {
       if (!blank_line) {
         int line_length = eol - sol;
         char *line_text = new_array(char, 1 + line_length);
@@ -643,6 +648,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
         enqueue(header, new_header);
       }
       sol = eol + 1; /* Start of next line */
+      data_len--;
     } else { /* must be null char */
       fprintf(stderr, "Got null character whilst processing header of %s\n",
           format_msg_src(src));
@@ -777,7 +783,7 @@ static void do_attachment(struct msg_src *src,
 
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
 
-  if (split_and_splice_header(src, start, &header, &body_start) < 0) {
+  if (split_and_splice_header(src, start, after_end-start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
     return;
@@ -1011,7 +1017,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   init_headers(&result->hdrs);
   result->atts.next = result->atts.prev = &result->atts;
 
-  if (split_and_splice_header(src, data, &header, &body_start) < 0) {
+  if (split_and_splice_header(src, data, length, &header, &body_start) < 0) {
     if (verbose) {
       fprintf(stderr, "Giving up on message %s with bad header\n",
           format_msg_src(src));

@@ -1,0 +1,61 @@
+Dump of database
+2 messages
+     0: MBOX 0, msg 0, offset=35, size=31, tid=0
+     1: MBOX 0, msg 1, offset=101, size=179, tid=1
+
+
+MBOX INFORMATION
+1 mboxen
+   0: 2 msgs in messages/mbox/corrupt_header
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+5 entries
+Word 0 : <test>
+  1 
+Word 1 : <example>
+  1 
+Word 2 : <sam@example.org>
+  1 
+Word 3 : <sam>
+  1 
+Word 4 : <org>
+  1 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+4 entries
+Word 0 : <foo@bar.org>
+  1 
+Word 1 : <foo>
+  1 
+Word 2 : <bar>
+  1 
+Word 3 : <org>
+  1 
+--------------------------------
+Contents of <Subject> table
+1 entries
+Word 0 : <test>
+  1 
+--------------------------------
+Contents of <Body> table
+2 entries
+Word 0 : <1234>
+  1 
+Word 1 : <test>
+  1 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+0 entries
+Chain 1
+0 entries
+--------------------------------

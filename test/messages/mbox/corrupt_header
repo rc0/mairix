@@ -1,0 +1,11 @@
+From test Fri Dec  1 15:13:24 2020
+Return-Path: <sam@example.org>
+From test Tue Dec  1 08:49:28 2020
+Date: Tue, 1 Dec 2020 08:49:28 +0100
+From: foo@bar.org
+To: Sam Test <sam@example.org>
+Subject: Test
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+
+Test 1234
