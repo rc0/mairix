@@ -73,6 +73,7 @@ static void append_name(struct nvp *nvp, char **name)/*{{{*/
   ne = new(struct nvp_entry);
   ne->type = NVP_NAME;
   ne->lhs = *name;
+  ne->rhs = NULL;
   *name = NULL;
   append(nvp, ne);
 }
