@@ -909,6 +909,7 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
 {
   maybe_grow_message_arrays(db);
   db->type[db->n_msgs] = type;
+  memset(&db->msgs[db->n_msgs], 0, sizeof(struct msgpath));
   db->msgs[db->n_msgs].src.mpf.path = new_string(path);
   db->msgs[db->n_msgs].src.mpf.mtime = mtime;
   db->msgs[db->n_msgs].src.mpf.size = message_size;
