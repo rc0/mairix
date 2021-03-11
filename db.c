@@ -356,7 +356,7 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
   out->mask = size - 1;
   out->n = n;
   out->tokens = new_array(struct token2 *, size);
-  memset(out->tokens, 0, size * sizeof(struct token *));
+  memset(out->tokens, 0, size * sizeof(struct token2 *));
   out->hwm = (n + size) >> 1;
 
   for (i=0; i<n; i++) {
