@@ -551,7 +551,7 @@ char close = 0;
 				) break;
 			}
 			if (i < t->leaflen) {
-				/* send as litteral */
+				/* send as literal */
 				out += sprintf(out, "{%d+}\015\012", (int)(t->leaflen));
 				memcpy(out, t->leaf, t->leaflen);
 				out += t->leaflen;

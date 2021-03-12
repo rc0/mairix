@@ -1370,7 +1370,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len, enu
     }
     free(p);
     xx_zclose(zf);
-    /* Urgh.  So.  The existence/use of (global) data_alloc_type kindof
+    /* Urgh.  So.  The existence/use of (global) data_alloc_type kind of
      * prevents this function from being re-entrant.  However, by
      * setting data_alloc_type here, *after* xx_zopen/zread/zclose, the
      * decompression functions can get away with memory mapping their

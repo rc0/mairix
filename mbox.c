@@ -153,7 +153,7 @@ static int find_number_intact(struct mbox *mb, char *va, size_t len)/*{{{*/
     int l, m, h;
     l = 0;
     h = mb->n_msgs;
-    /* Loop invariant : always, mesasage[l] is intact, message[h] isn't. */
+    /* Loop invariant : always, message[l] is intact, message[h] isn't. */
     while (l < h) {
       m = (h + l) >> 1;
       if (m==l) break;
