@@ -59,6 +59,12 @@ Abbrev DQUOTE = ["]
 Abbrev OTHER_QUOTED = [@:<>]
 Abbrev LEFTSQUARE = [[]
 Abbrev RIGHTSQUARE = [\]]
+Abbrev R = [r]
+Abbrev E = [e]
+Abbrev M = [m]
+Abbrev O = [o]
+Abbrev T = [t]
+Abbrev F = [e]
 
 BLOCK email {
     STATE in
@@ -178,6 +184,18 @@ BLOCK date {
 
 }
 
+BLOCK remote {
+    STATE in
+        WHITE -> in, before_remote
+
+    STATE before_remote
+        R ; E ; M ; O ; T ; E ; WHITE ; F ; R ; O ; M ; WHITE -> host
+
+    STATE host
+        DOMAIN -> host
+        -> out
+}
+
 # Assume the earlier code has identified the '\nFrom ' sequence,
 # and the validator starts scanning from the character beyond the space
 
@@ -197,10 +215,14 @@ BLOCK main {
                         -> before_date
 
     STATE before_date
-        <date:in->out> ; LF = FROMCHECK_PASS
+        <date:in->out> -> opt_remote
 
         # Cope with mozilla mbox format
         <date:in->out> ; CR ; LF = FROMCHECK_PASS
+
+    STATE opt_remote
+        <remote:in->out> ; LF = FROMCHECK_PASS
+        = FROMCHECK_PASS
 
     # Mention this state last : the last mentioned state in the last defined
     # block becomes the entry state of the scanner.

@@ -6,7 +6,7 @@ Dump of database
      3: FILE messages/mh/animals/1, size=1335, tid=0
      4: FILE messages/mh/animals/2, size=1467, tid=0
      5: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
-     6: MBOX 0, msg 1, offset=1431, size=1378, tid=0 seen
+     6: MBOX 0, msg 1, offset=1469, size=1378, tid=0 seen
      7: FILE messages/mh/AliceBobEve/1, size=279, tid=1
      8: FILE messages/mh/AliceBobEve/2, size=355, tid=2
      9: FILE messages/mh/AliceBobEve/3, size=341, tid=3
