@@ -41,6 +41,7 @@ Abbrev LF = [\n]
 Abbrev CR = [\r]
 Abbrev DIGIT = [0-9]
 Abbrev PERIOD = [.]
+Abbrev COMMA = [,]
 Abbrev AT = [@]
 Abbrev LOWER = [a-z]
 Abbrev UPPER = [A-Z]
@@ -124,6 +125,9 @@ BLOCK zone {
         DIGIT         -> zone2, out
 }
 
+# e.g. Mon Mar 15 14:36:40 2021
+# e.g. Mon Mar 15 14:36:40 PST 2021
+# e.g. Mon Mar 15 14:36:40 2021 PST
 BLOCK date {
     STATE in
         WHITE -> in, before_weekday
@@ -184,6 +188,51 @@ BLOCK date {
 
 }
 
+# e.g. Mon, 15 Mar 2021 21:36:40 PST
+# e.g. Mon, 15 Mar 21 21:36:40 PST
+BLOCK date_old {
+    STATE in
+        WHITE -> in, before_weekday
+
+    STATE before_weekday
+        UPPER ; LOWER ; LOWER ; COMMA ; WHITE -> after_weekday
+
+    STATE after_weekday
+        WHITE -> after_weekday
+        DIGIT ; WHITE -> after_day
+        DIGIT ; DIGIT ; WHITE -> after_day
+
+    STATE after_day
+        WHITE -> after_day
+        UPPER ; LOWER ; LOWER ; WHITE -> after_month
+
+    STATE after_month
+        DIGIT ; DIGIT ; DIGIT ; DIGIT -> after_year
+        DIGIT ; DIGIT -> after_year
+
+    STATE after_year
+        WHITE -> after_year
+        # Accept HH:MM:SS
+        DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; WHITE -> after_time
+        # Accept HH:MM
+        DIGIT ; DIGIT ; COLON ; DIGIT ; DIGIT ; WHITE -> after_time
+
+    # Allow either 1 or 2 words of timezone
+    STATE after_time
+        WHITE -> after_time
+        -> after_timezone
+        <zone:in->out> -> after_timezone
+        <zone:in->out> ; WHITE -> after_timezone_1
+
+    STATE after_timezone_1
+        WHITE -> after_timezone_1
+        <zone:in->out> -> after_timezone
+
+    STATE after_timezone
+        WHITE -> after_timezone
+        -> out
+}
+
 BLOCK remote {
     STATE in
         WHITE -> in, before_remote
@@ -219,6 +268,8 @@ BLOCK main {
 
         # Cope with mozilla mbox format
         <date:in->out> ; CR ; LF = FROMCHECK_PASS
+
+        <date_old:in->out> -> opt_remote
 
     STATE opt_remote
         <remote:in->out> ; LF = FROMCHECK_PASS

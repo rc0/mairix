@@ -33,7 +33,7 @@ Content-Length: 10
 Mouse
 Cat
 
-From old-style|uucp|bang|path|server!someid Tue Jan  4 16:45:37 2011 remote from ahost
+From xxold-style|uucp|bang|path|server!someid Tue, 04 Jan 11 08:44:27 PST remote from ahost
 Return-Path: <someid@some.server>
 Delivered-To: PFX delivery to someid@some.server
 Received: from pop.pop.domain [212.227.17.169]

@@ -4,7 +4,7 @@ Dump of database
      1: FILE messages/maildir/animals/cur/1294156254.3884_3.spencer:2,S, size=1259, tid=0 seen
      2: FILE messages/maildir/animals/new/1294156254.3884_5.spencer, size=1366, tid=0
      3: MBOX 0, msg 0, offset=49, size=1333, tid=0 seen replied
-     4: MBOX 0, msg 1, offset=1469, size=1378, tid=0 seen
+     4: MBOX 0, msg 1, offset=1474, size=1378, tid=0 seen
 
 
 MBOX INFORMATION
