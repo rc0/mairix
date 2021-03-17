@@ -332,16 +332,8 @@ void free_nvp(struct nvp *nvp)/*{{{*/
   struct nvp_entry *ne, *nne;
   for (ne = nvp->first; ne; ne=nne) {
     nne = ne->next;
-    switch (ne->type) {
-      case NVP_NAME:
-        free(ne->lhs);
-        break;
-      case NVP_MAJORMINOR:
-      case NVP_NAMEVALUE:
-        free(ne->lhs);
-        free(ne->rhs);
-        break;
-    }
+    free(ne->lhs);
+    free(ne->rhs);
     free(ne);
   }
   free(nvp);

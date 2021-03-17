@@ -128,6 +128,10 @@ int member_of (const char *complete_mfolder,
     if (mfolder_sb.st_ino == src_folder_sb.st_ino)
       return 1;
   }
+
+  free_string_array(n_raw_paths, &raw_paths);
+  free_string_array(n_paths, &paths);
+
   return 0;
 }
 /*}}}*/

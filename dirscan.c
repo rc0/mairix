@@ -355,7 +355,7 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
     struct msgpath_array *msgs,
     struct globber_array *omit_globs)
 {
-  char **raw_paths, **paths;
+  char **raw_paths, **paths = NULL;
   int n_raw_paths, n_paths, i;
 
   split_on_colons(folders, &n_raw_paths, &raw_paths);
@@ -377,7 +377,8 @@ void build_message_list(char *folder_base, char *folders, enum folder_type ft,
       break;
   }
 
-  if (paths) free(paths);
+  free_string_array(n_raw_paths, &raw_paths);
+  free_string_array(n_paths, &paths);
 
   return;
 }

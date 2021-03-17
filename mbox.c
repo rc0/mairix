@@ -435,6 +435,15 @@ static void deaden_mbox(struct mbox *mb)/*{{{*/
   }
 }
 /*}}}*/
+void free_mboxen(struct database *db)/*{{{*/
+{
+  int i;
+  for (i=0; i<db->n_mboxen; i++) {
+    deaden_mbox(&db->mboxen[i]);
+  }
+  free(db->mboxen);
+}
+/*}}}*/
 static void marry_up_mboxen(struct database *db, struct extant_mbox *extant_mboxen, int n_extant)/*{{{*/
 {
   int *old_to_new_idx;
@@ -802,6 +811,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
   if (mboxen_paths) {
     split_on_colons(mboxen_paths, &n_raw_paths, &raw_paths);
     glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
+    free_string_array(n_raw_paths, &raw_paths);
     extant_mboxen = new_array(struct extant_mbox, n_paths);
   } else {
     n_paths = 0;
@@ -847,6 +857,9 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
   check_duplicates(extant_mboxen, n_extant);
 
   marry_up_mboxen(db, extant_mboxen, n_extant);
+  for (i=0; i < n_extant; ++i)
+      free(extant_mboxen[i].full_path);
+  free(extant_mboxen);
 
   /* Now look for new/modified mboxen, find how many of the old messages are
    * still valid and scan the remainder. */

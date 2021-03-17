@@ -309,6 +309,7 @@ int is_glob_match(struct globber *g, const char *s);
 struct globber_array *colon_sep_string_to_globber_array(const char *in);
 int is_globber_array_match(struct globber_array *ga, const char *s);
 void free_globber_array(struct globber_array *in);
+void free_string_array(int n, char ***arr);
 
 /* In hash.c */
 unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval);
@@ -376,6 +377,7 @@ unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
 void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
 int verify_mbox_size_constraints(struct database *db);
 void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, const struct traverse_methods *methods, struct globber_array *omit_globs);
+void free_mboxen(struct database *db);
 
 /* In glob.c */
 struct globber;

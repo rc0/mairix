@@ -264,6 +264,7 @@ void free_database(struct database *db)/*{{{*/
     free(db->type);
   }
 
+  free_mboxen(db);
   free(db);
 }
 /*}}}*/
@@ -462,13 +463,19 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
     result->mboxen[i].file_size  = input->mbox_size_table[i];
     nn = result->mboxen[i].n_msgs = input->mbox_entries_table[i];
     result->mboxen[i].max_msgs = nn;
-    result->mboxen[i].start = new_array(off_t, nn);
-    result->mboxen[i].len   = new_array(size_t, nn);
-    result->mboxen[i].check_all = new_array(checksum_t, nn);
-    /* Copy the entire checksum table in one go. */
-    memcpy(result->mboxen[i].check_all,
-           input->data + input->mbox_checksum_table[i],
-           nn * sizeof(checksum_t));
+    if (nn > 0) {
+      result->mboxen[i].start = new_array(off_t, nn);
+      result->mboxen[i].len   = new_array(size_t, nn);
+      result->mboxen[i].check_all = new_array(checksum_t, nn);
+      /* Copy the entire checksum table in one go. */
+      memcpy(result->mboxen[i].check_all,
+             input->data + input->mbox_checksum_table[i],
+             nn * sizeof(checksum_t));
+    } else {
+      result->mboxen[i].start = NULL;
+      result->mboxen[i].len   = NULL;
+      result->mboxen[i].check_all = NULL;
+    }
     result->mboxen[i].n_so_far = 0;
   }
 
