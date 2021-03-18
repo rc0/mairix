@@ -1012,6 +1012,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
   int body_len;
 
+  ct_nvp = cte_nvp = cd_nvp = NULL;
   if (error) *error = DTR8_OK; /* default */
   result = new(struct rfc822);
   init_headers(&result->hdrs);
@@ -1023,11 +1024,12 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
           format_msg_src(src));
     }
     if (error) *error = DTR8_BAD_HEADERS;
-    return NULL;
+    free(result);
+    result = NULL;
+    goto out;
   }
 
   /* Extract key headers {{{*/
-  ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if      (match_string("to:", x->text))
       copy_or_concat_header_value(&result->hdrs.to, x->text);
@@ -1064,6 +1066,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   body_len = length - (body_start - data);
   do_body(src, body_start, body_len, ct_nvp, cte_nvp, cd_nvp, &result->atts, error);
 
+out:
   /* Free header memory */
   for (x=header.next; x!=&header; x=nx) {
     nx = x->next;
