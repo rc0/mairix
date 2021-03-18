@@ -137,16 +137,8 @@ static void release_nvp(struct nvp *nvp)/*{{{*/
   struct nvp_entry *e, *ne;
   for (e=nvp->first; e; e=ne) {
     ne = e->next;
-    switch (e->type) {
-      case NVP_NAME:
-        free(e->lhs);
-        break;
-      case NVP_MAJORMINOR:
-      case NVP_NAMEVALUE:
-        free(e->lhs);
-        free(e->rhs);
-        break;
-    }
+    free(e->lhs);
+    free(e->rhs);
     free(e);
   }
   free(nvp);
@@ -202,7 +194,8 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
           pfx, s, format_msg_src(src));
 #endif
       release_nvp(result);
-      return NULL;
+      result = NULL;
+      goto out;
     }
 
     if (nvp_copier[current_state] != last_copier) {
