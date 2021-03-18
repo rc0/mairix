@@ -304,7 +304,8 @@ static int message_compare(const void *a, const void *b)/*{{{*/
 /*}}}*/
 static void sort_message_list(struct msgpath_array *arr)/*{{{*/
 {
-  qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
+  if (arr->paths)
+    qsort(arr->paths, arr->n, sizeof(struct msgpath), message_compare);
 }
 /*}}}*/
 

@@ -218,7 +218,7 @@ struct database *new_database(unsigned int hash_key)/*{{{*/
     {
       gettimeofday(&tv, NULL);
       pid = getpid();
-      hash_key = tv.tv_sec ^ (pid ^ (tv.tv_usec << 15));
+      hash_key = tv.tv_sec ^ (pid ^ ((unsigned)tv.tv_usec << 15));
     }
   result->hash_key = hash_key;
 

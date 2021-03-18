@@ -556,7 +556,8 @@ static char *write_toktable2(struct toktable2 *tab, struct write_map_toktable2 *
     int dlen;
     dlen = stok[i]->match1.n;
     uidata[map->enc1_offset + i] = cdata - data;
-    memcpy(cdata, stok[i]->match1.msginfo, dlen);
+    if (dlen)
+      memcpy(cdata, stok[i]->match1.msginfo, dlen);
     cdata += dlen;
     *cdata++ = 0xff; /* termination character */
   }
