@@ -43,6 +43,7 @@ man1dir=$(mandir)/man1
 man5dir=$(mandir)/man5
 infodir=$(DESTDIR)@infodir@
 docdir=$(DESTDIR)@docdir@
+zshdir=$(DESTDIR)@datadir@/zsh/site-functions
 
 #########################################################################
 # Things below this point shouldn't need to be edited.
@@ -104,12 +105,15 @@ install:
 	[ -d $(mandir) ] || mkdir -p $(mandir)
 	[ -d $(man1dir) ] || mkdir -p $(man1dir)
 	[ -d $(man5dir) ] || mkdir -p $(man5dir)
+	[ -d $(zshdir) ] || mkdir -p $(zshdir)
 	cp -f mairix $(bindir)
 	chmod 555 $(bindir)/mairix
 	cp -f mairix.1 $(man1dir)
 	chmod 444 $(man1dir)/mairix.1
 	cp -f mairixrc.5 $(man5dir)
 	chmod 444 $(man5dir)/mairixrc.5
+	cp -f _mairix $(zshdir)
+	chmod 444 $(zshdir)/_mairix
 
 check: mairix
 	if [ -d test ]; then cd test ; $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" check ; else echo "No test subdirectory?" ; exit 1 ; fi

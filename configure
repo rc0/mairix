@@ -305,6 +305,9 @@ do
   --infodir=* )
     INFODIR=`echo $option | sed -e 's/[^=]*=//;'`
     ;;
+  --datadir=* )
+    DATADIR=`echo $option | sed -e 's/[^=]*=//;'`
+    ;;
   --docdir=* )
     DOCDIR=`echo $option | sed -e 's/[^=]*=//;'`
     ;;
@@ -429,6 +432,7 @@ fi
 if [ "x" = "x${BINDIR}" ]; then BINDIR=${PREFIX}/bin ; fi
 if [ "x" = "x${MANDIR}" ]; then MANDIR=${PREFIX}/man ; fi
 if [ "x" = "x${INFODIR}" ]; then INFODIR=${PREFIX}/info ; fi
+if [ "x" = "x${DATADIR}" ]; then DATADIR=${PREFIX}/share ; fi
 if [ "x" = "x${DOCDIR}" ]; then DOCDIR=${PREFIX}/doc/mairix-${revision} ; fi
 
 echo "Generating Makefile"
@@ -441,6 +445,7 @@ sed -e "s%@cc@%${MYCC}%; \
         s%@bindir@%${BINDIR}%; \
         s%@mandir@%${MANDIR}%; \
         s%@infodir@%${INFODIR}%; \
+        s%@datadir@%${DATADIR}%; \
         s%@docdir@%${DOCDIR}%; \
         s%@LIBS@%${LIBS}%; \
         s%@CPPFLAGS@%${MYCPPFLAGS}%; \
