@@ -612,7 +612,7 @@ void print_dfa(struct DFA *dfa)/*{{{*/
   unsigned long mask;
   unsigned long current_nfas;
   int rup_N = round_up(N);
-  int from_state, this_state;
+  int from_state;
 
   if (!report) return;
 
@@ -633,7 +633,6 @@ void print_dfa(struct DFA *dfa)/*{{{*/
       fprintf(report, "\n");
     }
     fprintf(report, "  Forward route :");
-    this_state = i;
     from_state = dfa->s[i]->from_state;
     if (from_state >= 0) {
       fprintf(report, " (from state %d)", from_state);

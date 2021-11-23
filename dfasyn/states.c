@@ -177,15 +177,15 @@ static void add_abbrev_transition(Block *curblock, State *curstate, struct Abbre
 /*}}}*/
 static void add_inline_block_transition(Block *curblock, State *curstate, InlineBlock *ib, char *destination)/*{{{*/
 {
-  char block_name[1024];
+  char block_name[1023];
   char input_name[1024];
   char output_name[1024];
   State *output_state;
 
-  sprintf(block_name, "%s#%d", ib->type, curblock->subblockcount++);
+  snprintf(block_name, 1023, "%s#%d", ib->type, curblock->subblockcount++);
   instantiate_block(curblock, ib->type, block_name);
-  sprintf(input_name, "%s.%s", block_name, ib->in);
-  sprintf(output_name, "%s.%s", block_name, ib->out);
+  snprintf(input_name, 1024, "%s.%s", block_name, ib->in);
+  snprintf(output_name, 1024, "%s.%s", block_name, ib->out);
   output_state = lookup_state(curblock, output_name, CREATE_OR_USE_OLD);
   add_epsilon_transition(curstate, input_name);
   add_epsilon_transition(output_state, destination);

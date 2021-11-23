@@ -292,51 +292,6 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
   if (nr) free(nr);
 }
 /*}}}*/
-static void match_substring_in_table2(struct read_db *db, struct toktable2_db *tt, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
-{
-
-  int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
-  char *token;
-
-  build_match_vector(substring, a, &hit);
-
-  got_hit = 0;
-  if (max_errors > 3) {
-    r = new_array(unsigned long, 1 + max_errors);
-    nr = new_array(unsigned long, 1 + max_errors);
-  }
-  for (i=0; i<tt->n; i++) {
-    token = db->data + tt->tok_offsets[i];
-    switch (max_errors) {
-      /* Optimise common cases for few errors to allow optimizer to keep bitmaps
-       * in registers */
-      case 0:
-        got_hit = substring_match_0(a, hit, left_anchor, token);
-        break;
-      case 1:
-        got_hit = substring_match_1(a, hit, left_anchor, token);
-        break;
-      case 2:
-        got_hit = substring_match_2(a, hit, left_anchor, token);
-        break;
-      case 3:
-        got_hit = substring_match_3(a, hit, left_anchor, token);
-        break;
-      default:
-        got_hit = substring_match_general(a, hit, left_anchor, token, max_errors, r, nr);
-        break;
-    }
-    if (got_hit) {
-      mark_hits_in_table2(db, tt, i, hits);
-    }
-  }
-  if (r)  free(r);
-  if (nr) free(nr);
-}
-/*}}}*/
 static void match_substring_in_paths(struct read_db *db, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
 {
 

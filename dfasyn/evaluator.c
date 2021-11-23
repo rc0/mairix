@@ -194,7 +194,6 @@ int evaluate_attrs(char ***attrs, int *attr_early)/*{{{*/
   for (j=0; j<n_evaluators; j++) {
     char **attr;
     struct evaluator *x;
-    int any_attrs_so_far = 0;
     int matched = -1;
 
     attr = &(*attrs)[j];
@@ -207,7 +206,6 @@ int evaluate_attrs(char ***attrs, int *attr_early)/*{{{*/
           status = 0;
           break;
         } else {
-          any_attrs_so_far = 1;
           matched = i;
         }
       }
