@@ -106,7 +106,7 @@ void dump_database(char *filename)
       case DB_MSG_MBOX:
         {
           unsigned int mbix, msgix;
-          decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+          decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
 
           printf("MBOX %d, msg %d, offset=%d, size=%d, tid=%d",
                  mbix, msgix, db->mtime_table[i], db->size_table[i], db->tid_table[i]);

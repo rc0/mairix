@@ -314,7 +314,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
         token = db->data + db->path_offsets[i];
         break;
       case DB_MSG_MBOX:
-        decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+        decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
         token = db->data + db->mbox_paths_table[mbix];
         break;
       case DB_MSG_DEAD:
@@ -685,7 +685,7 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
   *msg_data = NULL;
   *msg_len = 0;
 
-  decode_mbox_indices(db->path_offsets[msg_index], &mbi, &msgi);
+  decode_mbox_indices(db->data + db->path_offsets[msg_index], &mbi, &msgi);
   *mbox_index = mbi;
 
   create_ro_mapping(db->data + db->mbox_paths_table[mbi], mbox_data, mbox_len,
@@ -1200,7 +1200,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               start = db->mtime_table[i];
               len   = db->size_table[i];
               after_end = start + len;
-              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
               printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
             }
             break;
@@ -1244,7 +1244,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               len   = db->size_table[i];
               after_end = start + len;
               printf("---------------------------------\n");
-              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
               printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
 
               get_validated_mbox_msg(db, i, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);

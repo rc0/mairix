@@ -27,7 +27,7 @@
 #define HEADER_MAGIC0 'M'
 #define HEADER_MAGIC1 'X'
 #define HEADER_MAGIC2 0xA5
-#define HEADER_MAGIC3 0x03
+#define HEADER_MAGIC3 0x04
 
 /*{{{ Constants for file data positions */
 #define UI_ENDIAN          1
@@ -39,7 +39,7 @@
 /* Header positions containing offsets to the per-message tables. */
 /* Character data:
  * for maildir/MH : the path of the box.
- * for mbox : index of mbox containing the message */
+ * for mbox : a single struct encoded_mbox_indices */
 
 #define UI_MSG_CDATA       4
 /* For maildir/MH : mtime of file containing message */

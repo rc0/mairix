@@ -177,6 +177,7 @@ static int char_length(struct database *db)/*{{{*/
       case MTY_DEAD:
         break;
       case MTY_MBOX:
+        result += sizeof(struct encoded_mbox_indices);
         break;
       case MTY_FILE:
       case MTY_IMAP:
@@ -367,11 +368,12 @@ static char *write_messages(struct database *db, struct write_map *map, unsigned
           int mbno = db->msgs[i].src.mbox.file_index;
           int msgno = db->msgs[i].src.mbox.msg_index;
           struct mbox *mb = &db->mboxen[mbno];
-          uidata[map->path_offset + i] = encode_mbox_indices(mbno, msgno);
+          uidata[map->path_offset + i] = cdata - data;
           uidata[map->mtime_offset + i] = mb->start[msgno];
           uidata[map->size_offset + i] = mb->len[msgno];
           uidata[map->date_offset + i] = db->msgs[i].date;
           uidata[map->tid_offset + i]  = db->msgs[i].tid;
+          cdata = encode_mbox_indices(cdata, mbno, msgno);
         }
         break;
       case MTY_DEAD:

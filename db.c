@@ -502,7 +502,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
           int n;
           struct mbox *mb;
           result->type[i] = MTY_MBOX;
-          decode_mbox_indices(input->path_offsets[i], &mbi, &msgi);
+          decode_mbox_indices(input->data + input->path_offsets[i], &mbi, &msgi);
           result->msgs[i].src.mbox.file_index = mbi;
           mb = &result->mboxen[mbi];
           assert(mb->n_so_far == msgi);
