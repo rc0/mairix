@@ -958,7 +958,7 @@ static time_t parse_rfc822_date(char *date_string)/*{{{*/
   else if (!strncasecmp(s, "dec", 3)) tm.tm_mon = 11;
   else goto tough_cheese;
 
-  while (!isspace(*s)) s++;
+  while (*s && !isspace(*s)) s++;
   while (*s && isspace(*s)) s++;
   if (!isdigit(*s)) goto tough_cheese;
   tm.tm_year = atoi(s);
@@ -1056,9 +1056,9 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
     else if (!result->hdrs.references && match_string("references:", x->text))
       result->hdrs.references = copy_header_value(x->text);
     else if (match_string("status:", x->text))
-      scan_status_flags(x->text + sizeof("status:"), &result->hdrs);
+      scan_status_flags(x->text + (sizeof("status:") - 1), &result->hdrs);
     else if (match_string("x-status:", x->text))
-      scan_status_flags(x->text + sizeof("x-status:"), &result->hdrs);
+      scan_status_flags(x->text + (sizeof("x-status:") - 1), &result->hdrs);
   }
 /*}}}*/
 

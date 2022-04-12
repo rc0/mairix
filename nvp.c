@@ -272,8 +272,11 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
           case GOT_NAMEVALUE_CCONT:
 	    for(tempsrc = tempdst = value; *tempsrc; tempsrc++) {
 		if (*tempsrc == '%') {
-		    int val = hex_to_val(*++tempsrc) << 4;
-		    val |= hex_to_val(*++tempsrc);
+		    int val = -1;
+		    if (tempsrc[1] && tempsrc[2]) {
+			val = hex_to_val(*++tempsrc) << 4;
+			val |= hex_to_val(*++tempsrc);
+		    }
 		    if (val < 0) {
 #ifdef TEST
 			fprintf(stderr, "'%s' could not be parsed (%%)\n", s);
