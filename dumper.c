@@ -39,23 +39,26 @@
 
 static void dump_token_chain(struct read_db *db, unsigned int n, unsigned int *tok_offsets, unsigned int *enc_offsets)
 {
-  int i, j, incr;
+  int i, j;
   int on_line;
-  unsigned char *foo;
+  const char *token;
+  struct int_list_reader ilr;
   printf("%d entries\n", n);
   for (i=0; i<n; i++) {
-    printf("Word %d : <%s>\n", i, db->data + tok_offsets[i]);
-    foo = (unsigned char *) db->data + enc_offsets[i];
-    j = 0;
+    token = get_db_token(db, tok_offsets[i]);
+    if (token) {
+      printf("Word %d : <%s>\n", i, token);
+    } else {
+      printf("Word %d is corrupt, lies beyond end of database\n", i);
+    }
+    read_db_int_list_reader_init(&ilr, db, enc_offsets[i]);
     on_line = 0;
     printf("  ");
-    while (*foo != 0xff) {
+    while (int_list_reader_read(&ilr, &j)) {
       if (on_line > 15) {
         printf("\n");
         on_line = 0;
       }
-      incr = read_increment(&foo);
-      j += incr;
       printf("%d ", j);
       on_line++;
     }
