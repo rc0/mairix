@@ -241,10 +241,10 @@ char cur;
 struct imap_ll_tokenlist *line = NULL;
 struct imap_ll_tokenlist *node = NULL;
 int linestate = 0;
-int recv_tag;
+int recv_tag = 0;
 char *curtoken = NULL;
-size_t curtoken_now;
-size_t curtoken_max;
+size_t curtoken_now = 0;
+size_t curtoken_max = 0;
 struct pollfd pfd;
 
 	for (;;) {

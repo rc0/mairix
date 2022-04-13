@@ -582,10 +582,10 @@ static char *mk_maildir_path(int token, char *output_dir, int is_in_new,
 static char *mk_mh_path(int token, char *output_dir)/*{{{*/
 {
   char *result;
-  char uniq_buf[8];
+  char uniq_buf[11];
   int len;
 
-  len = strlen(output_dir) + 10; /* oversize */
+  len = strlen(output_dir) + 12; /* oversize */
   result = new_array(char, len);
   strcpy(result, output_dir);
   strcat(result, "/");
