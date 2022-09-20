@@ -208,11 +208,12 @@ growlist(struct imap_ll_tokenlist **nodep, struct imap_ll_tokenlist *tl)
 void
 imap_ll_freeline(struct imap_ll_tokenlist *t)
 {
-struct imap_ll_tokenlist *t2;
+struct imap_ll_tokenlist *t2, *next;
 
 	if (t) {
 		if (t->leaf) free(t->leaf);
-		for (t2 = t->first; t2; t2 = t2->next) {
+		for (t2 = t->first; t2; t2 = next) {
+			next = t2->next;
 			imap_ll_freeline(t2);
 		}
 		free(t);
