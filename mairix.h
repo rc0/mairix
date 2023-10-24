@@ -24,6 +24,14 @@
 #ifndef MAIRIX_H
 #define MAIRIX_H
 
+#ifdef HAS_STDINT_H
+#include <stdint.h>
+#elif defined(HAS_INTTYPES_H)
+#include <inttypes.h>
+#else
+#error "No <stdint.h> or <inttypes.h>"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -309,6 +317,7 @@ int is_glob_match(struct globber *g, const char *s);
 struct globber_array *colon_sep_string_to_globber_array(const char *in);
 int is_globber_array_match(struct globber_array *ga, const char *s);
 void free_globber_array(struct globber_array *in);
+void free_string_array(int n, char ***arr);
 
 /* In hash.c */
 unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval);
@@ -372,10 +381,19 @@ void build_mbox_lists(struct database *db, const char *folder_base,
 int add_mbox_messages(struct database *db);
 void compute_checksum(const char *data, size_t len, checksum_t *csum);
 void cull_dead_mboxen(struct database *db);
-unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg);
-void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg);
+
+struct encoded_mbox_indices {
+  uint32_t mb;
+  uint32_t msg;
+};
+/* Encode the mbox indices as a struct encoded_mbox_indices at cdata,
+   returning an updated pointer to just after what we wrote */
+char *encode_mbox_indices(char *cdata, unsigned int mb, unsigned int msg);
+void decode_mbox_indices(char *cdata, unsigned int *mb, unsigned int *msg);
+
 int verify_mbox_size_constraints(struct database *db);
 void glob_and_expand_paths(const char *folder_base, char **paths_in, int n_in, char ***paths_out, int *n_out, const struct traverse_methods *methods, struct globber_array *omit_globs);
+void free_mboxen(struct database *db);
 
 /* In glob.c */
 struct globber;

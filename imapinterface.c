@@ -162,7 +162,7 @@ imap_fetch_message_raw(
 struct imap_ll_tokenlist *cmd, *result, *l, *l2;
 const char *uidvalidity, *uid, *folder, *p;
 size_t uidvalidity_len;
-size_t uid_len, raw_len, got_uid_len;
+size_t uid_len, raw_len = 0, got_uid_len = 0;
 const char *actual_uidvalidity, *got_uid, *got_raw;
 
 	/* first part is the uidvalidity */

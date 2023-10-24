@@ -283,6 +283,16 @@ void string_list_to_array(struct string_list *list, int *n, char ***arr)/*{{{*/
   *arr = result;
 }
 /*}}}*/
+void free_string_array(int n, char ***arr) /*{{{*/
+{
+    int i;
+    for (i=0; i<n; ++i) {
+        free((*arr)[i]);
+    }
+    free(*arr);
+    *arr = NULL;
+}
+/*}}}*/
 void split_on_colons(const char *str, int *n, char ***arr)/*{{{*/
 {
   struct string_list list, *new_cell;

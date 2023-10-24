@@ -616,21 +616,26 @@ char *format_msg_src(struct msg_src *src)/*{{{*/
   return result;
 }
 /*}}}*/
-static int split_and_splice_header(struct msg_src *src, char *data, struct line *header, char **body_start)/*{{{*/
+static int split_and_splice_header(struct msg_src *src, char *data, size_t data_len, struct line *header, char **body_start)/*{{{*/
 {
   char *sol, *eol;
   int blank_line;
   header->next = header->prev = header;
   sol = data;
   do {
-    if (!*sol) break;
+    if ((data_len == 0) || (!*sol)) break;
     blank_line = 1; /* until proven otherwise */
     eol = sol;
-    while (*eol && (*eol != '\n')) {
+    while ((data_len > 0) && *eol && (*eol != '\n')) {
       if (!isspace(*(unsigned char *) eol)) blank_line = 0;
       eol++;
+      data_len--;
     }
-    if (*eol == '\n') {
+    if (data_len == 0) {
+      fprintf(stderr, "Found end of message while still in header processing %s\n",
+          format_msg_src(src));
+      return -1; /* & leak memory */
+    } else if (*eol == '\n') {
       if (!blank_line) {
         int line_length = eol - sol;
         char *line_text = new_array(char, 1 + line_length);
@@ -643,6 +648,7 @@ static int split_and_splice_header(struct msg_src *src, char *data, struct line 
         enqueue(header, new_header);
       }
       sol = eol + 1; /* Start of next line */
+      data_len--;
     } else { /* must be null char */
       fprintf(stderr, "Got null character whilst processing header of %s\n",
           format_msg_src(src));
@@ -777,7 +783,7 @@ static void do_attachment(struct msg_src *src,
 
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
 
-  if (split_and_splice_header(src, start, &header, &body_start) < 0) {
+  if (split_and_splice_header(src, start, after_end-start, &header, &body_start) < 0) {
     fprintf(stderr, "Giving up on attachment with bad header in %s\n",
         format_msg_src(src));
     return;
@@ -952,7 +958,7 @@ static time_t parse_rfc822_date(char *date_string)/*{{{*/
   else if (!strncasecmp(s, "dec", 3)) tm.tm_mon = 11;
   else goto tough_cheese;
 
-  while (!isspace(*s)) s++;
+  while (*s && !isspace(*s)) s++;
   while (*s && isspace(*s)) s++;
   if (!isdigit(*s)) goto tough_cheese;
   tm.tm_year = atoi(s);
@@ -1006,22 +1012,24 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   struct nvp *ct_nvp, *cte_nvp, *cd_nvp, *nvp;
   int body_len;
 
+  ct_nvp = cte_nvp = cd_nvp = NULL;
   if (error) *error = DTR8_OK; /* default */
   result = new(struct rfc822);
   init_headers(&result->hdrs);
   result->atts.next = result->atts.prev = &result->atts;
 
-  if (split_and_splice_header(src, data, &header, &body_start) < 0) {
+  if (split_and_splice_header(src, data, length, &header, &body_start) < 0) {
     if (verbose) {
       fprintf(stderr, "Giving up on message %s with bad header\n",
           format_msg_src(src));
     }
     if (error) *error = DTR8_BAD_HEADERS;
-    return NULL;
+    free(result);
+    result = NULL;
+    goto out;
   }
 
   /* Extract key headers {{{*/
-  ct_nvp = cte_nvp = cd_nvp = NULL;
   for (x=header.next; x!=&header; x=x->next) {
     if      (match_string("to:", x->text))
       copy_or_concat_header_value(&result->hdrs.to, x->text);
@@ -1048,9 +1056,9 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
     else if (!result->hdrs.references && match_string("references:", x->text))
       result->hdrs.references = copy_header_value(x->text);
     else if (match_string("status:", x->text))
-      scan_status_flags(x->text + sizeof("status:"), &result->hdrs);
+      scan_status_flags(x->text + (sizeof("status:") - 1), &result->hdrs);
     else if (match_string("x-status:", x->text))
-      scan_status_flags(x->text + sizeof("x-status:"), &result->hdrs);
+      scan_status_flags(x->text + (sizeof("x-status:") - 1), &result->hdrs);
   }
 /*}}}*/
 
@@ -1058,6 +1066,7 @@ struct rfc822 *data_to_rfc822(struct msg_src *src,
   body_len = length - (body_start - data);
   do_body(src, body_start, body_len, ct_nvp, cte_nvp, cd_nvp, &result->atts, error);
 
+out:
   /* Free header memory */
   for (x=header.next; x!=&header; x=nx) {
     nx = x->next;
@@ -1364,7 +1373,7 @@ void create_ro_mapping(const char *filename, unsigned char **data, int *len, enu
     }
     free(p);
     xx_zclose(zf);
-    /* Urgh.  So.  The existence/use of (global) data_alloc_type kindof
+    /* Urgh.  So.  The existence/use of (global) data_alloc_type kind of
      * prevents this function from being re-entrant.  However, by
      * setting data_alloc_type here, *after* xx_zopen/zread/zclose, the
      * decompression functions can get away with memory mapping their

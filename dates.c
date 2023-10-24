@@ -191,7 +191,7 @@ static int scan_date_expr(char *first, char *last, struct tm *start, struct tm *
       case DS_Y:/*{{{*/
         if (start) {
           start->tm_mday = 1;
-          start->tm_mon  = 0; /* january */
+          start->tm_mon  = 0; /* January */
           start->tm_year = year_fix(v1);
         }
         if (end) {

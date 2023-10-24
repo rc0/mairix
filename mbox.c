@@ -153,7 +153,7 @@ static int find_number_intact(struct mbox *mb, char *va, size_t len)/*{{{*/
     int l, m, h;
     l = 0;
     h = mb->n_msgs;
-    /* Loop invariant : always, mesasage[l] is intact, message[h] isn't. */
+    /* Loop invariant : always, message[l] is intact, message[h] isn't. */
     while (l < h) {
       m = (h + l) >> 1;
       if (m==l) break;
@@ -433,6 +433,15 @@ static void deaden_mbox(struct mbox *mb)/*{{{*/
     free(mb->check_all);
     mb->max_msgs = 0;
   }
+}
+/*}}}*/
+void free_mboxen(struct database *db)/*{{{*/
+{
+  int i;
+  for (i=0; i<db->n_mboxen; i++) {
+    deaden_mbox(&db->mboxen[i]);
+  }
+  free(db->mboxen);
 }
 /*}}}*/
 static void marry_up_mboxen(struct database *db, struct extant_mbox *extant_mboxen, int n_extant)/*{{{*/
@@ -802,6 +811,7 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
   if (mboxen_paths) {
     split_on_colons(mboxen_paths, &n_raw_paths, &raw_paths);
     glob_and_expand_paths(folder_base, raw_paths, n_raw_paths, &paths, &n_paths, &mbox_traverse_methods, omit_globs);
+    free_string_array(n_raw_paths, &raw_paths);
     extant_mboxen = new_array(struct extant_mbox, n_paths);
   } else {
     n_paths = 0;
@@ -847,6 +857,9 @@ void build_mbox_lists(struct database *db, const char *folder_base, /*{{{*/
   check_duplicates(extant_mboxen, n_extant);
 
   marry_up_mboxen(db, extant_mboxen, n_extant);
+  for (i=0; i < n_extant; ++i)
+      free(extant_mboxen[i].full_path);
+  free(extant_mboxen);
 
   /* Now look for new/modified mboxen, find how many of the old messages are
    * still valid and scan the remainder. */
@@ -1069,32 +1082,36 @@ void cull_dead_mboxen(struct database *db)/*{{{*/
 }
 /*}}}*/
 
-unsigned int encode_mbox_indices(unsigned int mb, unsigned int msg)/*{{{*/
+char *encode_mbox_indices(char *cdata, unsigned int mb, unsigned int msg)/*{{{*/
 {
-  unsigned int result;
-  result = ((mb & 0xffff) << 16) | (msg & 0xffff);
-  return result;
+  struct encoded_mbox_indices result;
+  result.mb = mb;
+  result.msg = msg;
+  memcpy(cdata, &result, sizeof(result));
+  return cdata + sizeof(result);
 }
 /*}}}*/
-void decode_mbox_indices(unsigned int index, unsigned int *mb, unsigned int *msg)/*{{{*/
+void decode_mbox_indices(char *cdata, unsigned int *mb, unsigned int *msg)/*{{{*/
 {
-  *mb = (index >> 16) & 0xffff;
-  *msg = (index & 0xffff);
+  struct encoded_mbox_indices encoded;
+  memcpy(&encoded, cdata, sizeof(encoded));
+  *mb = encoded.mb;
+  *msg = encoded.msg;
 }
 /*}}}*/
 int verify_mbox_size_constraints(struct database *db)/*{{{*/
 {
   int i;
   int fail;
-  if (db->n_mboxen > 65536) {
-    fprintf(stderr, "Too many mboxes (max 65536, you have %d)\n", db->n_mboxen);
+  if (db->n_mboxen > UINT32_MAX) {
+    fprintf(stderr, "Too many mboxes (max %d, you have %d)\n", UINT32_MAX, db->n_mboxen);
     return 0;
   }
   fail = 0;
   for (i=0; i<db->n_mboxen; i++) {
-    if (db->mboxen[i].n_msgs > 65536) {
-      fprintf(stderr, "Too many messages in mbox %s (max 65536, you have %d)\n",
-              db->mboxen[i].path, db->mboxen[i].n_msgs);
+    if (db->mboxen[i].n_msgs > UINT32_MAX) {
+      fprintf(stderr, "Too many messages in mbox %s (max %d, you have %d)\n",
+              db->mboxen[i].path, UINT32_MAX, db->mboxen[i].n_msgs);
       fail = 1;
     }
   }

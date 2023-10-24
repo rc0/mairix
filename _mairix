@@ -1,0 +1,105 @@
+#compdef mairix
+
+# Completion function for zsh
+
+local separator tosep end year=${(%):-"%D{%Y}"}
+local -a pattern flags headers other units oper pref months chdedup
+
+zstyle -s ":completion:${curcontext}:search-patterns" list-separator separator || separator=--
+chdedup=( ${${(s..)${PREFIX/a/atcf}}:#-} )
+flags=( "s $separator seen" "r $separator replied" "f $separator flagged" )
+headers=(
+  't:To: header'
+  'c:Cc: header'
+  'f:From: header'
+  's:Subject: header'
+  'b:message body'
+  'n:name of an attachment'
+  'a:all of To: Cc: and From:'
+)
+other=(
+  'm:Message-ID: header'
+  'F:match flag settings'
+  'd:Date: header within range'
+  'z:message size'
+)
+units=( d:days w:weeks m:months y:years )
+oper=( ,:conjunction /:disjunction '=:substring' )
+pref=( '^:start anchor' '~:negation' )
+months=( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec )
+
+for tosep in headers other units oper pref; do
+  set -A $tosep ${(P)tosep/:/ $separator }
+done
+
+pattern=(
+  \( /$'*\0[ \t\n]#'/ \) # strip off any preceding arguments - handled by _arguments
+  \( # dates
+    /d:/ \( '/*-/' -'end=' \| // -'end=1' \)
+    \(
+      "/${(M)year#??}/+" // ':years:year:compadd ${end:+-qS-} -o nosort {$year..$((year-15))}'
+    \|
+      '/[1-9][0-9]#/'
+      \( '/[]/' ':units:unit:compadd ${end:+-qS-} -d units -o nosort - ${(M)units#?}'
+      \| '/[]/' ':months:month:compadd -M "M:{a-zA-Z}={A-Za-z}" -a ${end:+-qS-} -o nosort -a - months' \)
+    \|
+      '/[jfmasondJFMASOND]/+' -'[[ $end = 1 ]]'
+      '/[]/' ':months:month:compadd -M "M:{a-zA-Z}={A-Za-z}" -o nosort -a - months'
+    \|
+      $'/[^\0]#\0/' ':dates:date:_dates -f "%Y%m%d" ${end:+-qS-}'
+    \)
+  \| # flags
+    '/F:(*[^-]|)/' \(
+      '/(-|)/' // ':flags:flag:compadd -S "" -d flags -F chdedup - ${(M)flags#?}'
+    \|
+      /-/ ':operators:negation:compadd -S "" - -'
+    \)
+  \| # sizes
+    /z:/
+        '/[0-9]##/' ': _message -e sizes "low size [0]"'
+        \( '/[kM]/' ':units:unit:compadd -S- k M' \| \)
+        '/-/' ':range-operators:range:compadd -S "" - -'
+        '/[0-9]##/' ': _message -e sizes "high size"'
+        '/[]/' ':units:unit [bytes]:compadd k M'
+  \| # text fields
+    \( '/[tcfsbnam]##:/' ':headers:header:compadd -d other -S ':' - ${(M)other#?}'
+    \| '/[tcfsbnam]#/' '/:/' ':headers:header:compadd -d headers -S "" -F chdedup - ${(M)headers#?}' \)
+    \(
+      \( '//' '%[^~^]%' ': _message -e words word'
+      \| '/[~^]/' ':operators:operator:compadd -S "" -d pref - ${(M)pref#?}' \)
+      '/[^/,=]##/' ': _message -e words word'
+      \(
+        '/[/,]/' ': _message -e words word'
+      \|
+        '/*=/' ':operators:operator:compadd -S "" -d oper - ${(M)oper#?}'
+        '/[0-9]#/' ': _message -e numbers "allowed errors"'
+        '/[/,]/' ':operators:operator:compadd -S "" -d oper - ${(M)oper[1,2]#?}'
+      \)
+    \) \#
+  \) '/[]/'
+)
+
+_regex_arguments _mairix_patterns "$pattern[@]"
+
+_arguments -S -A "-*" \
+  "(H)"{-f,--rcfile}'[specify alternative configuration file to use]:config file [~/.mairixrc]:_files' \
+  "(H -v --verbose)"{-v,--verbose}'[make output more verbose]' \
+  '(H -Q --no-integrity-checks)'{-Q,--no-integrity-checks}'[skip checking database integrity]' \
+  '(H)--unlock[remove the db lockfile first]' \
+  + H \
+  '(- *)'{-h,--help}'[display usage information]' \
+  '(- *)'{-V,--version}'[display version information]' \
+  + D \
+  '(H I S D)'{-d,--dump}'[dump database in human-readable form]' \
+  + I \
+  '(H D S -p --purge)'{-p,--purge}'[remove stale (dead) messages from the database]' \
+  '(H D S -F --fast-index)'{-F,--fast-index}'[skip mtime check for changed message files]' \
+  '(H D S)--force-hash-key-new-database[specify hash key for new database]:hash key' \
+  + S \
+  '(H D I -a --augment -r --raw-output -x --excerpt-output)'{-a,--augment}'[append newly matched messages to the current mfolder]' \
+  '(H D I -t --threads)'{-t,--threads}'[also return every message in the same thread as a matched message]' \
+  '(H D I -a --augment -r --raw-output -x --excerpt-output)'{-r,--raw-output}'[output paths to matched messages]' \
+  '(H D I -a --augment -r --raw-output -x --excerpt-output)'{-x,--excerpt-output}'[output brief header summary for matched messages]' \
+  '(H D I -r --raw-output -x --excerpt-output -H --force-hardlinks)'{-H,--force-hardlinks}'[use hardlinks when populating the search results folder]' \
+  '(H D I -r --raw-output -x --excerpt-output -o --mfolder)'{-o,--mfolder}'[specify path to search results folder]:folder:_directories' \
+  '*:search pattern:_mairix_patterns'

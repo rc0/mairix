@@ -29,8 +29,8 @@ static void do_toktable(struct toktable *x, int *lc, int *elc, int *ec, int size
   int i;
   for (i=0; i<x->size; i++) {
     struct token *tok = x->tokens[i];
-    unsigned char *j, *last_char;
-    int incr;
+    struct int_list_reader ilr;
+    int incr, idx, next_idx;
 
     if (tok) {
       int len = strlen(tok->text);
@@ -49,11 +49,11 @@ static void do_toktable(struct toktable *x, int *lc, int *elc, int *ec, int size
         if (tok->match0.n > *mel) *mel = tok->match0.n;
       }
 
-      /* Deal with encoding */
-      j = tok->match0.msginfo;
-      last_char = j + tok->match0.n;
-      while (j < last_char) {
-        incr = read_increment(&j);
+      matches_int_list_reader_init(&ilr, &(tok->match0));
+      idx = 0;
+      while (int_list_reader_read(&ilr, &next_idx)) {
+        incr = next_idx - idx;
+        idx = next_idx;
         if (incr > size) {
           fprintf(stderr, "Encoding increment %d exceeds size\n", incr);
         } else {

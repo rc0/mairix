@@ -9,6 +9,11 @@ The most important commands are:
   make test   -- runs all tests but stops at the first test
   make check  -- runs all tests but does not stop at failed tests
 
+Some tests will fail in some locales (most notably the "C" locale which is
+the POSIX default) due to differences in collation rules. Some locales known to
+work are "en_US", "UTF-8" and "ISO-8859-1", which can be used for a test run
+with a command like "env LC_COLLATE=UTF-8 make check".
+
 ===============================================================================
 How to write new tests:
 ===============================================================================

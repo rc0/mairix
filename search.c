@@ -50,11 +50,9 @@ static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int h
 {
   /* mark files containing matched token */
   int idx;
-  unsigned char *j, *first_char;
-  idx = 0;
-  first_char = (unsigned char *) db->data + tt->enc_offsets[hit_tok];
-  for (j = first_char; *j != 0xff; ) {
-    idx += read_increment(&j);
+  struct int_list_reader ilr;
+  read_db_int_list_reader_init(&ilr, db, tt->enc_offsets[hit_tok]);
+  while (int_list_reader_read(&ilr, &idx)) {
     assert(idx < db->n_msgs);
     hits[idx] = 1;
   }
@@ -64,11 +62,9 @@ static void mark_hits_in_table2(struct read_db *db, struct toktable2_db *tt, int
 {
   /* mark files containing matched token */
   int idx;
-  unsigned char *j, *first_char;
-  idx = 0;
-  first_char = (unsigned char *) db->data + tt->enc1_offsets[hit_tok];
-  for (j = first_char; *j != 0xff; ) {
-    idx += read_increment(&j);
+  struct int_list_reader ilr;
+  read_db_int_list_reader_init(&ilr, db, tt->enc1_offsets[hit_tok]);
+  while (int_list_reader_read(&ilr, &idx)) {
     assert(idx < db->n_msgs);
     hits[idx] = 1;
   }
@@ -100,10 +96,10 @@ static void build_match_vector(char *substring, unsigned long *a, unsigned long 
   return;
 }
 /*}}}*/
-static int substring_match_0(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_0(unsigned long *a, unsigned long hit, int left_anchor, const char *token)/*{{{*/
 {
   int got_hit=0;
-  char *p;
+  const char *p;
   unsigned long r0;
   unsigned long anchor, anchor1;
 
@@ -123,10 +119,10 @@ static int substring_match_0(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_1(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_1(unsigned long *a, unsigned long hit, int left_anchor, const char *token)/*{{{*/
 {
   int got_hit=0;
-  char *p;
+  const char *p;
   unsigned long r0, r1, nr0;
   unsigned long anchor, anchor1;
 
@@ -149,10 +145,10 @@ static int substring_match_1(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_2(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_2(unsigned long *a, unsigned long hit, int left_anchor, const char *token)/*{{{*/
 {
   int got_hit=0;
-  char *p;
+  const char *p;
   unsigned long r0, r1, r2, nr0, nr1;
   unsigned long anchor, anchor1;
 
@@ -178,10 +174,10 @@ static int substring_match_2(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_3(unsigned long *a, unsigned long hit, int left_anchor, char *token)/*{{{*/
+static int substring_match_3(unsigned long *a, unsigned long hit, int left_anchor, const char *token)/*{{{*/
 {
   int got_hit=0;
-  char *p;
+  const char *p;
   unsigned long r0, r1, r2, r3, nr0, nr1, nr2;
   unsigned long anchor, anchor1;
 
@@ -210,10 +206,10 @@ static int substring_match_3(unsigned long *a, unsigned long hit, int left_ancho
   return got_hit;
 }
 /*}}}*/
-static int substring_match_general(unsigned long *a, unsigned long hit, int left_anchor, char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
+static int substring_match_general(unsigned long *a, unsigned long hit, int left_anchor, const char *token, int max_errors, unsigned long *r, unsigned long *nr)/*{{{*/
 {
   int got_hit=0;
-  char *p;
+  const char *p;
   int j;
   unsigned long anchor, anchor1;
 
@@ -254,7 +250,7 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
   unsigned long a[256];
   unsigned long *r=NULL, *nr=NULL;
   unsigned long hit;
-  char *token;
+  const char *token;
 
   build_match_vector(substring, a, &hit);
 
@@ -264,7 +260,8 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
     nr = new_array(unsigned long, 1 + max_errors);
   }
   for (i=0; i<tt->n; i++) {
-    token = db->data + tt->tok_offsets[i];
+    token = get_db_token(db, tt->tok_offsets[i]);
+    if (!token) continue;
     switch (max_errors) {
       /* Optimise common cases for few errors to allow optimizer to keep bitmaps
        * in registers */
@@ -286,51 +283,6 @@ static void match_substring_in_table(struct read_db *db, struct toktable_db *tt,
     }
     if (got_hit) {
       mark_hits_in_table(db, tt, i, hits);
-    }
-  }
-  if (r)  free(r);
-  if (nr) free(nr);
-}
-/*}}}*/
-static void match_substring_in_table2(struct read_db *db, struct toktable2_db *tt, char *substring, int max_errors, int left_anchor, char *hits)/*{{{*/
-{
-
-  int i, got_hit;
-  unsigned long a[256];
-  unsigned long *r=NULL, *nr=NULL;
-  unsigned long hit;
-  char *token;
-
-  build_match_vector(substring, a, &hit);
-
-  got_hit = 0;
-  if (max_errors > 3) {
-    r = new_array(unsigned long, 1 + max_errors);
-    nr = new_array(unsigned long, 1 + max_errors);
-  }
-  for (i=0; i<tt->n; i++) {
-    token = db->data + tt->tok_offsets[i];
-    switch (max_errors) {
-      /* Optimise common cases for few errors to allow optimizer to keep bitmaps
-       * in registers */
-      case 0:
-        got_hit = substring_match_0(a, hit, left_anchor, token);
-        break;
-      case 1:
-        got_hit = substring_match_1(a, hit, left_anchor, token);
-        break;
-      case 2:
-        got_hit = substring_match_2(a, hit, left_anchor, token);
-        break;
-      case 3:
-        got_hit = substring_match_3(a, hit, left_anchor, token);
-        break;
-      default:
-        got_hit = substring_match_general(a, hit, left_anchor, token, max_errors, r, nr);
-        break;
-    }
-    if (got_hit) {
-      mark_hits_in_table2(db, tt, i, hits);
     }
   }
   if (r)  free(r);
@@ -359,7 +311,7 @@ static void match_substring_in_paths(struct read_db *db, char *substring, int ma
         token = db->data + db->path_offsets[i];
         break;
       case DB_MSG_MBOX:
-        decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+        decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
         token = db->data + db->mbox_paths_table[mbix];
         break;
       case DB_MSG_DEAD:
@@ -400,9 +352,11 @@ static void match_string_in_table(struct read_db *db, struct toktable_db *tt, ch
 {
   /* TODO : replace with binary search? */
   int i;
+  const char *token;
 
   for (i=0; i<tt->n; i++) {
-    if (!strcmp(key, db->data + tt->tok_offsets[i])) {
+    token = get_db_token(db, tt->tok_offsets[i]);
+    if (token && !strcmp(key, token)) {
       /* get all matching files */
       mark_hits_in_table(db, tt, i, hits);
     }
@@ -413,9 +367,11 @@ static void match_string_in_table2(struct read_db *db, struct toktable2_db *tt, 
 {
   /* TODO : replace with binary search? */
   int i;
+  const char *token;
 
   for (i=0; i<tt->n; i++) {
-    if (!strcmp(key, db->data + tt->tok_offsets[i])) {
+    token = get_db_token(db, tt->tok_offsets[i]);
+    if (!strcmp(key, token)) {
       /* get all matching files */
       mark_hits_in_table2(db, tt, i, hits);
     }
@@ -629,7 +585,7 @@ static char *mk_mh_path(int token, char *output_dir)/*{{{*/
   char uniq_buf[12];
   int len;
 
-  len = strlen(output_dir) + 10; /* oversize */
+  len = strlen(output_dir) + 12; /* oversize */
   result = new_array(char, len);
   strcpy(result, output_dir);
   strcat(result, "/");
@@ -730,7 +686,7 @@ static void get_validated_mbox_msg(struct read_db *db, int msg_index,/*{{{*/
   *msg_data = NULL;
   *msg_len = 0;
 
-  decode_mbox_indices(db->path_offsets[msg_index], &mbi, &msgi);
+  decode_mbox_indices(db->data + db->path_offsets[msg_index], &mbi, &msgi);
   *mbox_index = mbi;
 
   create_ro_mapping(db->data + db->mbox_paths_table[mbi], mbox_data, mbox_len,
@@ -1270,7 +1226,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               start = db->mtime_table[i];
               len   = db->size_table[i];
               after_end = start + len;
-              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
               printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
             }
             break;
@@ -1315,7 +1271,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
               len   = db->size_table[i];
               after_end = start + len;
               printf("---------------------------------\n");
-              decode_mbox_indices(db->path_offsets[i], &mbix, &msgix);
+              decode_mbox_indices(db->data + db->path_offsets[i], &mbix, &msgix);
               printf("mbox:%s [%d,%d)\n", db->data + db->mbox_paths_table[mbix], start, after_end);
 
               get_validated_mbox_msg(db, i, &mbox_index, &mbox_start, &mbox_len, &msg_start, &msg_len);

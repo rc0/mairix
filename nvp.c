@@ -73,6 +73,7 @@ static void append_name(struct nvp *nvp, char **name)/*{{{*/
   ne = new(struct nvp_entry);
   ne->type = NVP_NAME;
   ne->lhs = *name;
+  ne->rhs = NULL;
   *name = NULL;
   append(nvp, ne);
 }
@@ -136,16 +137,8 @@ static void release_nvp(struct nvp *nvp)/*{{{*/
   struct nvp_entry *e, *ne;
   for (e=nvp->first; e; e=ne) {
     ne = e->next;
-    switch (e->type) {
-      case NVP_NAME:
-        free(e->lhs);
-        break;
-      case NVP_MAJORMINOR:
-      case NVP_NAMEVALUE:
-        free(e->lhs);
-        free(e->rhs);
-        break;
-    }
+    free(e->lhs);
+    free(e->rhs);
     free(e);
   }
   free(nvp);
@@ -201,7 +194,8 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
           pfx, s, format_msg_src(src));
 #endif
       release_nvp(result);
-      return NULL;
+      result = NULL;
+      goto out;
     }
 
     if (nvp_copier[current_state] != last_copier) {
@@ -278,8 +272,11 @@ struct nvp *make_nvp(struct msg_src *src, char *s, const char *pfx)/*{{{*/
           case GOT_NAMEVALUE_CCONT:
 	    for(tempsrc = tempdst = value; *tempsrc; tempsrc++) {
 		if (*tempsrc == '%') {
-		    int val = hex_to_val(*++tempsrc) << 4;
-		    val |= hex_to_val(*++tempsrc);
+		    int val = -1;
+		    if (tempsrc[1] && tempsrc[2]) {
+			val = hex_to_val(*++tempsrc) << 4;
+			val |= hex_to_val(*++tempsrc);
+		    }
 		    if (val < 0) {
 #ifdef TEST
 			fprintf(stderr, "'%s' could not be parsed (%%)\n", s);
@@ -331,16 +328,8 @@ void free_nvp(struct nvp *nvp)/*{{{*/
   struct nvp_entry *ne, *nne;
   for (ne = nvp->first; ne; ne=nne) {
     nne = ne->next;
-    switch (ne->type) {
-      case NVP_NAME:
-        free(ne->lhs);
-        break;
-      case NVP_MAJORMINOR:
-      case NVP_NAMEVALUE:
-        free(ne->lhs);
-        free(ne->rhs);
-        break;
-    }
+    free(ne->lhs);
+    free(ne->rhs);
     free(ne);
   }
   free(nvp);

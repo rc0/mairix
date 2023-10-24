@@ -208,11 +208,12 @@ growlist(struct imap_ll_tokenlist **nodep, struct imap_ll_tokenlist *tl)
 void
 imap_ll_freeline(struct imap_ll_tokenlist *t)
 {
-struct imap_ll_tokenlist *t2;
+struct imap_ll_tokenlist *t2, *next;
 
 	if (t) {
 		if (t->leaf) free(t->leaf);
-		for (t2 = t->first; t2; t2 = t2->next) {
+		for (t2 = t->first; t2; t2 = next) {
+			next = t2->next;
 			imap_ll_freeline(t2);
 		}
 		free(t);
@@ -241,10 +242,10 @@ char cur;
 struct imap_ll_tokenlist *line = NULL;
 struct imap_ll_tokenlist *node = NULL;
 int linestate = 0;
-int recv_tag;
+int recv_tag = 0;
 char *curtoken = NULL;
-size_t curtoken_now;
-size_t curtoken_max;
+size_t curtoken_now = 0;
+size_t curtoken_max = 0;
 struct pollfd pfd;
 
 	for (;;) {
@@ -551,7 +552,7 @@ char close = 0;
 				) break;
 			}
 			if (i < t->leaflen) {
-				/* send as litteral */
+				/* send as literal */
 				out += sprintf(out, "{%d+}\015\012", (int)(t->leaflen));
 				memcpy(out, t->leaf, t->leaflen);
 				out += t->leaflen;

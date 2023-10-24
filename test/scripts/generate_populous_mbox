@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+seq 65600 | sed -s 's%^.*$%From someid@some.server Thu Dec 30 16:31:12 2021|'\
+'Date: Thu, 30 Dec 2021 16:31:12 +0000|'\
+'From: someidA@some.server|'\
+'To: someidAto@some.server|'\
+'Subject: Message number &|'\
+'Message-ID: <&@someid.some.unique.id>|'\
+'Content-Type: text/plain; charset=us-ascii|'\
+'Content-Length: 4|'\
+'|'\
+'foo|'\
+'%' | tr '|' \\012

@@ -45,20 +45,22 @@ BIG_MESSAGES=$(BIG_MESSAGES_INDICES:%=messages/mh/BigMessages/%)
 big-messages: $(BIG_MESSAGES)
 messages/mh/BigMessages/%:
 	$(SCRIPT_DIR)/generate_big_message.sh $@
+messages/mbox/manymessages: $(SCRIPT_DIR)/generate_populous_mbox
+	$(SCRIPT_DIR)/generate_populous_mbox >"$@"
 
 # splitting the mboxen
 .split_mboxen_marker:
-	find messages/mbox -type f -exec $(SCRIPT_DIR)/split_mbox.sh {} \;
+	find messages/mbox -not -name manymessages -type f -exec $(SCRIPT_DIR)/split_mbox.sh {} \;
 	touch $@
 
 # message-preparations is used to assert all required preprocessing is done
-message-preparations: .split_mboxen_marker big-messages
+message-preparations: .split_mboxen_marker big-messages messages/mbox/manymessages
 
 # maintenance for the generated files
 distclean-message-preparations:
 	-rm -f .split_mboxen_marker
 	-rm -rf messages/mbox_split
-	-rm -rf $(BIG_MESSAGES)
+	-rm -rf $(BIG_MESSAGES) messages/mbox/manymessages
 
 ############################################
 # Targets for the whole test suite

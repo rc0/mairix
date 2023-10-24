@@ -27,7 +27,7 @@
 #define HEADER_MAGIC0 'M'
 #define HEADER_MAGIC1 'X'
 #define HEADER_MAGIC2 0xA5
-#define HEADER_MAGIC3 0x03
+#define HEADER_MAGIC3 0x04
 
 /*{{{ Constants for file data positions */
 #define UI_ENDIAN          1
@@ -39,7 +39,7 @@
 /* Header positions containing offsets to the per-message tables. */
 /* Character data:
  * for maildir/MH : the path of the box.
- * for mbox : index of mbox containing the message */
+ * for mbox : a single struct encoded_mbox_indices */
 
 #define UI_MSG_CDATA       4
 /* For maildir/MH : mtime of file containing message */
@@ -178,7 +178,28 @@ static inline int rd_msg_type(struct read_db *db, int i) {
   return db->msg_type_and_flags[i] & 0x7;
 }
 
-/* Common to search and db reader. */
-int read_increment(unsigned char **encpos);
+/* int_list_reader reads a sorted list of integers in a
+   variable-length encoding of increments from the previous entry. */
+struct int_list_reader {
+  unsigned int accumulator;
+  const unsigned char *pos;
+  const unsigned char *end;
+};
+struct matches;
+void matches_int_list_reader_init(struct int_list_reader *, const struct matches *);
+void read_db_int_list_reader_init(
+  struct int_list_reader *,
+  const struct read_db *,
+  unsigned int start_offset
+);
+/* Returns 0 on end of list or bounds exceeded. */
+int int_list_reader_read(struct int_list_reader *, int *result);
+/* Consumes the list like int_list_reader_read but copies it
+   to a newly initialised struct match. */
+void int_list_reader_copy(struct int_list_reader *, struct matches *);
+
+/* Get token from database, respecting file bounds.
+   Returns NULL if the database is corrupt. */
+const char *get_db_token(const struct read_db *db, unsigned int token_offset);
 
 #endif /* READER_H */

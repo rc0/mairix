@@ -496,7 +496,9 @@ published_add_messages() {
 
 		    # For mboxen, we split them, to allow references to
 		    # individual messages within the mboxen
-		    "${SCRIPT_DIR_ABS}/split_mbox.sh" "$TARGET_FILE_ABS"
+		    if [ manymessages != "$SOURCE_UNSP_RELU" ]; then
+			"${SCRIPT_DIR_ABS}/split_mbox.sh" "$TARGET_FILE_ABS"
+		    fi
 		    ;; #--------------------------------------- mbox file -end-
 
 		"mmdf" ) #------ mmdf same as mbox but splits differently -----

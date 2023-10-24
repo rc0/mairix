@@ -55,23 +55,18 @@ static void check_toktable_enc_integrity(int n_msgs, struct toktable *table)/*{{
   /* FIXME : Check reachability of tokens that are displaced from their natural
    * hash bucket (if deletions have occurred during purge). */
 
-  int idx, incr;
+  int idx;
   int i, k;
-  unsigned char *j, *last_char;
   int broken_chains = 0;
   struct sortable_token *sort_list;
   int any_duplicates;
+  struct int_list_reader ilr;
 
   for (i=0; i<table->size; i++) {
     struct token *tok = table->tokens[i];
     if (tok) {
-      idx = 0;
-      incr = 0;
-      last_char = tok->match0.msginfo + tok->match0.n;
-      for (j = tok->match0.msginfo; j < last_char; ) {
-        incr = read_increment(&j);
-        idx += incr;
-      }
+      matches_int_list_reader_init(&ilr, &(tok->match0));
+      while (int_list_reader_read(&ilr, &idx));
       if (idx != tok->match0.highest) {
         fprintf(stderr, "broken encoding chain for token <%s>, highest=%ld\n", tok->text, tok->match0.highest);
         fflush(stderr);
@@ -218,7 +213,7 @@ struct database *new_database(unsigned int hash_key)/*{{{*/
     {
       gettimeofday(&tv, NULL);
       pid = getpid();
-      hash_key = tv.tv_sec ^ (pid ^ (tv.tv_usec << 15));
+      hash_key = tv.tv_sec ^ (pid ^ ((unsigned)tv.tv_usec << 15));
     }
   result->hash_key = hash_key;
 
@@ -264,15 +259,13 @@ void free_database(struct database *db)/*{{{*/
     free(db->type);
   }
 
+  free_mboxen(db);
   free(db);
 }
 /*}}}*/
 
-static int get_max (int a, int b) {/*{{{*/
-  return (a > b) ? a : b;
-}
 /*}}}*/
-static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struct toktable_db *in, struct toktable *out)/*{{{*/
+static void import_toktable(const struct read_db *indb, int n_msgs, struct toktable_db *in, struct toktable *out)/*{{{*/
 {
   int n, size, i;
 
@@ -290,37 +283,31 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
 
   for (i=0; i<n; i++) {
     unsigned int hash, index;
-    char *text;
-    unsigned char *enc;
-    int enc_len;
+    const char *text;
     struct token *nt;
-    int enc_hi;
-    int idx, incr;
-    unsigned char *j;
-
-    /* Recover enc_len and enc_hi from the data */
-    enc = (unsigned char *) data + in->enc_offsets[i];
-    idx = 0;
-    for (j = enc; *j != 0xff; ) {
-      incr = read_increment(&j);
-      idx += incr;
-    }
-    enc_len = j - enc;
-    enc_hi = idx;
-
-    text = data + in->tok_offsets[i];
-    hash = hashfn((unsigned char *) text, strlen(text), hash_key);
+    struct int_list_reader ilr;
 
     nt = new(struct token);
+
+    /* Recover enc_len and enc_hi from the data */
+    read_db_int_list_reader_init(&ilr, indb, in->enc_offsets[i]);
+    int_list_reader_copy(&ilr, &(nt->match0));
+
+    text = get_db_token(indb, in->tok_offsets[i]);
+    if (!text) {
+      fprintf(stderr, "\n!!! Corrupt token offset found in database, aborting.\n");
+corrupt:
+      fprintf(stderr, "  Delete the database file and rebuild from scratch as a workaround\n");
+      /* No point going on - need to find out why the database got corrupted
+       * in the 1st place.  Workaround for user - rebuild database from
+       * scratch by deleting it then rerunning. */
+      unlock_and_exit(1);
+    }
+    hash = hashfn((unsigned char *) text, strlen(text), indb->hash_key);
+
     nt->hashval = hash;
     nt->text = new_string(text);
-    /* Allow a bit of headroom for adding more entries later */
-    nt->match0.max = get_max(16, enc_len + (enc_len >> 1));
-    nt->match0.n = enc_len;
-    nt->match0.highest = enc_hi;
     assert(nt->match0.highest < n_msgs);
-    nt->match0.msginfo = new_array(unsigned char, nt->match0.max);
-    memcpy(nt->match0.msginfo, enc, nt->match0.n);
 
     index = hash & out->mask;
     while (out->tokens[index]) {
@@ -329,11 +316,7 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
       if (!strcmp(nt->text, out->tokens[index]->text)) {
         fprintf(stderr, "\n!!! Corrupt token table found in database, token <%s> duplicated, aborting\n",
             nt->text);
-        fprintf(stderr, "  Delete the database file and rebuild from scratch as a workaround\n");
-        /* No point going on - need to find out why the database got corrupted
-         * in the 1st place.  Workaround for user - rebuild database from
-         * scratch by deleting it then rerunning. */
-        unlock_and_exit(1);
+        goto corrupt;
       }
       ++index;
       index &= out->mask;
@@ -343,7 +326,7 @@ static void import_toktable(char *data, unsigned int hash_key, int n_msgs, struc
   }
 }
 /*}}}*/
-static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, struct toktable2_db *in, struct toktable2 *out)/*{{{*/
+static void import_toktable2(struct read_db *indb, int n_msgs, struct toktable2_db *in, struct toktable2 *out)/*{{{*/
 {
   int n, size, i;
 
@@ -356,63 +339,34 @@ static void import_toktable2(char *data, unsigned int hash_key, int n_msgs, stru
   out->mask = size - 1;
   out->n = n;
   out->tokens = new_array(struct token2 *, size);
-  memset(out->tokens, 0, size * sizeof(struct token *));
+  memset(out->tokens, 0, size * sizeof(struct token2 *));
   out->hwm = (n + size) >> 1;
 
   for (i=0; i<n; i++) {
     unsigned int hash, index;
-    char *text;
+    const char *text;
     struct token2 *nt;
-    unsigned char *enc0, *enc1;
-    int enc0_len, enc1_len;
-    int enc0_hi, enc1_hi;
-    int idx, incr;
-    unsigned char *j;
-
-/*{{{ do enc0*/
-    enc0 = (unsigned char *) data + in->enc0_offsets[i];
-    idx = 0;
-    for (j = enc0; *j != 0xff; ) {
-      incr = read_increment(&j);
-      idx += incr;
-    }
-    enc0_len = j - enc0;
-    enc0_hi = idx;
-/*}}}*/
-/*{{{ do enc1*/
-    enc1 = (unsigned char *) data + in->enc1_offsets[i];
-    idx = 0;
-    for (j = enc1; *j != 0xff; ) {
-      incr = read_increment(&j);
-      idx += incr;
-    }
-    enc1_len = j - enc1;
-    enc1_hi = idx;
-/*}}}*/
-
-    text = data + in->tok_offsets[i];
-    hash = hashfn((unsigned char *) text, strlen(text), hash_key);
+    struct int_list_reader ilr;
 
     nt = new(struct token2);
+
+    read_db_int_list_reader_init(&ilr, indb, in->enc0_offsets[i]);
+    int_list_reader_copy(&ilr, &(nt->match0));
+    read_db_int_list_reader_init(&ilr, indb, in->enc1_offsets[i]);
+    int_list_reader_copy(&ilr, &(nt->match1));
+
+    text = get_db_token(indb, in->tok_offsets[i]);
+    if (!text) {
+      fprintf(stderr, "\n!!! Corrupt token offset found in database, aborting.\n");
+      fprintf(stderr, "  Delete the database file and rebuild from scratch as a workaround\n");
+      unlock_and_exit(1);
+    }
+    hash = hashfn((unsigned char *) text, strlen(text), indb->hash_key);
+
     nt->hashval = hash;
     nt->text = new_string(text);
-    /* Allow a bit of headroom for adding more entries later */
-    /*{{{ set up match0 chain */
-    nt->match0.max = get_max(16, enc0_len + (enc0_len >> 1));
-    nt->match0.n = enc0_len;
-    nt->match0.highest = enc0_hi;
     assert(nt->match0.highest < n_msgs);
-    nt->match0.msginfo = new_array(unsigned char, nt->match0.max);
-    memcpy(nt->match0.msginfo, enc0, nt->match0.n);
-    /*}}}*/
-    /*{{{ set up match1 chain */
-    nt->match1.max = get_max(16, enc1_len + (enc1_len >> 1));
-    nt->match1.n = enc1_len;
-    nt->match1.highest = enc1_hi;
     assert(nt->match1.highest < n_msgs);
-    nt->match1.msginfo = new_array(unsigned char, nt->match1.max);
-    memcpy(nt->match1.msginfo, enc1, nt->match1.n);
-    /*}}}*/
 
     index = hash & out->mask;
     while (out->tokens[index]) {
@@ -462,13 +416,19 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
     result->mboxen[i].file_size  = input->mbox_size_table[i];
     nn = result->mboxen[i].n_msgs = input->mbox_entries_table[i];
     result->mboxen[i].max_msgs = nn;
-    result->mboxen[i].start = new_array(off_t, nn);
-    result->mboxen[i].len   = new_array(size_t, nn);
-    result->mboxen[i].check_all = new_array(checksum_t, nn);
-    /* Copy the entire checksum table in one go. */
-    memcpy(result->mboxen[i].check_all,
-           input->data + input->mbox_checksum_table[i],
-           nn * sizeof(checksum_t));
+    if (nn > 0) {
+      result->mboxen[i].start = new_array(off_t, nn);
+      result->mboxen[i].len   = new_array(size_t, nn);
+      result->mboxen[i].check_all = new_array(checksum_t, nn);
+      /* Copy the entire checksum table in one go. */
+      memcpy(result->mboxen[i].check_all,
+             input->data + input->mbox_checksum_table[i],
+             nn * sizeof(checksum_t));
+    } else {
+      result->mboxen[i].start = NULL;
+      result->mboxen[i].len   = NULL;
+      result->mboxen[i].check_all = NULL;
+    }
     result->mboxen[i].n_so_far = 0;
   }
 
@@ -495,7 +455,7 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
           int n;
           struct mbox *mb;
           result->type[i] = MTY_MBOX;
-          decode_mbox_indices(input->path_offsets[i], &mbi, &msgi);
+          decode_mbox_indices(input->data + input->path_offsets[i], &mbi, &msgi);
           result->msgs[i].src.mbox.file_index = mbi;
           mb = &result->mboxen[mbi];
           assert(mb->n_so_far == msgi);
@@ -515,13 +475,13 @@ struct database *new_database_from_file(char *db_filename, int do_integrity_chec
     result->msgs[i].tid   = input->tid_table[i];
   }
 
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->to, result->to);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->cc, result->cc);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->from, result->from);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->subject, result->subject);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->body, result->body);
-  import_toktable(input->data, input->hash_key, result->n_msgs, &input->attachment_name, result->attachment_name);
-  import_toktable2(input->data, input->hash_key, result->n_msgs, &input->msg_ids, result->msg_ids);
+  import_toktable(input, result->n_msgs, &input->to, result->to);
+  import_toktable(input, result->n_msgs, &input->cc, result->cc);
+  import_toktable(input, result->n_msgs, &input->from, result->from);
+  import_toktable(input, result->n_msgs, &input->subject, result->subject);
+  import_toktable(input, result->n_msgs, &input->body, result->body);
+  import_toktable(input, result->n_msgs, &input->attachment_name, result->attachment_name);
+  import_toktable2(input, result->n_msgs, &input->msg_ids, result->msg_ids);
 
   close_db(input);
 
@@ -822,13 +782,11 @@ static void find_threading(struct database *db)/*{{{*/
   for (m=0; m<sm; m++) {
     struct token2 *tok = db->msg_ids->tokens[m];
     if (tok) {
-      unsigned char *j = tok->match0.msginfo;
-      unsigned char *last_char = j + tok->match0.n;
-      int cur = 0, incr, first=1;
+      struct int_list_reader ilr;
+      matches_int_list_reader_init(&ilr, &(tok->match0));
+      int cur, first=1;
       int new_base=-1, old_base;
-      while (j < last_char) {
-        incr = read_increment(&j);
-        cur += incr;
+      while (int_list_reader_read(&ilr, &cur)) {
         if (first) {
           new_base = find_base(ix, cur);
           first = 0;
@@ -909,6 +867,7 @@ static void add_msg_path(struct database *db, char *path, time_t mtime, size_t m
 {
   maybe_grow_message_arrays(db);
   db->type[db->n_msgs] = type;
+  memset(&db->msgs[db->n_msgs], 0, sizeof(struct msgpath));
   db->msgs[db->n_msgs].src.mpf.path = new_string(path);
   db->msgs[db->n_msgs].src.mpf.mtime = mtime;
   db->msgs[db->n_msgs].src.mpf.size = message_size;
@@ -1103,22 +1062,18 @@ int update_database(struct database *db, struct msgpath *sorted_paths, int n_msg
 static void recode_encoding(struct matches *m, int *new_idx)/*{{{*/
 {
   unsigned char *new_enc, *old_enc;
-  unsigned char *j, *last_char;
-  int incr, idx, n_idx;
+  int idx, n_idx;
+  struct int_list_reader ilr;
 
   old_enc = m->msginfo;
-  j = old_enc;
-  last_char = old_enc + m->n;
+  matches_int_list_reader_init(&ilr, m);
 
   new_enc = new_array(unsigned char, m->max); /* Probably not bigger than this. */
   m->n = 0;
   m->highest = 0;
   m->msginfo = new_enc;
-  idx = 0;
 
-  while (j < last_char) {
-    incr = read_increment(&j);
-    idx += incr;
+  while (int_list_reader_read(&ilr, &idx)) {
     n_idx = new_idx[idx];
     if (n_idx >= 0) {
       check_and_enlarge_encoding(m);
