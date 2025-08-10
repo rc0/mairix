@@ -65,7 +65,7 @@ Abbrev E = [e]
 Abbrev M = [m]
 Abbrev O = [o]
 Abbrev T = [t]
-Abbrev F = [e]
+Abbrev F = [f]
 
 BLOCK email {
     STATE in
