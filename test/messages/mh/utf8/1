@@ -1,0 +1,11 @@
+From: Unicode Tester <unicode@example.net>
+To: Reader <reader@example.net>
+Subject: Cafe and café notes
+Message-ID: <utf8-message@example.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Date: Fri, 22 May 2026 09:30:00 +0200
+
+The naive spelling differs from naïve.
+A short résumé mentions déjà vu.

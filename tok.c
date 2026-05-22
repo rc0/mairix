@@ -26,6 +26,13 @@
 #include <ctype.h>
 #include "mairix.h"
 
+static unsigned char ascii_tolower(unsigned char c)/*{{{*/
+{
+  if ((c >= 'A') && (c <= 'Z')) return c + ('a' - 'A');
+  return c;
+}
+/*}}}*/
+
 static void init_matches(struct matches *m) {/*{{{*/
   m->msginfo = NULL;
   m->n = 0;
@@ -252,7 +259,7 @@ void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, st
 
   lc_tok_text = new_string((char*)tok_text);
   for (p = lc_tok_text; *p; p++) {
-    *p = tolower(*(unsigned char *) p);
+    *p = ascii_tolower(*(unsigned char *) p);
   }
   /* 2nd arg is string length */
   hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
@@ -298,7 +305,7 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
 
   lc_tok_text = new_string(tok_text);
   for (p = lc_tok_text; *p; p++) {
-    *p = tolower(*(unsigned char *) p);
+    *p = ascii_tolower(*(unsigned char *) p);
   }
   /* 2nd arg is string length */
   hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
@@ -338,7 +345,6 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
   }
 }
 /*}}}*/
-
 
 
 

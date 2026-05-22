@@ -1,0 +1,85 @@
+Dump of database
+1 messages
+     0: FILE messages/mh/utf8/1, size=346, tid=0
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <example>
+  0 
+Word 1 : <net>
+  0 
+Word 2 : <reader@example.net>
+  0 
+Word 3 : <reader>
+  0 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+5 entries
+Word 0 : <tester>
+  0 
+Word 1 : <unicode@example.net>
+  0 
+Word 2 : <example>
+  0 
+Word 3 : <net>
+  0 
+Word 4 : <unicode>
+  0 
+--------------------------------
+Contents of <Subject> table
+4 entries
+Word 0 : <and>
+  0 
+Word 1 : <notes>
+  0 
+Word 2 : <cafe>
+  0 
+Word 3 : <café>
+  0 
+--------------------------------
+Contents of <Body> table
+12 entries
+Word 0 : <vu>
+  0 
+Word 1 : <differs>
+  0 
+Word 2 : <from>
+  0 
+Word 3 : <mentions>
+  0 
+Word 4 : <naïve>
+  0 
+Word 5 : <déjà>
+  0 
+Word 6 : <résumé>
+  0 
+Word 7 : <a>
+  0 
+Word 8 : <naive>
+  0 
+Word 9 : <the>
+  0 
+Word 10 : <short>
+  0 
+Word 11 : <spelling>
+  0 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+1 entries
+Word 0 : <utf8-message@example.net>
+  0 
+Chain 1
+1 entries
+Word 0 : <utf8-message@example.net>
+  0 
+--------------------------------

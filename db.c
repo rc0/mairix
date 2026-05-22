@@ -553,7 +553,8 @@ static unsigned char special_table[256] = {
 static inline int char_valid_p(char x, unsigned int mask)/*{{{*/
 {
   unsigned char xx = (unsigned char) x;
-  if (isalnum(xx)) return 1;
+  if (xx >= 0x80) return 1;
+  else if (isalnum(xx)) return 1;
   else if (special_table[(unsigned int) xx] & mask) return 1;
   else return 0;
 }

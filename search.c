@@ -782,7 +782,10 @@ static void string_tolower(char *str)
 {
   char *p;
   for (p=str; *p; p++) {
-    *p = tolower(*(unsigned char *)p);
+    unsigned char c = *(unsigned char *)p;
+    if ((c >= 'A') && (c <= 'Z')) {
+      *p = c + ('a' - 'A');
+    }
   }
 }
 
@@ -1576,5 +1579,3 @@ int search_top(int do_threads, int do_augment, char *database_path, char *comple
   return result;
 }
 /*}}}*/
-
-
