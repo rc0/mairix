@@ -357,6 +357,8 @@ void free_token(struct token *x);
 void free_token2(struct token2 *x);
 void free_toktable(struct toktable *x);
 void free_toktable2(struct toktable2 *x);
+void fold_utf8_inplace(char *str);
+
 void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable *table);
 void check_and_enlarge_encoding(struct matches *m);
 void insert_index_on_encoding(struct matches *m, int idx);
