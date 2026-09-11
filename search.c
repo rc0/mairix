@@ -780,13 +780,7 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
 
 static void string_tolower(char *str)
 {
-  char *p;
-  for (p=str; *p; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if ((c >= 'A') && (c <= 'Z')) {
-      *p = c + ('a' - 'A');
-    }
-  }
+  fold_utf8_inplace(str);
 }
 
 typedef struct {

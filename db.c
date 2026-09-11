@@ -23,6 +23,7 @@
 /* Handle complete database */
 
 #include "mairix.h"
+#include "utf8fold.h"
 #include "reader.h"
 #include <ctype.h>
 #include <assert.h>
@@ -550,6 +551,32 @@ static unsigned char special_table[256] = {
 #if 0
 #define CHAR_VALID(x,mask) (isalnum((unsigned char) x) || (special_table[(unsigned int)(unsigned char) x] & mask))
 #endif
+static inline int get_char_validity(const char *ptr, int match_mask, int *char_len)/*{{{*/
+{
+  unsigned char c = (unsigned char) *ptr;
+  if (c < 0x80) {
+    *char_len = 1;
+    if (isalnum(c)) return 1;
+    else if (special_table[(unsigned int) c] & match_mask) return 1;
+    else return 0;
+  } else if ((c >= 0xC2) && (c <= 0xDF) && (((unsigned char)ptr[1] & 0xC0) == 0x80)) {
+    unsigned int cp = ((unsigned int)(c & 0x1f) << 6) | ((unsigned char)ptr[1] & 0x3f);
+    *char_len = 2;
+    return !utf8_is_delimiter(cp);
+  } else if ((c >= 0xE0) && (c <= 0xEF) && (((unsigned char)ptr[1] & 0xC0) == 0x80) && (((unsigned char)ptr[2] & 0xC0) == 0x80)) {
+    unsigned int cp = ((unsigned int)(c & 0x0f) << 12) | (((unsigned char)ptr[1] & 0x3f) << 6) | ((unsigned char)ptr[2] & 0x3f);
+    *char_len = 3;
+    return !utf8_is_delimiter(cp);
+  } else if ((c >= 0xF0) && (c <= 0xF4) && (((unsigned char)ptr[1] & 0xC0) == 0x80) && (((unsigned char)ptr[2] & 0xC0) == 0x80) && (((unsigned char)ptr[3] & 0xC0) == 0x80)) {
+    unsigned int cp = ((unsigned int)(c & 0x07) << 18) | (((unsigned char)ptr[1] & 0x3f) << 12) | (((unsigned char)ptr[2] & 0x3f) << 6) | ((unsigned char)ptr[3] & 0x3f);
+    *char_len = 4;
+    return !utf8_is_delimiter(cp);
+  } else {
+    *char_len = 1;
+    return 0;
+  }
+}
+/*}}}*/
 static inline int char_valid_p(char x, unsigned int mask)/*{{{*/
 {
   unsigned char xx = (unsigned char) x;
@@ -562,12 +589,13 @@ static inline int char_valid_p(char x, unsigned int mask)/*{{{*/
 static void tokenise_string(int file_index, unsigned int hash_key, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
   char *ss, *es, old_es;
+  int clen;
   ss = data;
   for (;;) {
-    while (*ss && !char_valid_p(*ss,match_mask)) ss++;
+    while (*ss && !get_char_validity(ss, match_mask, &clen)) ss += clen;
     if (!*ss) break;
-    es = ss + 1;
-    while (*es && char_valid_p(*es,match_mask)) es++;
+    es = ss;
+    while (*es && get_char_validity(es, match_mask, &clen)) es += clen;
 
     /* deal with token [ss,es) */
     old_es = *es;
@@ -584,22 +612,26 @@ static void tokenise_string(int file_index, unsigned int hash_key, struct toktab
 static void tokenise_html_string(int file_index, unsigned int hash_key, struct toktable *table, char *data)/*{{{*/
 {
   char *ss, *es, old_es;
+  int clen;
 
   /* FIXME : Probably want to rewrite this as an explicit FSM */
 
   ss = data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
-    while (*ss && !char_valid_p(*ss, 1)) {
-      if (*ss++ == '<') {
+    while (*ss && !get_char_validity(ss, 1, &clen)) {
+      if (*ss == '<') {
         /* Skip over HTML tag */
         while (*ss && (*ss != '>')) ss++;
+        if (*ss == '>') ss++;
+      } else {
+        ss += clen;
       }
     }
     if (!*ss) break;
 
-    es = ss + 1;
-    while (*es && char_valid_p(*es, 1)) es++;
+    es = ss;
+    while (*es && get_char_validity(es, 1, &clen)) es += clen;
 
     /* deal with token [ss,es) */
     old_es = *es;
