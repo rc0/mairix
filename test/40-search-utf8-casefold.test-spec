@@ -1,0 +1,59 @@
+add_messages mh utf8fold
+
+assert_dump utf8fold
+
+# Latin-1 Supplement: both query cases must match the same token
+search_messages utf8fold s:café
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:CAFÉ
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:ZÜRICH
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+# Cyrillic: uppercase subject vs lowercase query and vice versa
+search_messages utf8fold s:привет
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold s:ПРИВЕТ
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:СЛОВО
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:слово
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+# Greek: unaccented queries match unaccented tokens in any case
+search_messages utf8fold s:οδος
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold s:ΟΔΟΣ
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold s:ελλας
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+# Latin Extended-A
+search_messages utf8fold s:DVOŘÁK
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold s:dvořák
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold b:ř
+assert_match mh utf8fold/4
+assert_no_more_matches
