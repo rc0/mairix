@@ -1,0 +1,10 @@
+From: Encoded Header Tester <encoded@example.net>
+To: Reader <reader@example.net>
+Subject: =?UTF-8?Q?R=C3=89SUM=C3=89?=
+Message-ID: <utf8casefold-rfc2047@example.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Date: Sun, 13 Sep 2026 12:01:00 +0000
+
+The subject is RFC 2047 encoded.

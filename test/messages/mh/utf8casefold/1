@@ -1,0 +1,10 @@
+From: Unicode Tester <unicode@example.net>
+To: Reader <reader@example.net>
+Subject: CAFÉ ПРИВЕТ ΟΔΟΣ 𐐀
+Message-ID: <utf8casefold-raw@example.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Date: Sun, 13 Sep 2026 12:00:00 +0000
+
+Mixed-case Unicode appears in this message.
