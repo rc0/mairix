@@ -45,6 +45,7 @@
 #include "reader.h"
 #include "memmac.h"
 #include "imapinterface.h"
+#include "utf8fold.h"
 
 static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int hit_tok, char *hits)/*{{{*/
 {
@@ -780,13 +781,7 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
 
 static void string_tolower(char *str)
 {
-  char *p;
-  for (p=str; *p; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if ((c >= 'A') && (c <= 'Z')) {
-      *p = c + ('a' - 'A');
-    }
-  }
+  utf8_casefold_inplace(str);
 }
 
 typedef struct {

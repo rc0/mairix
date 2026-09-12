@@ -25,13 +25,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include "mairix.h"
-
-static unsigned char ascii_tolower(unsigned char c)/*{{{*/
-{
-  if ((c >= 'A') && (c <= 'Z')) return c + ('a' - 'A');
-  return c;
-}
-/*}}}*/
+#include "utf8fold.h"
 
 static void init_matches(struct matches *m) {/*{{{*/
   m->msginfo = NULL;
@@ -255,14 +249,10 @@ void add_token_in_file(int file_index, unsigned int hash_key, char *tok_text, st
   int index;
   struct token *tok;
   char *lc_tok_text;
-  char *p;
 
   lc_tok_text = new_string((char*)tok_text);
-  for (p = lc_tok_text; *p; p++) {
-    *p = ascii_tolower(*(unsigned char *) p);
-  }
-  /* 2nd arg is string length */
-  hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
+  utf8_casefold_inplace(lc_tok_text);
+  hash = hashfn((unsigned char *) lc_tok_text, strlen(lc_tok_text), hash_key);
 
   if (table->n >= table->hwm) {
     enlarge_toktable(table);
@@ -301,14 +291,10 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
   int index;
   struct token2 *tok;
   char *lc_tok_text;
-  char *p;
 
   lc_tok_text = new_string(tok_text);
-  for (p = lc_tok_text; *p; p++) {
-    *p = ascii_tolower(*(unsigned char *) p);
-  }
-  /* 2nd arg is string length */
-  hash = hashfn((unsigned char *) lc_tok_text, p - lc_tok_text, hash_key);
+  utf8_casefold_inplace(lc_tok_text);
+  hash = hashfn((unsigned char *) lc_tok_text, strlen(lc_tok_text), hash_key);
 
   if (table->n >= table->hwm) {
     enlarge_toktable2(table);
@@ -345,6 +331,5 @@ void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, s
   }
 }
 /*}}}*/
-
 
 

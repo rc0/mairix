@@ -1,0 +1,100 @@
+Dump of database
+2 messages
+     0: FILE messages/mh/utf8casefold/1, size=329, tid=0
+     1: FILE messages/mh/utf8casefold/2, size=325, tid=1
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <example>
+  0 1 
+Word 1 : <reader@example.net>
+  0 1 
+Word 2 : <reader>
+  0 1 
+Word 3 : <net>
+  0 1 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+8 entries
+Word 0 : <unicode@example.net>
+  0 
+Word 1 : <encoded@example.net>
+  1 
+Word 2 : <header>
+  1 
+Word 3 : <unicode>
+  0 
+Word 4 : <example>
+  0 1 
+Word 5 : <encoded>
+  1 
+Word 6 : <net>
+  0 1 
+Word 7 : <tester>
+  0 1 
+--------------------------------
+Contents of <Subject> table
+5 entries
+Word 0 : <café>
+  0 
+Word 1 : <привет>
+  0 
+Word 2 : <résumé>
+  1 
+Word 3 : <οδοσ>
+  0 
+Word 4 : <𐐨>
+  0 
+--------------------------------
+Contents of <Body> table
+13 entries
+Word 0 : <rfc>
+  1 
+Word 1 : <mixed>
+  0 
+Word 2 : <2047>
+  1 
+Word 3 : <is>
+  1 
+Word 4 : <encoded>
+  1 
+Word 5 : <appears>
+  0 
+Word 6 : <case>
+  0 
+Word 7 : <the>
+  1 
+Word 8 : <in>
+  0 
+Word 9 : <subject>
+  1 
+Word 10 : <message>
+  0 
+Word 11 : <unicode>
+  0 
+Word 12 : <this>
+  0 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+2 entries
+Word 0 : <utf8casefold-raw@example.net>
+  0 
+Word 1 : <utf8casefold-rfc2047@example.net>
+  1 
+Chain 1
+2 entries
+Word 0 : <utf8casefold-raw@example.net>
+  0 
+Word 1 : <utf8casefold-rfc2047@example.net>
+  1 
+--------------------------------

@@ -1,0 +1,28 @@
+add_messages mh utf8casefold
+
+assert_dump utf8casefold-generated
+
+conf_set_mformat mbox
+
+search_messages utf8casefold-generated s:café
+assert_match mh utf8casefold/1
+assert_no_more_matches
+
+search_messages utf8casefold-generated s:привет
+assert_match mh utf8casefold/1
+assert_no_more_matches
+
+# Final sigma in the query folds to the same form as capital sigma.
+search_messages utf8casefold-generated s:οδος
+assert_match mh utf8casefold/1
+assert_no_more_matches
+
+# Exercise a four-byte case fold (Deseret U+10400 -> U+10428).
+search_messages utf8casefold-generated s:𐐨
+assert_match mh utf8casefold/1
+assert_no_more_matches
+
+# The parser decodes RFC 2047 before token case folding.
+search_messages utf8casefold-generated s:résumé
+assert_match mh utf8casefold/2
+assert_no_more_matches
