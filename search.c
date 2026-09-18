@@ -45,6 +45,7 @@
 #include "reader.h"
 #include "memmac.h"
 #include "imapinterface.h"
+#include "utf8fold.h"
 
 static void mark_hits_in_table(struct read_db *db, struct toktable_db *tt, int hit_tok, char *hits)/*{{{*/
 {
@@ -778,16 +779,6 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
   *is_flagged = (db->msg_type_and_flags[idx] & FLAG_FLAGGED) ? 1 : 0;
 }
 
-static void string_tolower(char *str)
-{
-  char *p;
-  for (p=str; *p; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if ((c >= 'A') && (c <= 'Z')) {
-      *p = c + ('a' - 'A');
-    }
-  }
-}
 
 typedef struct {
   int m_db_id;   /* Database ID */
@@ -918,8 +909,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
         hit1[i] &= hit0[i];
       }
     } else if (do_msgid) {
-      char *lower_word = new_string(start_words);
-      string_tolower(lower_word);
+      char *lower_word = utf8_tolower_string(start_words);
       memset(hit0, 0, db->n_msgs);
       match_string_in_table2(db, &db->msg_ids, lower_word, hit0);
       free(lower_word);
@@ -1000,8 +990,7 @@ static int do_search(struct read_db *db, char **args, char *output_path, int sho
 
       /* Canonicalise search string to lowercase, since the database has all
        * tokens handled that way.  But not for path search! */
-      lower_word = new_string(word);
-      string_tolower(lower_word);
+      lower_word = utf8_tolower_string(word);
 
       memset(hit0, 0, db->n_msgs);
       if (equal) {

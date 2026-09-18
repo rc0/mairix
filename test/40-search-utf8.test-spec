@@ -10,10 +10,26 @@ search_messages utf8 s:Café
 assert_match mh utf8/1
 assert_no_more_matches
 
+search_messages utf8 s:CAFÉ
+assert_match mh utf8/1
+assert_no_more_matches
+
+search_messages utf8 s:cafÉ
+assert_match mh utf8/1
+assert_no_more_matches
+
 search_messages utf8 b:naïve
 assert_match mh utf8/1
 assert_no_more_matches
 
+search_messages utf8 b:NAÏVE
+assert_match mh utf8/1
+assert_no_more_matches
+
 search_messages utf8 b:résumé
+assert_match mh utf8/1
+assert_no_more_matches
+
+search_messages utf8 b:RÉSUMÉ
 assert_match mh utf8/1
 assert_no_more_matches

@@ -1,0 +1,282 @@
+/*
+  mairix - message index builder and finder for maildir folders.
+
+ **********************************************************************
+ * Copyright (C) Richard P. Curnow  2002-2004, 2005
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ **********************************************************************
+ */
+
+/* Unicode simple case folding for UTF-8 text.
+ *
+ * The fold tables below were generated from the Unicode character database
+ * (CaseFolding.txt, common + simple mappings only).  Simple folds map one
+ * code point to one code point, so the result never needs more than one
+ * extra byte per input code point (U+023A and U+023E expand 2->3 bytes).
+ */
+
+#include <assert.h>
+#include "mairix.h"
+#include "utf8fold.h"
+
+typedef struct {
+  unsigned long first, last;
+  long delta;
+} FoldRange;
+
+/*{{{ fold_ranges : contiguous runs folded by a uniform offset */
+static const FoldRange fold_ranges[] = {
+  {0x0041, 0x005a, 32},
+  {0x00c0, 0x00d6, 32},
+  {0x00d8, 0x00de, 32},
+  {0x0388, 0x038a, 37},
+  {0x0391, 0x03a1, 32},
+  {0x03a3, 0x03ab, 32},
+  {0x03fd, 0x03ff, -130},
+  {0x0400, 0x040f, 80},
+  {0x0410, 0x042f, 32},
+  {0x0531, 0x0556, 48},
+  {0x10a0, 0x10c5, 7264},
+  {0x13a0, 0x13ef, 38864},
+  {0x13f0, 0x13f5, 8},
+  {0x1c90, 0x1cba, -3008},
+  {0x1cbd, 0x1cbf, -3008},
+  {0x1f08, 0x1f0f, -8},
+  {0x1f18, 0x1f1d, -8},
+  {0x1f28, 0x1f2f, -8},
+  {0x1f38, 0x1f3f, -8},
+  {0x1f48, 0x1f4d, -8},
+  {0x1f68, 0x1f6f, -8},
+  {0x1f88, 0x1f8f, -8},
+  {0x1f98, 0x1f9f, -8},
+  {0x1fa8, 0x1faf, -8},
+  {0x1fc8, 0x1fcb, -86},
+  {0x2160, 0x216f, 16},
+  {0x24b6, 0x24cf, 26},
+  {0x2c00, 0x2c2f, 48},
+  {0xff21, 0xff3a, 32},
+  {0x10400, 0x10427, 40},
+  {0x104b0, 0x104d3, 40},
+  {0x10570, 0x1057a, 39},
+  {0x1057c, 0x1058a, 39},
+  {0x1058c, 0x10592, 39},
+  {0x10c80, 0x10cb2, 64},
+  {0x10d50, 0x10d65, 32},
+  {0x118a0, 0x118bf, 32},
+  {0x16e40, 0x16e5f, 32},
+  {0x1e900, 0x1e921, 34},
+};
+#define N_FOLD_RANGES (sizeof(fold_ranges) / sizeof(fold_ranges[0]))
+/*}}}*/
+
+typedef struct {
+  unsigned long first, last;
+} FoldAlt;
+
+/*{{{ fold_alts : ranges where each even code point folds to the odd one after it */
+static const FoldAlt fold_alts[] = {
+  {0x0100, 0x012e},
+  {0x0132, 0x0136},
+  {0x014a, 0x0176},
+  {0x01a0, 0x01a4},
+  {0x01de, 0x01ee},
+  {0x01f8, 0x021e},
+  {0x0222, 0x0232},
+  {0x0246, 0x024e},
+  {0x03d8, 0x03ee},
+  {0x0460, 0x0480},
+  {0x048a, 0x04be},
+  {0x04d0, 0x052e},
+  {0x1e00, 0x1e94},
+  {0x1ea0, 0x1efe},
+  {0x2c80, 0x2ce2},
+  {0xa640, 0xa66c},
+  {0xa680, 0xa69a},
+  {0xa722, 0xa72e},
+  {0xa732, 0xa76e},
+  {0xa77e, 0xa786},
+  {0xa796, 0xa7a8},
+  {0xa7b4, 0xa7c2},
+  {0xa7d6, 0xa7da},
+};
+#define N_FOLD_ALTS (sizeof(fold_alts) / sizeof(fold_alts[0]))
+/*}}}*/
+
+typedef struct {
+  unsigned long from, to;
+} FoldPair;
+
+/*{{{ fold_pairs : remaining singleton mappings, sorted by 'from' */
+static const FoldPair fold_pairs[] = {
+  {0x0139, 0x013a}, {0x013b, 0x013c}, {0x013d, 0x013e}, {0x013f, 0x0140},
+  {0x0141, 0x0142}, {0x0143, 0x0144}, {0x0145, 0x0146}, {0x0147, 0x0148},
+  {0x0178, 0x00ff}, {0x0179, 0x017a}, {0x017b, 0x017c}, {0x017d, 0x017e},
+  {0x0181, 0x0253}, {0x0182, 0x0183}, {0x0184, 0x0185}, {0x0186, 0x0254},
+  {0x0187, 0x0188}, {0x0189, 0x0256}, {0x018a, 0x0257}, {0x018b, 0x018c},
+  {0x018e, 0x01dd}, {0x018f, 0x0259}, {0x0190, 0x025b}, {0x0191, 0x0192},
+  {0x0193, 0x0260}, {0x0194, 0x0263}, {0x0196, 0x0269}, {0x0197, 0x0268},
+  {0x0198, 0x0199}, {0x019c, 0x026f}, {0x019d, 0x0272}, {0x019f, 0x0275},
+  {0x01a6, 0x0280}, {0x01a7, 0x01a8}, {0x01a9, 0x0283}, {0x01ac, 0x01ad},
+  {0x01ae, 0x0288}, {0x01af, 0x01b0}, {0x01b1, 0x028a}, {0x01b2, 0x028b},
+  {0x01b3, 0x01b4}, {0x01b5, 0x01b6}, {0x01b7, 0x0292}, {0x01b8, 0x01b9},
+  {0x01bc, 0x01bd}, {0x01c4, 0x01c6}, {0x01c5, 0x01c6}, {0x01c7, 0x01c9},
+  {0x01c8, 0x01c9}, {0x01ca, 0x01cc}, {0x01cb, 0x01cc}, {0x01cd, 0x01ce},
+  {0x01cf, 0x01d0}, {0x01d1, 0x01d2}, {0x01d3, 0x01d4}, {0x01d5, 0x01d6},
+  {0x01d7, 0x01d8}, {0x01d9, 0x01da}, {0x01db, 0x01dc}, {0x01f1, 0x01f3},
+  {0x01f2, 0x01f3}, {0x01f4, 0x01f5}, {0x01f6, 0x0195}, {0x01f7, 0x01bf},
+  {0x0220, 0x019e}, {0x023a, 0x2c65}, {0x023b, 0x023c}, {0x023d, 0x019a},
+  {0x023e, 0x2c66}, {0x0241, 0x0242}, {0x0243, 0x0180}, {0x0244, 0x0289},
+  {0x0245, 0x028c}, {0x0370, 0x0371}, {0x0372, 0x0373}, {0x0376, 0x0377},
+  {0x037f, 0x03f3}, {0x0386, 0x03ac}, {0x038c, 0x03cc}, {0x038e, 0x03cd},
+  {0x038f, 0x03ce}, {0x03cf, 0x03d7}, {0x03f4, 0x03b8}, {0x03f7, 0x03f8},
+  {0x03f9, 0x03f2}, {0x03fa, 0x03fb}, {0x04c0, 0x04cf}, {0x04c1, 0x04c2},
+  {0x04c3, 0x04c4}, {0x04c5, 0x04c6}, {0x04c7, 0x04c8}, {0x04c9, 0x04ca},
+  {0x04cb, 0x04cc}, {0x04cd, 0x04ce}, {0x10c7, 0x2d27}, {0x10cd, 0x2d2d},
+  {0x1c89, 0x1c8a}, {0x1e9e, 0x00df}, {0x1f59, 0x1f51}, {0x1f5b, 0x1f53},
+  {0x1f5d, 0x1f55}, {0x1f5f, 0x1f57}, {0x1fb8, 0x1fb0}, {0x1fb9, 0x1fb1},
+  {0x1fba, 0x1f70}, {0x1fbb, 0x1f71}, {0x1fbc, 0x1fb3}, {0x1fcc, 0x1fc3},
+  {0x1fd8, 0x1fd0}, {0x1fd9, 0x1fd1}, {0x1fda, 0x1f76}, {0x1fdb, 0x1f77},
+  {0x1fe8, 0x1fe0}, {0x1fe9, 0x1fe1}, {0x1fea, 0x1f7a}, {0x1feb, 0x1f7b},
+  {0x1fec, 0x1fe5}, {0x1ff8, 0x1f78}, {0x1ff9, 0x1f79}, {0x1ffa, 0x1f7c},
+  {0x1ffb, 0x1f7d}, {0x1ffc, 0x1ff3}, {0x2126, 0x03c9}, {0x212a, 0x006b},
+  {0x212b, 0x00e5}, {0x2132, 0x214e}, {0x2183, 0x2184}, {0x2c60, 0x2c61},
+  {0x2c62, 0x026b}, {0x2c63, 0x1d7d}, {0x2c64, 0x027d}, {0x2c67, 0x2c68},
+  {0x2c69, 0x2c6a}, {0x2c6b, 0x2c6c}, {0x2c6d, 0x0251}, {0x2c6e, 0x0271},
+  {0x2c6f, 0x0250}, {0x2c70, 0x0252}, {0x2c72, 0x2c73}, {0x2c75, 0x2c76},
+  {0x2c7e, 0x023f}, {0x2c7f, 0x0240}, {0x2ceb, 0x2cec}, {0x2ced, 0x2cee},
+  {0x2cf2, 0x2cf3}, {0xa779, 0xa77a}, {0xa77b, 0xa77c}, {0xa77d, 0x1d79},
+  {0xa78b, 0xa78c}, {0xa78d, 0x0265}, {0xa790, 0xa791}, {0xa792, 0xa793},
+  {0xa7aa, 0x0266}, {0xa7ab, 0x025c}, {0xa7ac, 0x0261}, {0xa7ad, 0x026c},
+  {0xa7ae, 0x026a}, {0xa7b0, 0x029e}, {0xa7b1, 0x0287}, {0xa7b2, 0x029d},
+  {0xa7b3, 0xab53}, {0xa7c4, 0xa794}, {0xa7c5, 0x0282}, {0xa7c6, 0x1d8e},
+  {0xa7c7, 0xa7c8}, {0xa7c9, 0xa7ca}, {0xa7cb, 0x0264}, {0xa7cc, 0xa7cd},
+  {0xa7d0, 0xa7d1}, {0xa7dc, 0x019b}, {0xa7f5, 0xa7f6}, {0x10594, 0x105bb},
+  {0x10595, 0x105bc},
+};
+#define N_FOLD_PAIRS (sizeof(fold_pairs) / sizeof(fold_pairs[0]))
+/*}}}*/
+
+static unsigned long fold_cp(unsigned long cp)/*{{{*/
+{
+  int lo, hi;
+
+  lo = 0; hi = N_FOLD_RANGES - 1;
+  while (lo <= hi) {
+    int mid = (lo + hi) >> 1;
+    if (cp < fold_ranges[mid].first) hi = mid - 1;
+    else if (cp > fold_ranges[mid].last) lo = mid + 1;
+    else return cp + fold_ranges[mid].delta;
+  }
+
+  lo = 0; hi = N_FOLD_ALTS - 1;
+  while (lo <= hi) {
+    int mid = (lo + hi) >> 1;
+    if (cp < fold_alts[mid].first) hi = mid - 1;
+    else if (cp > fold_alts[mid].last) lo = mid + 1;
+    else return (cp & 1) ? cp : cp + 1;
+  }
+
+  lo = 0; hi = N_FOLD_PAIRS - 1;
+  while (lo <= hi) {
+    int mid = (lo + hi) >> 1;
+    if (cp < fold_pairs[mid].from) hi = mid - 1;
+    else if (cp > fold_pairs[mid].from) lo = mid + 1;
+    else return fold_pairs[mid].to;
+  }
+
+  return cp;
+}
+/*}}}*/
+
+/* Decode one UTF-8 sequence.  Returns its length in bytes (1-4), or 1 for
+ * an invalid leading byte or truncated/malformed sequence, in which case
+ * *cp is set to the raw byte so it passes through unchanged. */
+static int utf8_decode(const unsigned char *s, unsigned long *cp)/*{{{*/
+{
+  unsigned char c = s[0];
+  unsigned long v;
+  int need, i;
+
+  if (c < 0x80) { *cp = c; return 1; }
+  else if (c < 0xc2) { *cp = c; return 1; }  /* stray continuation or overlong lead */
+  else if (c < 0xe0) { v = c & 0x1f; need = 1; }
+  else if (c < 0xf0) { v = c & 0x0f; need = 2; }
+  else if (c < 0xf5) { v = c & 0x07; need = 3; }
+  else { *cp = c; return 1; }
+
+  for (i = 1; i <= need; i++) {
+    if ((s[i] & 0xc0) != 0x80) { *cp = c; return 1; }
+    v = (v << 6) | (s[i] & 0x3f);
+  }
+
+  /* reject overlongs, surrogates and out-of-range values */
+  if ((need == 1 && v < 0x80) ||
+      (need == 2 && v < 0x800) ||
+      (need == 3 && (v < 0x10000 || v > 0x10ffff)) ||
+      (v >= 0xd800 && v <= 0xdfff)) {
+    *cp = c; return 1;
+  }
+
+  *cp = v;
+  return need + 1;
+}
+/*}}}*/
+
+static int utf8_encode(unsigned long cp, unsigned char *out)/*{{{*/
+{
+  if (cp < 0x80) { out[0] = cp; return 1; }
+  else if (cp < 0x800) {
+    out[0] = 0xc0 | (cp >> 6); out[1] = 0x80 | (cp & 0x3f); return 2;
+  } else if (cp < 0x10000) {
+    out[0] = 0xe0 | (cp >> 12); out[1] = 0x80 | ((cp >> 6) & 0x3f);
+    out[2] = 0x80 | (cp & 0x3f); return 3;
+  } else {
+    out[0] = 0xf0 | (cp >> 18); out[1] = 0x80 | ((cp >> 12) & 0x3f);
+    out[2] = 0x80 | ((cp >> 6) & 0x3f); out[3] = 0x80 | (cp & 0x3f);
+    return 4;
+  }
+}
+/*}}}*/
+
+char *utf8_tolower_string(const char *src)/*{{{*/
+{
+  const unsigned char *r;
+  unsigned char *out, *w;
+  size_t len = strlen(src);
+
+  /* A folded code point never occupies more than 4 bytes; this bound is
+   * generous but keeps the single-allocation contract simple. */
+  out = (unsigned char *) Malloc(4 * len + 1);
+  r = (const unsigned char *) src;
+  w = out;
+
+  while (*r) {
+    unsigned long cp;
+    int ilen = utf8_decode(r, &cp);
+    if (ilen == 1) {
+      /* ASCII or invalid byte: fold ASCII letters, pass the rest through */
+      *w++ = (*r >= 'A' && *r <= 'Z') ? *r + ('a' - 'A') : *r;
+      r++;
+    } else {
+      unsigned long f = fold_cp(cp);
+      w += utf8_encode(f, w);
+      r += ilen;
+    }
+  }
+  *w = '\0';
+  return (char *) out;
+}
+/*}}}*/
