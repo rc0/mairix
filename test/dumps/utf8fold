@@ -1,0 +1,111 @@
+Dump of database
+3 messages
+     0: FILE messages/mh/utf8fold/1, size=307, tid=0
+     1: FILE messages/mh/utf8fold/2, size=301, tid=1
+     2: FILE messages/mh/utf8fold/3, size=318, tid=2
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <example>
+  0 1 2 
+Word 1 : <reader@example.net>
+  0 1 2 
+Word 2 : <reader>
+  0 1 2 
+Word 3 : <net>
+  0 1 2 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+5 entries
+Word 0 : <folder>
+  0 1 2 
+Word 1 : <case>
+  0 1 2 
+Word 2 : <folder@example.net>
+  0 1 2 
+Word 3 : <example>
+  0 1 2 
+Word 4 : <net>
+  0 1 2 
+--------------------------------
+Contents of <Subject> table
+9 entries
+Word 0 : <και>
+  2 
+Word 1 : <zürich>
+  0 
+Word 2 : <café>
+  0 
+Word 3 : <οδοσ>
+  2 
+Word 4 : <in>
+  0 
+Word 5 : <привет>
+  1 
+Word 6 : <москвы>
+  1 
+Word 7 : <из>
+  1 
+Word 8 : <οδόσ>
+  2 
+--------------------------------
+Contents of <Body> table
+15 entries
+Word 0 : <straße>
+  2 
+Word 1 : <за>
+  1 
+Word 2 : <is>
+  0 
+Word 3 : <wrote>
+  0 
+Word 4 : <İstanbul>
+  2 
+Word 5 : <bleibt>
+  2 
+Word 6 : <the>
+  0 
+Word 7 : <слово>
+  1 
+Word 8 : <so>
+  2 
+Word 9 : <music>
+  0 
+Word 10 : <heißt>
+  2 
+Word 11 : <dvořák>
+  0 
+Word 12 : <résumé>
+  0 
+Word 13 : <die>
+  2 
+Word 14 : <attached>
+  0 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+3 entries
+Word 0 : <utf8fold-3@example.net>
+  2 
+Word 1 : <utf8fold-1@example.net>
+  0 
+Word 2 : <utf8fold-2@example.net>
+  1 
+Chain 1
+3 entries
+Word 0 : <utf8fold-3@example.net>
+  2 
+Word 1 : <utf8fold-1@example.net>
+  0 
+Word 2 : <utf8fold-2@example.net>
+  1 
+--------------------------------

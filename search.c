@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
+#include "utf8fold.h"
 
 /* Lame fix for systems where NAME_MAX isn't defined after including the above
  * set of .h files (Solaris, FreeBSD so far).  Probably grossly oversized but
@@ -780,13 +781,7 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
 
 static void string_tolower(char *str)
 {
-  char *p;
-  for (p=str; *p; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if ((c >= 'A') && (c <= 'Z')) {
-      *p = c + ('a' - 'A');
-    }
-  }
+  fold_utf8_inplace(str);
 }
 
 typedef struct {
