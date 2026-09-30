@@ -1,0 +1,81 @@
+add_messages mh utf8fold
+
+assert_dump utf8fold
+
+search_messages utf8fold s:café
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:CAFÉ
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:zürich
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:ZÜRICH
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:dvořák
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:DVOŘÁK
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:résumé
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:RÉSUMÉ
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:привет
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold s:ПРИВЕТ
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:слово
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:СЛОВО
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold s:οδοσ
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold s:ΟΔΟΣ
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold s:οδός
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:straße
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:Straße
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:STRASSE
+assert_no_more_matches
+
+search_messages utf8fold b:İstanbul
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:istanbul
+assert_no_more_matches
