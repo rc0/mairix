@@ -1,3 +1,0 @@
-add_messages mh animals
-
-assert_dump animals-mh

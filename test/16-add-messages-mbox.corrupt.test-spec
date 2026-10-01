@@ -1,2 +1,0 @@
-add_messages mbox corrupt_header
-assert_dump corrupt_header

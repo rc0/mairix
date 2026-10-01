@@ -1,2 +1,0 @@
-add_messages maildir oddcases
-assert_dump oddcases
