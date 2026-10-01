@@ -1,8 +1,0 @@
-dfasyn is a tool for constructing state machines.  The input language allows a
-lot of generality.  For example, it allows repeated elements to be specified
-where the items have constraints between the end of one and the start of the
-next.   (I could not find a way to define such an automaton in the lex/flex
-input language, which prompted the writing of the tool.)  Currently, you must
-do a fair amount of work yourself to build a parser around the resulting state
-machine.
-

@@ -1,3 +1,0 @@
-add_messages mbox animals.gz
-
-assert_dump animals-mbox-gz
