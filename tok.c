@@ -33,6 +33,16 @@ static unsigned char ascii_tolower(unsigned char c)/*{{{*/
 }
 /*}}}*/
 
+static inline int is_word_char(unsigned char c)
+{
+  if ((c >= 'a') && (c <= 'z')) return 1;
+  if ((c >= 'A') && (c <= 'Z')) return 1;
+  if ((c >= '0') && (c <= '9')) return 1;
+  if (c >= 128) return 1;
+  return 0;
+}
+/*}}}*/
+
 static void init_matches(struct matches *m) {/*{{{*/
   m->msginfo = NULL;
   m->n = 0;
