@@ -362,6 +362,11 @@ void check_and_enlarge_encoding(struct matches *m);
 void insert_index_on_encoding(struct matches *m, int idx);
 void add_token2_in_file(int file_index, unsigned int hash_key, char *tok_text, struct toktable2 *table, int add_to_chain1);
 
+/* In utf8.c */
+int utf8_decode_char(const char *s, unsigned long *cp);
+int utf8_word_char_p(unsigned long cp);
+char *utf8_tolower_string(const char *src);
+
 /* In db.c */
 #define CREATE_RANDOM_DATABASE_HASH 0
 struct database *new_database(unsigned int hash_key);

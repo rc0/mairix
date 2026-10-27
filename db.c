@@ -559,15 +559,41 @@ static inline int char_valid_p(char x, unsigned int mask)/*{{{*/
   else return 0;
 }
 /*}}}*/
+/* Like char_valid_p, but operates on a whole (possibly multibyte UTF-8)
+ * character starting at s.  *char_len is set to the length of the
+ * character in bytes, so the caller can advance past it.  Bytes that do
+ * not start a well-formed UTF-8 sequence are treated as before : word
+ * characters of length 1, so that non-UTF-8 8-bit text is still
+ * tokenised byte-wise. */
+static int char_valid_at(const char *s, unsigned int mask, int *char_len)/*{{{*/
+{
+  unsigned char xx = (unsigned char) *s;
+  if (xx < 0x80) {
+    *char_len = 1;
+    return char_valid_p((char) xx, mask);
+  } else {
+    unsigned long cp;
+    int len = utf8_decode_char(s, &cp);
+    if (len > 0) {
+      *char_len = len;
+      return utf8_word_char_p(cp);
+    } else {
+      *char_len = 1;
+      return 1;
+    }
+  }
+}
+/*}}}*/
 static void tokenise_string(int file_index, unsigned int hash_key, struct toktable *table, char *data, int match_mask)/*{{{*/
 {
   char *ss, *es, old_es;
+  int clen;
   ss = data;
   for (;;) {
-    while (*ss && !char_valid_p(*ss,match_mask)) ss++;
+    while (*ss && !char_valid_at(ss,match_mask,&clen)) ss += clen;
     if (!*ss) break;
-    es = ss + 1;
-    while (*es && char_valid_p(*es,match_mask)) es++;
+    es = ss;
+    while (*es && char_valid_at(es,match_mask,&clen)) es += clen;
 
     /* deal with token [ss,es) */
     old_es = *es;
@@ -584,22 +610,26 @@ static void tokenise_string(int file_index, unsigned int hash_key, struct toktab
 static void tokenise_html_string(int file_index, unsigned int hash_key, struct toktable *table, char *data)/*{{{*/
 {
   char *ss, *es, old_es;
+  int clen;
 
   /* FIXME : Probably want to rewrite this as an explicit FSM */
 
   ss = data;
   for (;;) {
     /* Assume < and > are never valid token characters ! */
-    while (*ss && !char_valid_p(*ss, 1)) {
-      if (*ss++ == '<') {
+    while (*ss && !char_valid_at(ss, 1, &clen)) {
+      if (*ss == '<') {
         /* Skip over HTML tag */
+        ss++;
         while (*ss && (*ss != '>')) ss++;
+      } else {
+        ss += clen;
       }
     }
     if (!*ss) break;
 
-    es = ss + 1;
-    while (*es && char_valid_p(*es, 1)) es++;
+    es = ss;
+    while (*es && char_valid_at(es, 1, &clen)) es += clen;
 
     /* deal with token [ss,es) */
     old_es = *es;
