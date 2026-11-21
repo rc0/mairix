@@ -322,6 +322,9 @@ void free_string_array(int n, char ***arr);
 /* In hash.c */
 unsigned int hashfn( unsigned char *k, unsigned int length, unsigned int initval);
 
+/* In utf8.c */
+void utf8_tolower(char *s);
+
 /* In dirscan.c */
 struct msgpath_array *new_msgpath_array(void);
 int valid_mh_filename_p(const char *x);
