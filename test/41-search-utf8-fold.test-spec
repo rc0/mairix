@@ -1,0 +1,126 @@
+# Searching with UTF-8 words must match whatever capitalisation the
+# message uses: tokens are Unicode simple case folded when indexing
+# and search words are folded the same way (see utf8fold.c).
+
+add_messages mh utf8fold
+
+assert_dump utf8fold
+
+# Latin-1: uppercase subject, lowercase and uppercase queries
+search_messages utf8fold s:café
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold s:CAFÉ
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:zürich
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+search_messages utf8fold b:ZÜRICH
+assert_match mh utf8fold/1
+assert_no_more_matches
+
+# Latin Extended-A
+search_messages utf8fold s:łódź
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold s:ŁÓDŹ
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:ābols
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+search_messages utf8fold b:ĶIRŠI
+assert_match mh utf8fold/2
+assert_no_more_matches
+
+# Cyrillic
+search_messages utf8fold s:привет
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold s:ПРИВЕТ
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:москвы
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+search_messages utf8fold b:МОСКВЫ
+assert_match mh utf8fold/3
+assert_no_more_matches
+
+# Greek, including the final sigma: a word ending in sigma or in
+# final sigma folds to the same token either way
+search_messages utf8fold s:οδος
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold s:ΟΔΟΣ
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold s:μεθοδος
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold b:μέθοδος
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold b:ΜΈΘΟΔΟΣ
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold b:κόσμος
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+search_messages utf8fold b:ΚΌΣΜΟΣ
+assert_match mh utf8fold/4
+assert_no_more_matches
+
+# RFC 2047 encoded-word subjects (Q- and B-encoded) are decoded
+# before indexing, and the decoded words fold like any others
+search_messages utf8fold s:zürich
+assert_match mh utf8fold/5
+assert_no_more_matches
+
+search_messages utf8fold s:ZÜRICH
+assert_match mh utf8fold/5
+assert_no_more_matches
+
+search_messages utf8fold s:москва
+assert_match mh utf8fold/5
+assert_no_more_matches
+
+search_messages utf8fold s:МОСКВА
+assert_match mh utf8fold/5
+assert_no_more_matches
+
+# Simple folding only: ß does not become ss and İ does not become i,
+# so these queries find nothing, while the exact words do match
+search_messages utf8fold s:strasse
+assert_match mh utf8fold/6
+assert_no_more_matches
+
+search_messages utf8fold b:straße
+assert_match mh utf8fold/6
+assert_no_more_matches
+
+search_messages utf8fold b:strasse
+assert_no_more_matches
+
+search_messages utf8fold b:istanbul
+assert_no_more_matches
+
+search_messages utf8fold b:İstanbul
+assert_match mh utf8fold/6
+assert_no_more_matches

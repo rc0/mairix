@@ -1,0 +1,10 @@
+From: Fold Tester <fold@example.net>
+To: Reader <reader@example.net>
+Subject: ПРИВЕТ ИЗ МОСКВЫ
+Message-ID: <utf8fold-3@example.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Date: Sat, 23 May 2026 09:32:00 +0200
+
+Привет, мир! Это письмо из Москвы.
