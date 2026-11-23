@@ -1,3 +1,12 @@
+UNRELEASED
+==========
+* Non-ASCII (UTF-8) words are now case folded (Unicode simple case
+  folding) when indexing and when searching, so a search matches a
+  word whatever capitalisation the message or the query uses.
+  Databases indexed by earlier versions hold unfolded non-ASCII
+  tokens, so they have to be rebuilt (delete the database file and
+  re-index) for non-ASCII searches to match in them.
+
 NEW IN VERSION 0.24
 ===================
 * Support fancy Content-Disposition

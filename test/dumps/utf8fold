@@ -1,0 +1,174 @@
+Dump of database
+6 messages
+     0: FILE messages/mh/utf8fold/1, size=284, tid=0
+     1: FILE messages/mh/utf8fold/2, size=281, tid=1
+     2: FILE messages/mh/utf8fold/3, size=332, tid=2
+     3: FILE messages/mh/utf8fold/4, size=360, tid=3
+     4: FILE messages/mh/utf8fold/5, size=332, tid=4
+     5: FILE messages/mh/utf8fold/6, size=291, tid=5
+
+Hash key 00000001
+
+--------------------------------
+Contents of <To> table
+4 entries
+Word 0 : <example>
+  0 1 2 3 4 5 
+Word 1 : <reader@example.net>
+  0 1 2 3 4 5 
+Word 2 : <reader>
+  0 1 2 3 4 5 
+Word 3 : <net>
+  0 1 2 3 4 5 
+--------------------------------
+Contents of <Cc> table
+0 entries
+--------------------------------
+Contents of <From> table
+5 entries
+Word 0 : <fold@example.net>
+  0 1 2 3 4 5 
+Word 1 : <example>
+  0 1 2 3 4 5 
+Word 2 : <fold>
+  0 1 2 3 4 5 
+Word 3 : <net>
+  0 1 2 3 4 5 
+Word 4 : <tester>
+  0 1 2 3 4 5 
+--------------------------------
+Contents of <Subject> table
+13 entries
+Word 0 : <και>
+  3 
+Word 1 : <café>
+  0 
+Word 2 : <οδοσ>
+  3 
+Word 3 : <москва>
+  4 
+Word 4 : <łódź>
+  1 
+Word 5 : <strasse>
+  5 
+Word 6 : <zürich>
+  4 
+Word 7 : <société>
+  0 
+Word 8 : <привет>
+  2 
+Word 9 : <москвы>
+  2 
+Word 10 : <und>
+  4 
+Word 11 : <μεθοδοσ>
+  3 
+Word 12 : <из>
+  2 
+--------------------------------
+Contents of <Body> table
+35 entries
+Word 0 : <café>
+  0 
+Word 1 : <İstanbul>
+  5 
+Word 2 : <groß>
+  5 
+Word 3 : <κόσμοσ>
+  3 
+Word 4 : <мир>
+  2 
+Word 5 : <encoded>
+  4 
+Word 6 : <ist>
+  5 
+Word 7 : <line>
+  4 
+Word 8 : <η>
+  3 
+Word 9 : <ābols>
+  1 
+Word 10 : <ο>
+  3 
+Word 11 : <αυτή>
+  3 
+Word 12 : <καλή>
+  3 
+Word 13 : <straße>
+  5 
+Word 14 : <ķirši>
+  1 
+Word 15 : <crème>
+  0 
+Word 16 : <μέθοδοσ>
+  3 
+Word 17 : <είναι>
+  3 
+Word 18 : <auga>
+  1 
+Word 19 : <words>
+  4 
+Word 20 : <the>
+  4 
+Word 21 : <lang>
+  5 
+Word 22 : <in>
+  4 
+Word 23 : <un>
+  0 1 
+Word 24 : <μικρόσ>
+  3 
+Word 25 : <subject>
+  4 
+Word 26 : <łodžā>
+  1 
+Word 27 : <zürich>
+  0 
+Word 28 : <à>
+  0 
+Word 29 : <это>
+  2 
+Word 30 : <привет>
+  2 
+Word 31 : <москвы>
+  2 
+Word 32 : <письмо>
+  2 
+Word 33 : <die>
+  5 
+Word 34 : <из>
+  2 
+--------------------------------
+Contents of <Attachment names> table
+0 entries
+--------------------------------
+Contents of <Message Ids> table
+Chain 0
+6 entries
+Word 0 : <utf8fold-2@example.net>
+  1 
+Word 1 : <utf8fold-4@example.net>
+  3 
+Word 2 : <utf8fold-3@example.net>
+  2 
+Word 3 : <utf8fold-5@example.net>
+  4 
+Word 4 : <utf8fold-1@example.net>
+  0 
+Word 5 : <utf8fold-6@example.net>
+  5 
+Chain 1
+6 entries
+Word 0 : <utf8fold-2@example.net>
+  1 
+Word 1 : <utf8fold-4@example.net>
+  3 
+Word 2 : <utf8fold-3@example.net>
+  2 
+Word 3 : <utf8fold-5@example.net>
+  4 
+Word 4 : <utf8fold-1@example.net>
+  0 
+Word 5 : <utf8fold-6@example.net>
+  5 
+--------------------------------

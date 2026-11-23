@@ -42,6 +42,7 @@
 #endif
 
 #include "mairix.h"
+#include "utf8fold.h"
 #include "reader.h"
 #include "memmac.h"
 #include "imapinterface.h"
@@ -780,13 +781,9 @@ static void get_flags_from_file(struct read_db *db, int idx, int *is_seen, int *
 
 static void string_tolower(char *str)
 {
-  char *p;
-  for (p=str; *p; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if ((c >= 'A') && (c <= 'Z')) {
-      *p = c + ('a' - 'A');
-    }
-  }
+  /* Canonicalise with the same case folding that is applied to the
+   * tokens when indexing (see utf8fold.c). */
+  utf8_fold_string(str);
 }
 
 typedef struct {
